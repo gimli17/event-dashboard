@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 export function Navbar() {
   return (
-    <nav className="bg-white border-b border-card-border sticky top-0 z-50">
+    <nav className="bg-surface border-b border-divider sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
@@ -13,7 +13,7 @@ export function Navbar() {
           <span className="font-bold text-lg text-foreground tracking-tight">Boulder Roots</span>
         </Link>
         <div className="flex items-center gap-6">
-          <Link href="/" className="text-sm font-medium text-muted hover:text-foreground transition-colors">
+          <Link href="/" className="text-sm font-medium text-foreground hover:text-accent transition-colors">
             Schedule
           </Link>
           <span className="text-sm font-medium text-muted/50 cursor-default">

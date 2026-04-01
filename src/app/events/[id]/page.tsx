@@ -51,12 +51,11 @@ export default async function EventPage({
     <>
       <Navbar />
 
-      {/* Hero bar */}
-      <section className="bg-hero-bg text-hero-text">
+      <section className="bg-surface border-b border-divider">
         <div className="max-w-7xl mx-auto px-6 py-10">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-sm text-white/50 hover:text-white mb-4 transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-accent mb-6 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -65,9 +64,9 @@ export default async function EventPage({
           </Link>
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-black tracking-tight">{event.title}</h1>
-              <p className="text-white/60 mt-2 text-sm">
-                {event.day_label} &middot; {event.start_time} – {event.end_time}
+              <h1 className="text-3xl font-black tracking-tight text-foreground">{event.title}</h1>
+              <p className="text-muted mt-2 text-sm">
+                {event.day_label} &middot; {event.start_time} \u2013 {event.end_time}
               </p>
             </div>
             <EventStatusBadge status={event.status} />
@@ -75,13 +74,12 @@ export default async function EventPage({
         </div>
       </section>
 
-      <div className="bg-section-bg flex-1">
+      <div className="flex-1">
         <div className="max-w-7xl mx-auto px-6 py-10">
-          {/* Info card */}
-          <div className="bg-white rounded-2xl border border-card-border p-6 mb-8 shadow-sm">
+          <div className="bg-card rounded-xl border border-card-border p-6 mb-8">
             <div className="flex flex-wrap items-center gap-3 text-sm text-muted mb-4">
               <span className="flex items-center gap-1.5">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
@@ -110,13 +108,12 @@ export default async function EventPage({
             </div>
           </div>
 
-          {/* Tasks */}
-          <h2 className="text-xl font-bold mb-5">Activities & Tasks</h2>
+          <h2 className="text-xl font-bold text-foreground mb-5">Activities & Tasks</h2>
 
           {Object.keys(grouped).length === 0 ? (
             <p className="text-muted text-sm">No tasks yet for this event.</p>
           ) : (
-            <div className="space-y-5">
+            <div className="space-y-4">
               {Object.entries(grouped).map(([category, catTasks]) => {
                 const catKey = category as EventTask['category']
                 const catDone = catTasks.filter((t) => t.status === 'complete').length
@@ -125,9 +122,9 @@ export default async function EventPage({
                 return (
                   <div
                     key={category}
-                    className="bg-white rounded-2xl border border-card-border overflow-hidden shadow-sm"
+                    className="bg-card rounded-xl border border-card-border overflow-hidden"
                   >
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-card-border">
+                    <div className="flex items-center justify-between px-5 py-3 border-b border-divider">
                       <div className="flex items-center gap-2.5">
                         <span className="text-lg">{categoryIcons[catKey]}</span>
                         <h3 className="font-bold text-sm text-foreground">
@@ -138,11 +135,11 @@ export default async function EventPage({
                         {catDone}/{catTotal} done
                       </span>
                     </div>
-                    <ul className="divide-y divide-card-border">
+                    <ul className="divide-y divide-divider">
                       {catTasks.map((task) => (
                         <li
                           key={task.id}
-                          className="px-6 py-4 flex items-center justify-between gap-4"
+                          className="px-5 py-3.5 flex items-center justify-between gap-4"
                         >
                           <div className="min-w-0">
                             <p
@@ -162,7 +159,7 @@ export default async function EventPage({
                                   </span>
                                 )}
                                 {task.notes && (
-                                  <span className="text-xs text-muted/70 italic">
+                                  <span className="text-xs text-muted/60 italic">
                                     {task.notes}
                                   </span>
                                 )}
@@ -181,7 +178,7 @@ export default async function EventPage({
         </div>
       </div>
 
-      <footer className="bg-hero-bg text-white/50 text-center py-8 text-sm">
+      <footer className="border-t border-divider text-muted text-center py-8 text-sm">
         <p>2026 Boulder Roots Music Fest &middot; Founders Experience Dashboard</p>
       </footer>
     </>

@@ -1,36 +1,40 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #1a1a2e;
-  --card: #ffffff;
-  --card-border: #e8eaf0;
-  --muted: #6b7194;
-  --accent: #4a6cf7;
-  --accent-hover: #3b5de7;
-  --accent-light: #eef2ff;
-  --success: #10b981;
-  --success-light: #ecfdf5;
+  --background: #0b0f1a;
+  --surface: #131825;
+  --surface-hover: #1a2035;
+  --card: #161c2e;
+  --card-border: #1e2640;
+  --card-hover: #1c2440;
+  --foreground: #eef0f6;
+  --muted: #7a839e;
+  --accent: #4353ff;
+  --accent-hover: #5a68ff;
+  --accent-glow: rgba(67, 83, 255, 0.15);
+  --success: #22c55e;
+  --success-light: rgba(34, 197, 94, 0.12);
   --warning: #f59e0b;
-  --warning-light: #fffbeb;
+  --warning-light: rgba(245, 158, 11, 0.12);
   --danger: #ef4444;
-  --danger-light: #fef2f2;
+  --danger-light: rgba(239, 68, 68, 0.12);
   --info: #3b82f6;
-  --info-light: #eff6ff;
-  --section-bg: #f8f9fc;
-  --hero-bg: #1a1a2e;
-  --hero-text: #ffffff;
+  --info-light: rgba(59, 130, 246, 0.12);
+  --divider: #1e2640;
 }
 
 @theme inline {
   --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
   --color-card: var(--card);
   --color-card-border: var(--card-border);
+  --color-card-hover: var(--card-hover);
+  --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
-  --color-accent-light: var(--accent-light);
+  --color-accent-glow: var(--accent-glow);
   --color-success: var(--success);
   --color-success-light: var(--success-light);
   --color-warning: var(--warning);
@@ -39,9 +43,7 @@
   --color-danger-light: var(--danger-light);
   --color-info: var(--info);
   --color-info-light: var(--info-light);
-  --color-section-bg: var(--section-bg);
-  --color-hero-bg: var(--hero-bg);
-  --color-hero-text: var(--hero-text);
+  --color-divider: var(--divider);
   --font-sans: "Lato", Arial, Helvetica, sans-serif;
 }
 
@@ -51,4 +53,9 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: var(--accent);
+  color: white;
 }

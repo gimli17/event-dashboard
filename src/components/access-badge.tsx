@@ -1,10 +1,10 @@
 import type { AccessLevel } from '@/lib/types'
 
 const styles: Record<AccessLevel, string> = {
-  founders: 'bg-violet-50 text-violet-600 border-violet-100',
-  'founders-premium': 'bg-indigo-50 text-indigo-600 border-indigo-100',
-  'all-access': 'bg-sky-50 text-sky-600 border-sky-100',
-  'sponsor-private': 'bg-amber-50 text-amber-600 border-amber-100',
+  founders: 'bg-accent-glow text-accent border-accent/20',
+  'founders-premium': 'bg-info-light text-info border-info/20',
+  'all-access': 'bg-muted/10 text-muted border-muted/20',
+  'sponsor-private': 'bg-warning-light text-warning border-warning/20',
 }
 
 const labels: Record<AccessLevel, string> = {
@@ -17,7 +17,7 @@ const labels: Record<AccessLevel, string> = {
 export function AccessBadge({ access }: { access: AccessLevel }) {
   return (
     <span
-      className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${styles[access]}`}
+      className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-bold ${styles[access]}`}
     >
       {labels[access]}
     </span>
