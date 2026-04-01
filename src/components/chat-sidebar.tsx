@@ -3,7 +3,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useUser } from './user-provider'
-import type { Comment, Event, EventTask } from '@/lib/types'
+import type { Comment, EventTask } from '@/lib/types'
+
+interface EventOption {
+  id: string
+  title: string
+  day_label: string
+}
 
 type Tab = 'chat' | 'add-task'
 
@@ -26,7 +32,7 @@ export function ChatSidebar() {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   // Add task form state
-  const [events, setEvents] = useState<Event[]>([])
+  const [events, setEvents] = useState<EventOption[]>([])
   const [selectedEvent, setSelectedEvent] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<EventTask['category']>('venue')
   const [taskTitle, setTaskTitle] = useState('')
@@ -53,19 +59,23 @@ export function ChatSidebar() {
   // Fetch events for dropdown when tab switches or sidebar opens
   useEffect(() => {
     if (tab !== 'add-task' || !open) return
+    if (events.length > 0) return
     async function fetchEvents() {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('events')
-        .select('*')
+        .select('id, title, day_label, date')
         .order('date', { ascending: true })
-      if (data) {
-        const typed = data as Event[]
-        setEvents(typed)
-        if (typed.length > 0 && !selectedEvent) setSelectedEvent(typed[0].id)
+      if (error) {
+        console.error('Failed to fetch events:', error)
+        return
+      }
+      if (data && data.length > 0) {
+        setEvents(data as EventOption[])
+        setSelectedEvent((data as EventOption[])[0].id)
       }
     }
     fetchEvents()
-  }, [tab, open])
+  }, [tab, open, events.length])
 
   // Realtime subscription
   useEffect(() => {
