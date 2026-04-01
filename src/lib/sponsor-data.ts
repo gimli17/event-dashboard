@@ -18,17 +18,32 @@ export interface Sponsor {
   vip_day: string | null
   vip_party_name: string | null
   recognition_name: string | null
+  add_recog_category: string | null
+  add_recog_detail: string | null
 }
 
 // Map vip_day codes to our event IDs
 const vipDayToEventId: Record<string, string> = {
   'fri_300_500': 'fri-endeavor',
-  'fri_415_615': 'sat-sponsor-late',  // Friday 4:15-6:15
+  'fri_415_615': 'sat-sponsor-late',
   'sat_200_400_1': 'sat-sponsor-early',
   'sat_200_400_2': 'sat-sponsor-early',
   'sat_415_615_1': 'sat-sponsor-late',
   'sat_415_615_2': 'sat-sponsor-late',
   'sun_415_615': 'sun-sponsor',
+}
+
+// Map add_recog_detail (Founders Experience event sponsorship) to our event IDs
+const recogDetailToEventId: Record<string, string> = {
+  'opening_night': 'thu-opening',
+  'cocktail_gathering': 'fri-cocktail',
+  'friday_headliner': 'fri-headliner',
+  'saturday_headliner': 'sat-headliner',
+  'sunday_headliner': 'sun-headliner',
+  'after_party_friday': 'fri-afterparty',
+  'after_party_saturday': 'sat-afterparty',
+  'film_evening': 'wed-film',
+  'founders_lounge': 'weekend-lounge',
 }
 
 export async function getSponsors(): Promise<Sponsor[]> {
@@ -39,7 +54,7 @@ export async function getSponsors(): Promise<Sponsor[]> {
   try {
     const { data, error } = await sponsorSupabase
       .from('sponsors')
-      .select('id, name, tier_id, amount, brmf_priority, founder_2025, funnel_stage, payment_status, vip_day, vip_party_name, recognition_name')
+      .select('id, name, tier_id, amount, brmf_priority, founder_2025, funnel_stage, payment_status, vip_day, vip_party_name, recognition_name, add_recog_category, add_recog_detail')
       .is('deleted_at', null)
 
     if (error) throw error
@@ -84,13 +99,27 @@ export function getSponsorsByEvent(sponsors: Sponsor[]): Record<string, { name: 
   const result: Record<string, { name: string; partyName: string | null; tier: string | null }> = {}
 
   for (const s of sponsors) {
-    if (!s.vip_day || !s.vip_day.trim()) continue
-    const eventId = vipDayToEventId[s.vip_day]
-    if (eventId) {
-      result[eventId] = {
-        name: s.recognition_name || s.name,
-        partyName: s.vip_party_name || null,
-        tier: s.tier_id,
+    // Check VIP day selections (private party slots)
+    if (s.vip_day && s.vip_day.trim()) {
+      const eventId = vipDayToEventId[s.vip_day]
+      if (eventId) {
+        result[eventId] = {
+          name: s.recognition_name || s.name,
+          partyName: s.vip_party_name || null,
+          tier: s.tier_id,
+        }
+      }
+    }
+
+    // Check Founders Experience event sponsorship (add_recog_detail)
+    if (s.add_recog_detail && s.add_recog_detail.trim()) {
+      const eventId = recogDetailToEventId[s.add_recog_detail]
+      if (eventId) {
+        result[eventId] = {
+          name: s.recognition_name || s.name,
+          partyName: null,
+          tier: s.tier_id,
+        }
       }
     }
   }
