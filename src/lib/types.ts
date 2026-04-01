@@ -21,12 +21,15 @@ export interface Event {
   created_at: string
 }
 
+export type Priority = 'high' | 'medium' | 'low'
+
 export interface EventTask {
   id: string
   event_id: string
   title: string
   category: 'venue' | 'talent' | 'sponsorship' | 'logistics' | 'marketing' | 'production'
   status: TaskStatus
+  priority?: Priority
   assignee: string | null
   notes: string | null
   created_at: string

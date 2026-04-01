@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useUser } from './user-provider'
 import { useSidebar } from '@/lib/sidebar-context'
-import type { EventTask, TaskStatus } from '@/lib/types'
+import type { EventTask, TaskStatus, Priority } from '@/lib/types'
 
 const categoryLabels: Record<EventTask['category'], string> = {
   venue: 'Venue',
@@ -40,6 +40,24 @@ const nextStatus: Record<TaskStatus, TaskStatus> = {
   'not-started': 'in-progress',
   'in-progress': 'complete',
   complete: 'not-started',
+}
+
+const priorityLabels: Record<Priority, string> = {
+  high: 'HIGH',
+  medium: 'MED',
+  low: 'LOW',
+}
+
+const priorityColors: Record<Priority, string> = {
+  high: 'text-red bg-red/10 hover:bg-red/20',
+  medium: 'text-gold bg-gold/10 hover:bg-gold/20',
+  low: 'text-muted bg-black/5 hover:bg-black/10',
+}
+
+const nextPriority: Record<Priority, Priority> = {
+  low: 'medium',
+  medium: 'high',
+  high: 'low',
 }
 
 function getProgress(tasks: EventTask[]): number {
@@ -188,6 +206,16 @@ export function TaskList({
     } as never)
   }
 
+  const handlePriorityCycle = async (task: EventTask) => {
+    if (!displayName) return
+    const newPriority = nextPriority[task.priority || 'medium']
+    setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, priority: newPriority } : t)))
+    await supabase
+      .from('event_tasks')
+      .update({ priority: newPriority } as never)
+      .eq('id', task.id)
+  }
+
   // Group tasks by category
   const grouped: Record<string, EventTask[]> = {}
   for (const task of tasks) {
@@ -310,12 +338,20 @@ export function TaskList({
                           </div>
 
                           {/* Actions */}
-                          <div className="flex items-center gap-2 shrink-0">
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              onClick={() => handlePriorityCycle(task)}
+                              disabled={!displayName}
+                              className={`px-2 py-1.5 text-[9px] font-bold tracking-widest uppercase transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${priorityColors[task.priority || 'medium']}`}
+                              title="Click to change priority"
+                            >
+                              {priorityLabels[task.priority || 'medium']}
+                            </button>
                             <button
                               onClick={() => handleStatusCycle(task)}
                               disabled={!displayName}
                               className={`px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${statusColors[task.status]}`}
-                              title={displayName ? 'Click to change status' : 'Set your name first'}
+                              title="Click to change status"
                             >
                               {statusLabels[task.status]}
                             </button>

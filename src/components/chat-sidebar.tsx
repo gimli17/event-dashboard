@@ -12,12 +12,6 @@ interface EventOption {
   day_label: string
 }
 
-interface PendingTask extends EventTask {
-  event_title?: string
-  event_date?: string
-  event_day_label?: string
-}
-
 const taskCategories: { label: string; value: EventTask['category'] }[] = [
   { label: 'Venue', value: 'venue' },
   { label: 'Talent', value: 'talent' },
@@ -46,7 +40,6 @@ const tabs: { label: string; value: SidebarTab; color: string }[] = [
   { label: 'Chat', value: 'chat', color: 'bg-blue' },
   { label: '+ Task', value: 'add-task', color: 'bg-red' },
   { label: '+ Event', value: 'add-event', color: 'bg-green' },
-  { label: 'Pending', value: 'pending', color: 'bg-orange' },
 ]
 
 function renderMessage(text: string) {
@@ -92,10 +85,6 @@ export function ChatSidebar() {
   const [addingEvent, setAddingEvent] = useState(false)
   const [eventSuccess, setEventSuccess] = useState('')
 
-  // Pending tasks state
-  const [pendingTasks, setPendingTasks] = useState<PendingTask[]>([])
-  const [loadingPending, setLoadingPending] = useState(false)
-
   const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [])
@@ -128,54 +117,6 @@ export function ChatSidebar() {
     }
     fetchEvents()
   }, [isOpen, events.length])
-
-  // Fetch pending tasks when tab switches
-  useEffect(() => {
-    if (tab !== 'pending' || !isOpen) return
-    async function fetchPending() {
-      setLoadingPending(true)
-      const { data: tasks } = await supabase
-        .from('event_tasks')
-        .select('*')
-        .in('status', ['not-started', 'in-progress'])
-        .order('status', { ascending: true })
-
-      if (tasks) {
-        // Fetch event info for each task
-        const eventIds = [...new Set((tasks as EventTask[]).map((t) => t.event_id))]
-        const { data: eventsData } = await supabase
-          .from('events')
-          .select('id, title, date, day_label')
-          .in('id', eventIds)
-          .order('date', { ascending: true })
-
-        const eventMap: Record<string, { title: string; date: string; day_label: string }> = {}
-        if (eventsData) {
-          for (const e of eventsData as { id: string; title: string; date: string; day_label: string }[]) {
-            eventMap[e.id] = { title: e.title, date: e.date, day_label: e.day_label }
-          }
-        }
-
-        const enriched: PendingTask[] = (tasks as EventTask[]).map((t) => ({
-          ...t,
-          event_title: eventMap[t.event_id]?.title,
-          event_date: eventMap[t.event_id]?.date,
-          event_day_label: eventMap[t.event_id]?.day_label,
-        }))
-
-        // Sort: in-progress first, then by event date
-        enriched.sort((a, b) => {
-          if (a.status === 'in-progress' && b.status !== 'in-progress') return -1
-          if (a.status !== 'in-progress' && b.status === 'in-progress') return 1
-          return (a.event_date ?? '').localeCompare(b.event_date ?? '')
-        })
-
-        setPendingTasks(enriched)
-      }
-      setLoadingPending(false)
-    }
-    fetchPending()
-  }, [tab, isOpen])
 
   // Realtime subscription
   useEffect(() => {
@@ -518,50 +459,6 @@ export function ChatSidebar() {
           </form>
         )}
 
-        {/* ── PENDING TASKS TAB ── */}
-        {tab === 'pending' && (
-          <div className="flex-1 overflow-y-auto">
-            {loadingPending ? (
-              <p className="text-xs uppercase tracking-wider text-muted text-center mt-8 font-medium">Loading...</p>
-            ) : pendingTasks.length === 0 ? (
-              <p className="text-xs uppercase tracking-wider text-muted text-center mt-8 font-medium">All tasks complete!</p>
-            ) : (
-              <>
-                <div className="px-4 py-3 bg-cream-dark border-b border-black/10">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted">
-                    {pendingTasks.length} pending &middot; In-progress tasks shown first, then by event date
-                  </p>
-                </div>
-                <div className="divide-y divide-black/5">
-                  {pendingTasks.map((task) => (
-                    <a
-                      key={task.id}
-                      href={`/events/${task.event_id}`}
-                      className="block px-4 py-3 hover:bg-cream-dark transition-colors"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold leading-tight">{task.title}</p>
-                          <p className="text-[10px] text-muted mt-0.5">
-                            {task.event_day_label} &middot; {task.event_title}
-                          </p>
-                          <p className="text-[10px] text-muted uppercase tracking-wider mt-0.5">
-                            {task.category}
-                          </p>
-                        </div>
-                        <span className={`shrink-0 px-2 py-1 text-[9px] font-bold tracking-widest uppercase ${
-                          task.status === 'in-progress' ? 'text-orange bg-orange/10' : 'text-muted bg-black/5'
-                        }`}>
-                          {task.status === 'in-progress' ? 'IN PROGRESS' : 'NOT STARTED'}
-                        </span>
-                      </div>
-                    </a>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        )}
       </div>
     </>
   )
