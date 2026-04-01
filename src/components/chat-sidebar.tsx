@@ -3,22 +3,42 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useUser } from './user-provider'
-import type { Comment } from '@/lib/types'
+import type { Comment, Event, EventTask } from '@/lib/types'
+
+type Tab = 'chat' | 'add-task'
+
+const categories: { label: string; value: EventTask['category'] }[] = [
+  { label: 'Venue', value: 'venue' },
+  { label: 'Talent', value: 'talent' },
+  { label: 'Sponsorship', value: 'sponsorship' },
+  { label: 'Logistics', value: 'logistics' },
+  { label: 'Marketing', value: 'marketing' },
+  { label: 'Production', value: 'production' },
+]
 
 export function ChatSidebar() {
   const { displayName } = useUser()
   const [open, setOpen] = useState(false)
+  const [tab, setTab] = useState<Tab>('chat')
   const [messages, setMessages] = useState<Comment[]>([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Add task form state
+  const [events, setEvents] = useState<Event[]>([])
+  const [selectedEvent, setSelectedEvent] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState<EventTask['category']>('venue')
+  const [taskTitle, setTaskTitle] = useState('')
+  const [taskNotes, setTaskNotes] = useState('')
+  const [addingTask, setAddingTask] = useState(false)
+  const [taskSuccess, setTaskSuccess] = useState('')
 
   const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [])
 
-  // Fetch initial messages
+  // Fetch messages
   useEffect(() => {
     async function fetchMessages() {
       const { data } = await supabase
@@ -30,7 +50,23 @@ export function ChatSidebar() {
     fetchMessages()
   }, [])
 
-  // Subscribe to realtime inserts
+  // Fetch events for dropdown
+  useEffect(() => {
+    async function fetchEvents() {
+      const { data } = await supabase
+        .from('events')
+        .select('*')
+        .order('date', { ascending: true })
+      if (data) {
+        const typed = data as Event[]
+        setEvents(typed)
+        if (typed.length > 0) setSelectedEvent(typed[0].id)
+      }
+    }
+    fetchEvents()
+  }, [])
+
+  // Realtime subscription
   useEffect(() => {
     const channel = supabase
       .channel('comments-realtime')
@@ -52,7 +88,6 @@ export function ChatSidebar() {
     }
   }, [])
 
-  // Auto-scroll on new messages
   useEffect(() => {
     scrollToBottom()
   }, [messages, scrollToBottom])
@@ -71,6 +106,41 @@ export function ChatSidebar() {
     } as never)
 
     setSending(false)
+  }
+
+  const handleAddTask = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!taskTitle.trim() || !selectedEvent || !displayName || addingTask) return
+
+    setAddingTask(true)
+    setTaskSuccess('')
+
+    const taskId = `t-${Date.now()}`
+    const { error } = await supabase.from('event_tasks').insert({
+      id: taskId,
+      event_id: selectedEvent,
+      title: taskTitle.trim(),
+      category: selectedCategory,
+      status: 'not-started',
+      assignee: null,
+      notes: taskNotes.trim() || null,
+    } as never)
+
+    if (!error) {
+      const eventName = events.find((e) => e.id === selectedEvent)?.title ?? 'event'
+      // Log the action as a chat message
+      await supabase.from('comments').insert({
+        author: displayName,
+        message: `Added task "${taskTitle.trim()}" to ${eventName} [${selectedCategory}]`,
+      } as never)
+
+      setTaskSuccess(`Added to ${eventName}`)
+      setTaskTitle('')
+      setTaskNotes('')
+      setTimeout(() => setTaskSuccess(''), 3000)
+    }
+
+    setAddingTask(false)
   }
 
   function formatTime(dateStr: string) {
@@ -110,9 +180,9 @@ export function ChatSidebar() {
         }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-4 border-b-4 border-black bg-black text-cream">
+        <div className="flex items-center justify-between px-4 py-3 border-b-4 border-black bg-black text-cream">
           <h2 className="text-sm font-bold uppercase tracking-widest">
-            BRMF Chat
+            BRMF
           </h2>
           <button
             onClick={() => setOpen(false)}
@@ -123,55 +193,168 @@ export function ChatSidebar() {
           </button>
         </div>
 
-        {/* Messages */}
-        <div
-          ref={containerRef}
-          className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
-        >
-          {messages.length === 0 && (
-            <p className="text-xs uppercase tracking-wider text-muted text-center mt-8 font-medium">
-              No messages yet. Start the conversation!
-            </p>
-          )}
-          {messages.map((msg) => (
-            <div key={msg.id} className="border-b-2 border-cream-dark pb-3">
-              <div className="flex items-baseline justify-between gap-2 mb-1">
-                <span className="text-xs font-bold uppercase tracking-wider text-blue">
-                  {msg.author}
-                </span>
-                <span className="text-[10px] uppercase tracking-wider text-muted font-medium whitespace-nowrap">
-                  {formatDate(msg.created_at)} {formatTime(msg.created_at)}
-                </span>
-              </div>
-              <p className="text-sm text-black leading-relaxed">
-                {msg.message}
-              </p>
-            </div>
-          ))}
-          <div ref={bottomRef} />
+        {/* Tabs */}
+        <div className="flex border-b-2 border-black">
+          <button
+            onClick={() => setTab('chat')}
+            className={`flex-1 py-3 text-xs font-bold uppercase tracking-widest transition-colors ${
+              tab === 'chat'
+                ? 'bg-blue text-white'
+                : 'bg-cream-dark text-muted hover:text-black'
+            }`}
+          >
+            Chat
+          </button>
+          <button
+            onClick={() => setTab('add-task')}
+            className={`flex-1 py-3 text-xs font-bold uppercase tracking-widest transition-colors border-l-2 border-black ${
+              tab === 'add-task'
+                ? 'bg-red text-white'
+                : 'bg-cream-dark text-muted hover:text-black'
+            }`}
+          >
+            + Add Task
+          </button>
         </div>
 
-        {/* Input */}
-        <form
-          onSubmit={handleSend}
-          className="border-t-4 border-black px-4 py-3 bg-cream-dark flex gap-2"
-        >
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={displayName ? 'TYPE A MESSAGE...' : 'SET NAME FIRST'}
-            disabled={!displayName}
-            className="flex-1 border-2 border-black bg-white px-3 py-2 text-xs font-bold uppercase tracking-wider text-black placeholder:text-muted/50 focus:outline-none focus:border-blue disabled:opacity-40"
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || !displayName || sending}
-            className="bg-black text-cream px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-blue transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Send
-          </button>
-        </form>
+        {tab === 'chat' ? (
+          <>
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+              {messages.length === 0 && (
+                <p className="text-xs uppercase tracking-wider text-muted text-center mt-8 font-medium">
+                  No messages yet. Start the conversation!
+                </p>
+              )}
+              {messages.map((msg) => (
+                <div key={msg.id} className="border-b-2 border-cream-dark pb-3">
+                  <div className="flex items-baseline justify-between gap-2 mb-1">
+                    <span className="text-xs font-bold uppercase tracking-wider text-blue">
+                      {msg.author}
+                    </span>
+                    <span className="text-[10px] uppercase tracking-wider text-muted font-medium whitespace-nowrap">
+                      {formatDate(msg.created_at)} {formatTime(msg.created_at)}
+                    </span>
+                  </div>
+                  <p className="text-sm text-black leading-relaxed">
+                    {msg.message}
+                  </p>
+                </div>
+              ))}
+              <div ref={bottomRef} />
+            </div>
+
+            {/* Chat input */}
+            <form
+              onSubmit={handleSend}
+              className="border-t-4 border-black px-4 py-3 bg-cream-dark flex gap-2"
+            >
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={displayName ? 'TYPE A MESSAGE...' : 'SET NAME FIRST'}
+                disabled={!displayName}
+                className="flex-1 border-2 border-black bg-white px-3 py-2 text-xs font-bold uppercase tracking-wider text-black placeholder:text-muted/50 focus:outline-none focus:border-blue disabled:opacity-40"
+              />
+              <button
+                type="submit"
+                disabled={!input.trim() || !displayName || sending}
+                className="bg-black text-cream px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-blue transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Send
+              </button>
+            </form>
+          </>
+        ) : (
+          <>
+            {/* Add Task Form */}
+            <form onSubmit={handleAddTask} className="flex-1 overflow-y-auto px-4 py-6 space-y-5">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">
+                  Event
+                </label>
+                <select
+                  value={selectedEvent}
+                  onChange={(e) => setSelectedEvent(e.target.value)}
+                  className="w-full border-2 border-black bg-white px-3 py-2.5 text-xs font-bold text-black focus:outline-none focus:border-blue appearance-none"
+                >
+                  {events.map((ev) => (
+                    <option key={ev.id} value={ev.id}>
+                      {ev.day_label} — {ev.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">
+                  Category
+                </label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {categories.map((cat) => (
+                    <button
+                      key={cat.value}
+                      type="button"
+                      onClick={() => setSelectedCategory(cat.value)}
+                      className={`py-2 text-[10px] font-bold uppercase tracking-widest border-2 transition-all ${
+                        selectedCategory === cat.value
+                          ? 'bg-black text-white border-black'
+                          : 'bg-white text-black border-black/20 hover:border-black'
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">
+                  Task Title
+                </label>
+                <input
+                  type="text"
+                  value={taskTitle}
+                  onChange={(e) => setTaskTitle(e.target.value)}
+                  placeholder="E.G., BOOK SOUND ENGINEER"
+                  className="w-full border-2 border-black bg-white px-3 py-2.5 text-xs font-bold text-black placeholder:text-muted/50 focus:outline-none focus:border-blue"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">
+                  Notes (optional)
+                </label>
+                <input
+                  type="text"
+                  value={taskNotes}
+                  onChange={(e) => setTaskNotes(e.target.value)}
+                  placeholder="ANY ADDITIONAL DETAILS..."
+                  className="w-full border-2 border-black bg-white px-3 py-2.5 text-xs font-bold text-black placeholder:text-muted/50 focus:outline-none focus:border-blue"
+                />
+              </div>
+
+              {taskSuccess && (
+                <div className="bg-green text-white px-4 py-3 text-xs font-bold uppercase tracking-widest text-center">
+                  {taskSuccess}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={!taskTitle.trim() || !selectedEvent || !displayName || addingTask}
+                className="w-full bg-red text-white py-3 text-xs font-bold uppercase tracking-widest hover:bg-red-bright transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {addingTask ? 'Adding...' : 'Add Task'}
+              </button>
+
+              <p className="text-[10px] text-muted text-center uppercase tracking-wider">
+                Tasks are logged in chat and added to the event
+              </p>
+            </form>
+          </>
+        )}
       </div>
     </>
   )
