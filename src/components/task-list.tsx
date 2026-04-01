@@ -365,7 +365,10 @@ export function TaskList({
                               </button>
                             )}
 
-                            {/* Assignee display/edit */}
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex items-center gap-1.5 shrink-0">
                             {editingAssignee === task.id ? (
                               <input
                                 type="text"
@@ -377,25 +380,22 @@ export function TaskList({
                                   if (e.key === 'Escape') setEditingAssignee(null)
                                 }}
                                 autoFocus
-                                placeholder="Assign to..."
-                                className="mt-1 border-2 border-black bg-white px-2 py-0.5 text-xs font-bold text-black focus:outline-none focus:border-blue w-40"
+                                placeholder="Name..."
+                                className="border-2 border-black bg-white px-2 py-1 text-[10px] font-bold text-black focus:outline-none focus:border-blue w-24"
                               />
                             ) : (
                               <button
                                 onClick={() => handleAssigneeEdit(task)}
-                                className="mt-1 text-xs font-bold uppercase tracking-wider hover:text-blue transition-colors text-left"
+                                className={`px-2 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-all cursor-pointer ${
+                                  task.assignee
+                                    ? 'text-blue bg-blue/10 hover:bg-blue/20'
+                                    : 'text-muted/40 bg-black/5 hover:bg-black/10'
+                                }`}
+                                title="Click to assign"
                               >
-                                {task.assignee ? (
-                                  <span className="text-blue">{task.assignee}</span>
-                                ) : (
-                                  <span className="text-muted/40">+ Assign</span>
-                                )}
+                                {task.assignee || 'ASSIGN'}
                               </button>
                             )}
-                          </div>
-
-                          {/* Actions */}
-                          <div className="flex items-center gap-1.5 shrink-0">
                             <button
                               onClick={() => handlePriorityCycle(task)}
                               disabled={!displayName}
