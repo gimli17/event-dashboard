@@ -2,10 +2,6 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getEvent, getEventTasks, getProgress } from '@/lib/data'
 import { Navbar } from '@/components/navbar'
-import { EventStatusBadge, TaskStatusBadge } from '@/components/status-badge'
-import { ProgressBar } from '@/components/progress-bar'
-import { SponsorshipBadge } from '@/components/sponsorship-badge'
-import { AccessBadge } from '@/components/access-badge'
 import type { EventTask } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -19,13 +15,32 @@ const categoryLabels: Record<EventTask['category'], string> = {
   production: 'Production',
 }
 
-const categoryIcons: Record<EventTask['category'], string> = {
-  venue: '\u{1F3DB}',
-  talent: '\u{1F3A4}',
-  sponsorship: '\u{1F91D}',
-  logistics: '\u{1F4E6}',
-  marketing: '\u{1F4E3}',
-  production: '\u{1F3AC}',
+const categoryColors: Record<EventTask['category'], string> = {
+  venue: 'bg-blue',
+  talent: 'bg-red',
+  sponsorship: 'bg-gold',
+  logistics: 'bg-green',
+  marketing: 'bg-orange',
+  production: 'bg-black',
+}
+
+const statusLabels: Record<string, string> = {
+  'not-started': 'NOT STARTED',
+  'in-progress': 'IN PROGRESS',
+  complete: 'DONE',
+}
+
+const statusColors: Record<string, string> = {
+  'not-started': 'text-muted',
+  'in-progress': 'text-orange',
+  complete: 'text-green',
+}
+
+const accessLabels: Record<string, string> = {
+  founders: 'Founders',
+  'founders-premium': 'Founders + Premium',
+  'all-access': 'All Access',
+  'sponsor-private': 'Sponsor Private',
 }
 
 export default async function EventPage({
@@ -51,135 +66,154 @@ export default async function EventPage({
     <>
       <Navbar />
 
-      <section className="bg-surface border-b border-divider">
-        <div className="max-w-7xl mx-auto px-6 py-10">
+      {/* Hero */}
+      <section className="bg-blue text-white py-12">
+        <div className="max-w-5xl mx-auto px-6">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-accent mb-6 transition-colors"
+            className="inline-flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-white/50 hover:text-white mb-8 transition-colors"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to Schedule
+            <span>&larr;</span> Back to Schedule
           </Link>
-          <div className="flex items-start justify-between gap-4">
+
+          <div className="flex items-start justify-between gap-6">
             <div>
-              <h1 className="text-3xl font-black tracking-tight text-foreground">{event.title}</h1>
-              <p className="text-muted mt-2 text-sm">
-                {event.day_label} &middot; {event.start_time} \u2013 {event.end_time}
-              </p>
+              <h1 className="text-4xl sm:text-5xl font-bold tracking-tight leading-none uppercase">
+                {event.title}
+              </h1>
+              <div className="flex items-center gap-4 mt-4 flex-wrap">
+                <div className="bg-red px-3 py-1.5">
+                  <span className="text-xs font-bold tracking-widest uppercase">
+                    {event.day_label}
+                  </span>
+                </div>
+                <span className="text-sm text-white/60">
+                  {event.start_time} \u2013 {event.end_time}
+                </span>
+              </div>
             </div>
-            <EventStatusBadge status={event.status} />
+            <div className="text-right shrink-0">
+              <p className="text-5xl font-bold">{progress}%</p>
+              <p className="text-xs text-white/50 uppercase tracking-wider font-bold mt-1">Complete</p>
+            </div>
           </div>
         </div>
       </section>
 
-      <div className="flex-1">
-        <div className="max-w-7xl mx-auto px-6 py-10">
-          <div className="bg-card rounded-xl border border-card-border p-6 mb-8">
-            <div className="flex flex-wrap items-center gap-3 text-sm text-muted mb-4">
-              <span className="flex items-center gap-1.5">
-                <svg className="w-4 h-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                {event.location}
-              </span>
-              <AccessBadge access={event.access} />
-              <SponsorshipBadge
-                available={event.sponsorship_available}
-                sponsorName={event.sponsor_name}
-              />
-            </div>
+      {/* Info */}
+      <section className="bg-cream-dark border-b-2 border-black/10">
+        <div className="max-w-5xl mx-auto px-6 py-5 flex items-center gap-6 flex-wrap text-sm">
+          <span className="text-muted">{event.location}</span>
+          <span className="text-xs font-bold text-blue uppercase tracking-wider">
+            {accessLabels[event.access]}
+          </span>
+          {event.sponsorship_available && !event.sponsor_name && (
+            <span className="text-xs font-bold text-red uppercase tracking-wider">
+              Open for Sponsorship
+            </span>
+          )}
+          {event.sponsor_name && (
+            <span className="text-xs font-bold text-green uppercase tracking-wider">
+              Sponsored: {event.sponsor_name}
+            </span>
+          )}
+          <span className="text-xs text-muted">
+            {tasks.filter((t) => t.status === 'complete').length}/{tasks.length} tasks done
+          </span>
+        </div>
+      </section>
 
-            {event.description && (
-              <p className="text-sm text-muted leading-relaxed mb-6">{event.description}</p>
-            )}
-
-            <div>
-              <div className="flex items-center justify-between text-sm mb-2">
-                <span className="font-semibold text-foreground">Overall Progress</span>
-                <span className="text-muted">
-                  {tasks.filter((t) => t.status === 'complete').length} of{' '}
-                  {tasks.length} tasks complete
-                </span>
-              </div>
-              <ProgressBar percent={progress} />
-            </div>
+      {/* Description */}
+      {event.description && (
+        <section className="bg-cream">
+          <div className="max-w-5xl mx-auto px-6 py-8">
+            <p className="text-sm text-muted leading-relaxed max-w-2xl">{event.description}</p>
           </div>
+        </section>
+      )}
 
-          <h2 className="text-xl font-bold text-foreground mb-5">Activities & Tasks</h2>
+      {/* Progress bar */}
+      <section className="bg-cream">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="h-2 bg-black/5">
+            <div
+              className={`h-2 transition-all ${progress === 100 ? 'bg-green' : 'bg-red'}`}
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Tasks */}
+      <section className="bg-cream flex-1">
+        <div className="max-w-5xl mx-auto px-6 py-10">
+          <h2 className="text-2xl font-bold uppercase tracking-tight mb-8">
+            Activities & Tasks
+          </h2>
 
           {Object.keys(grouped).length === 0 ? (
-            <p className="text-muted text-sm">No tasks yet for this event.</p>
+            <p className="text-muted">No tasks yet.</p>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-8">
               {Object.entries(grouped).map(([category, catTasks]) => {
                 const catKey = category as EventTask['category']
                 const catDone = catTasks.filter((t) => t.status === 'complete').length
-                const catTotal = catTasks.length
 
                 return (
-                  <div
-                    key={category}
-                    className="bg-card rounded-xl border border-card-border overflow-hidden"
-                  >
-                    <div className="flex items-center justify-between px-5 py-3 border-b border-divider">
-                      <div className="flex items-center gap-2.5">
-                        <span className="text-lg">{categoryIcons[catKey]}</span>
-                        <h3 className="font-bold text-sm text-foreground">
-                          {categoryLabels[catKey]}
-                        </h3>
-                      </div>
-                      <span className="text-xs font-semibold text-muted">
-                        {catDone}/{catTotal} done
+                  <div key={category}>
+                    {/* Category header */}
+                    <div className={`${categoryColors[catKey]} text-white px-5 py-3 flex items-center justify-between`}>
+                      <h3 className="text-sm font-bold tracking-widest uppercase">
+                        {categoryLabels[catKey]}
+                      </h3>
+                      <span className="text-xs font-bold tracking-wider opacity-70">
+                        {catDone}/{catTasks.length} DONE
                       </span>
                     </div>
-                    <ul className="divide-y divide-divider">
-                      {catTasks.map((task) => (
-                        <li
+
+                    {/* Task list */}
+                    <div className="border-l-2 border-r-2 border-b-2 border-black/10">
+                      {catTasks.map((task, i) => (
+                        <div
                           key={task.id}
-                          className="px-5 py-3.5 flex items-center justify-between gap-4"
+                          className={`px-5 py-4 flex items-center justify-between gap-4 ${
+                            i > 0 ? 'border-t border-black/5' : ''
+                          }`}
                         >
                           <div className="min-w-0">
                             <p
-                              className={`text-sm font-medium ${
-                                task.status === 'complete'
-                                  ? 'line-through text-muted'
-                                  : 'text-foreground'
+                              className={`text-sm font-bold ${
+                                task.status === 'complete' ? 'line-through text-muted' : ''
                               }`}
                             >
                               {task.title}
                             </p>
                             {(task.assignee || task.notes) && (
-                              <div className="flex items-center gap-3 mt-1">
-                                {task.assignee && (
-                                  <span className="text-xs text-muted font-medium">
-                                    {task.assignee}
-                                  </span>
-                                )}
-                                {task.notes && (
-                                  <span className="text-xs text-muted/60 italic">
-                                    {task.notes}
-                                  </span>
-                                )}
-                              </div>
+                              <p className="text-xs text-muted mt-0.5">
+                                {task.assignee && <span>{task.assignee}</span>}
+                                {task.assignee && task.notes && <span> &middot; </span>}
+                                {task.notes && <span className="italic">{task.notes}</span>}
+                              </p>
                             )}
                           </div>
-                          <TaskStatusBadge status={task.status} />
-                        </li>
+                          <span className={`text-[10px] font-bold tracking-widest uppercase shrink-0 ${statusColors[task.status]}`}>
+                            {statusLabels[task.status]}
+                          </span>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   </div>
                 )
               })}
             </div>
           )}
         </div>
-      </div>
+      </section>
 
-      <footer className="border-t border-divider text-muted text-center py-8 text-sm">
-        <p>2026 Boulder Roots Music Fest &middot; Founders Experience Dashboard</p>
+      <footer className="bg-black text-white/40 text-center py-8">
+        <p className="text-xs font-bold tracking-widest uppercase">
+          Boulder Roots Music Fest &middot; 2026
+        </p>
       </footer>
     </>
   )

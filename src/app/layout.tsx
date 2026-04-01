@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
-import { Lato } from "next/font/google";
+import { DM_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const lato = Lato({
-  variable: "--font-lato",
+const dmSans = DM_Sans({
+  variable: "--font-body",
   subsets: ["latin"],
-  weight: ["100", "300", "400", "700", "900"],
+  weight: ["400", "500", "700"],
 });
 
 export const metadata: Metadata = {
-  title: "BRMF Dashboard — Boulder Roots Music Fest",
-  description: "2026 Boulder Roots Music Fest — Founders Experience planning dashboard",
+  title: "BRMF 2026 — Boulder Roots Music Fest",
+  description: "The Founders Experience — August 26\u201330, 2026",
 };
 
 export default function RootLayout({
@@ -19,10 +20,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${lato.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col" style={{ fontFamily: "var(--font-lato), Lato, sans-serif" }}>
-        {children}
-      </body>
+    <html lang="en" className={`${dmSans.variable} h-full antialiased`}>
+      <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
 }
