@@ -4,6 +4,17 @@ import { useState } from 'react'
 import type { Event, EventTask, EventStatus } from '@/lib/types'
 import { getProgress } from '@/lib/data'
 
+function parseTime(timeStr: string): number {
+  const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i)
+  if (!match) return 0
+  let hours = parseInt(match[1])
+  const minutes = parseInt(match[2])
+  const ampm = match[3].toUpperCase()
+  if (ampm === 'PM' && hours !== 12) hours += 12
+  if (ampm === 'AM' && hours === 12) hours = 0
+  return hours * 60 + minutes
+}
+
 const dayOrder = ['wednesday', 'thursday', 'all-weekend', 'friday', 'saturday', 'sunday']
 
 const dayMeta: Record<string, { title: string; subtitle: string; color: string }> = {
@@ -45,6 +56,10 @@ export function Dashboard({
   for (const event of filtered) {
     if (!grouped[event.day]) grouped[event.day] = []
     grouped[event.day].push(event)
+  }
+  // Sort events within each day by start time
+  for (const day of Object.keys(grouped)) {
+    grouped[day].sort((a, b) => parseTime(a.start_time) - parseTime(b.start_time))
   }
 
   const allTasks = Object.values(tasksByEvent).flat()
