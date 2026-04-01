@@ -7,9 +7,12 @@ export function Navbar() {
         <Link href="/" className="text-sm font-bold tracking-widest uppercase">
           Boulder Roots 2026
         </Link>
-        <div className="flex items-center gap-8">
-          <Link href="/" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
+        <div className="flex items-center gap-6">
+          <Link href="/schedule" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
             Schedule
+          </Link>
+          <Link href="/tasks" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
+            Tasks
           </Link>
           <Link href="/bold-conversations" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
             Bold Conversations
