@@ -50,8 +50,9 @@ export function ChatSidebar() {
     fetchMessages()
   }, [])
 
-  // Fetch events for dropdown
+  // Fetch events for dropdown when tab switches or sidebar opens
   useEffect(() => {
+    if (tab !== 'add-task' || !open) return
     async function fetchEvents() {
       const { data } = await supabase
         .from('events')
@@ -60,11 +61,11 @@ export function ChatSidebar() {
       if (data) {
         const typed = data as Event[]
         setEvents(typed)
-        if (typed.length > 0) setSelectedEvent(typed[0].id)
+        if (typed.length > 0 && !selectedEvent) setSelectedEvent(typed[0].id)
       }
     }
     fetchEvents()
-  }, [])
+  }, [tab, open])
 
   // Realtime subscription
   useEffect(() => {
@@ -274,17 +275,26 @@ export function ChatSidebar() {
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">
                   Event
                 </label>
-                <select
-                  value={selectedEvent}
-                  onChange={(e) => setSelectedEvent(e.target.value)}
-                  className="w-full border-2 border-black bg-white px-3 py-2.5 text-xs font-bold text-black focus:outline-none focus:border-blue appearance-none"
-                >
-                  {events.map((ev) => (
-                    <option key={ev.id} value={ev.id}>
-                      {ev.day_label} — {ev.title}
-                    </option>
-                  ))}
-                </select>
+                {events.length === 0 ? (
+                  <p className="text-xs text-muted py-2">Loading events...</p>
+                ) : (
+                  <div className="relative">
+                    <select
+                      value={selectedEvent}
+                      onChange={(e) => setSelectedEvent(e.target.value)}
+                      className="w-full border-2 border-black bg-white px-3 py-2.5 pr-8 text-xs font-bold text-black focus:outline-none focus:border-blue cursor-pointer"
+                    >
+                      {events.map((ev) => (
+                        <option key={ev.id} value={ev.id}>
+                          {ev.day_label} — {ev.title}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-black text-xs">
+                      &#9660;
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
