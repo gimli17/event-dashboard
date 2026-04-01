@@ -354,7 +354,7 @@ export function MasterTaskList() {
                               {taskComments.length > 0 && (
                                 <div className="space-y-2 mb-3 max-h-48 overflow-y-auto">
                                   {taskComments.map((c) => (
-                                    <div key={c.id} className="text-xs group/comment flex items-start justify-between gap-2">
+                                    <div key={c.id} className="text-xs flex items-start justify-between gap-2 py-1">
                                       <div>
                                         <span className="font-bold text-blue">{c.author}</span>
                                         <span className="text-muted mx-1">&middot;</span>
@@ -363,7 +363,7 @@ export function MasterTaskList() {
                                       </div>
                                       <button
                                         onClick={() => handleDeleteComment(c.id)}
-                                        className="text-muted/0 group-hover/comment:text-muted/40 hover:!text-red transition-colors text-sm font-bold shrink-0 mt-0.5"
+                                        className="text-muted/30 hover:text-red transition-colors text-lg font-bold shrink-0 leading-none px-1"
                                         title="Delete comment"
                                       >
                                         &times;

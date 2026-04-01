@@ -78,7 +78,7 @@ export function Dashboard({
       {/* Hero */}
       <section className="bg-blue text-white py-20">
         <div className="max-w-7xl mx-auto px-6">
-          <Link href="/" className="inline-flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-white/50 hover:text-white mb-6 transition-colors">
+          <Link href="/" className="inline-flex items-center gap-2 bg-white/20 hover:bg-white/30 px-4 py-2 text-xs font-bold tracking-widest uppercase text-white mb-6 transition-colors">
             <span>&larr;</span> Back
           </Link>
           <p className="text-xs font-bold tracking-[0.3em] uppercase text-white/50 mb-4">
