@@ -6,7 +6,7 @@ import { useUser } from './user-provider'
 
 interface Topic {
   id: string
-  session_id: string
+  session_id: string | null
   track: string
   title: string
   description: string | null
@@ -21,15 +21,6 @@ interface Selection {
   founder_name: string
 }
 
-const sessionLabels: Record<string, string> = {
-  'wed-bold-s1': 'WEDNESDAY SESSION 1 — 12:30–2:00 PM',
-  'wed-bold-s2': 'WEDNESDAY SESSION 2 — 2:45–4:15 PM',
-  'thu-bold-s3': 'THURSDAY SESSION 3 — 1:00–2:30 PM',
-  'thu-bold-s4': 'THURSDAY SESSION 4 — 3:15–4:45 PM',
-}
-
-const sessionOrder = ['wed-bold-s1', 'wed-bold-s2', 'thu-bold-s3', 'thu-bold-s4']
-
 const trackColors: Record<string, string> = {
   health: 'bg-green',
   culture: 'bg-blue',
@@ -42,12 +33,7 @@ const trackLabels: Record<string, string> = {
   tech: 'Tech & Innovation',
 }
 
-const sessionDayColors: Record<string, string> = {
-  'wed-bold-s1': 'bg-green',
-  'wed-bold-s2': 'bg-green',
-  'thu-bold-s3': 'bg-red',
-  'thu-bold-s4': 'bg-red',
-}
+const trackOrder = ['health', 'culture', 'tech']
 
 export function BoldConversationsList() {
   const { displayName } = useUser()
@@ -59,7 +45,7 @@ export function BoldConversationsList() {
   useEffect(() => {
     async function fetch() {
       const [topicsRes, selectionsRes] = await Promise.all([
-        supabase.from('bc_topics').select('*').order('session_id'),
+        supabase.from('bc_topics').select('*'),
         supabase.from('bc_selections').select('*'),
       ])
       if (topicsRes.data) setTopics(topicsRes.data as Topic[])
@@ -69,7 +55,7 @@ export function BoldConversationsList() {
     fetch()
   }, [])
 
-  const handleSelect = async (topicId: string) => {
+  const handleToggleInterest = async (topicId: string) => {
     if (!displayName) return
 
     const existing = selections.find(
@@ -77,29 +63,9 @@ export function BoldConversationsList() {
     )
 
     if (existing) {
-      // Remove selection
       setSelections((prev) => prev.filter((s) => s.id !== existing.id))
       await supabase.from('bc_selections').delete().eq('id', existing.id)
     } else {
-      // Check capacity
-      const topicSelections = selections.filter((s) => s.topic_id === topicId)
-      const topic = topics.find((t) => t.id === topicId)
-      if (topic && topicSelections.length >= topic.capacity) return
-
-      // Remove any other selection in the same session
-      const thisTopic = topics.find((t) => t.id === topicId)
-      if (thisTopic) {
-        const sameSessionTopics = topics.filter((t) => t.session_id === thisTopic.session_id).map((t) => t.id)
-        const conflicting = selections.find(
-          (s) => sameSessionTopics.includes(s.topic_id) && s.founder_name === displayName
-        )
-        if (conflicting) {
-          setSelections((prev) => prev.filter((s) => s.id !== conflicting.id))
-          await supabase.from('bc_selections').delete().eq('id', conflicting.id)
-        }
-      }
-
-      // Add selection
       const { data } = await supabase
         .from('bc_selections')
         .insert({ topic_id: topicId, founder_name: displayName } as never)
@@ -112,10 +78,6 @@ export function BoldConversationsList() {
     }
   }
 
-  // Stats
-  const totalSlots = topics.reduce((sum, t) => sum + t.capacity, 0)
-  const totalFilled = selections.length
-
   if (loading) {
     return (
       <div className="max-w-5xl mx-auto px-6 py-16 text-center">
@@ -124,12 +86,26 @@ export function BoldConversationsList() {
     )
   }
 
-  // Group topics by session
+  // Group by track
   const grouped: Record<string, Topic[]> = {}
   for (const topic of topics) {
-    if (!grouped[topic.session_id]) grouped[topic.session_id] = []
-    grouped[topic.session_id].push(topic)
+    if (!grouped[topic.track]) grouped[topic.track] = []
+    grouped[topic.track].push(topic)
   }
+
+  // Sort topics within each track by interest count (most popular first)
+  for (const track of Object.keys(grouped)) {
+    grouped[track].sort((a, b) => {
+      const aCount = selections.filter((s) => s.topic_id === a.id).length
+      const bCount = selections.filter((s) => s.topic_id === b.id).length
+      return bCount - aCount
+    })
+  }
+
+  const totalInterest = selections.length
+  const topicsWithInterest = topics.filter(
+    (t) => selections.some((s) => s.topic_id === t.id)
+  ).length
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-8">
@@ -140,126 +116,126 @@ export function BoldConversationsList() {
           <p className="text-xs font-bold uppercase tracking-widest text-muted">Topics</p>
         </div>
         <div>
-          <p className="text-3xl font-bold text-green">{totalFilled}</p>
-          <p className="text-xs font-bold uppercase tracking-widest text-muted">Seats Taken</p>
+          <p className="text-3xl font-bold text-green">{totalInterest}</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-muted">Interest Signals</p>
         </div>
         <div>
-          <p className="text-3xl font-bold text-red">{totalSlots - totalFilled}</p>
-          <p className="text-xs font-bold uppercase tracking-widest text-muted">Seats Available</p>
+          <p className="text-3xl font-bold text-blue">{topicsWithInterest}</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-muted">Topics With Interest</p>
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="flex items-center gap-4 mb-8 flex-wrap">
-        {Object.entries(trackLabels).map(([key, label]) => (
-          <div key={key} className="flex items-center gap-2">
-            <div className={`w-3 h-3 ${trackColors[key]}`} />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted">{label}</span>
-          </div>
-        ))}
-      </div>
+      <p className="text-xs text-muted mb-8 max-w-xl">
+        Topics have not yet been assigned to sessions. Founders can indicate interest in as many topics as they like. Interest counts will help determine which topics make it into the final schedule.
+      </p>
 
-      {/* Sessions */}
+      {/* Topics by track */}
       <div className="space-y-10">
-        {sessionOrder
-          .filter((sid) => grouped[sid])
-          .map((sessionId) => {
-            const sessionTopics = grouped[sessionId]
-
-            return (
-              <div key={sessionId}>
-                <div className={`${sessionDayColors[sessionId]} text-white px-6 py-4`}>
-                  <h2 className="text-sm font-bold tracking-widest uppercase">
-                    {sessionLabels[sessionId]}
-                  </h2>
-                </div>
-
-                <div className="border-l-2 border-r-2 border-b-2 border-black/10">
-                  {sessionTopics.map((topic, i) => {
-                    const topicSelections = selections.filter((s) => s.topic_id === topic.id)
-                    const isFull = topicSelections.length >= topic.capacity
-                    const isSelected = topicSelections.some((s) => s.founder_name === displayName)
-                    const isExpanded = expandedTopic === topic.id
-
-                    return (
-                      <div
-                        key={topic.id}
-                        className={`${i > 0 ? 'border-t border-black/5' : ''}`}
-                      >
-                        <div className="px-5 py-4 flex items-start gap-4">
-                          {/* Track badge */}
-                          <div className={`${trackColors[topic.track]} text-white px-2 py-1 text-[9px] font-bold tracking-widest uppercase shrink-0 w-16 text-center`}>
-                            {topic.track === 'health' ? 'HEALTH' : topic.track === 'culture' ? 'CULTURE' : 'TECH'}
-                          </div>
-
-                          {/* Content */}
-                          <div className="flex-1 min-w-0">
-                            <h3 className="text-sm font-bold">{topic.title}</h3>
-                            {topic.description && (
-                              <p className="text-xs text-muted mt-1">{topic.description}</p>
-                            )}
-                            <div className="flex items-center gap-3 mt-2 flex-wrap">
-                              {topic.facilitator && (
-                                <span className="text-[10px] font-bold text-blue uppercase tracking-wider">
-                                  Facilitator: {topic.facilitator}
-                                </span>
-                              )}
-                              {topic.expert_guest && (
-                                <span className="text-[10px] font-bold text-gold uppercase tracking-wider">
-                                  Guest: {topic.expert_guest}
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Founder list toggle */}
-                            {topicSelections.length > 0 && (
-                              <button
-                                onClick={() => setExpandedTopic(isExpanded ? null : topic.id)}
-                                className="mt-2 text-[10px] font-bold text-blue uppercase tracking-widest hover:text-red transition-colors"
-                              >
-                                {isExpanded ? 'Hide' : 'Show'} {topicSelections.length} founder{topicSelections.length !== 1 ? 's' : ''}
-                              </button>
-                            )}
-
-                            {isExpanded && (
-                              <div className="mt-2 flex flex-wrap gap-1.5">
-                                {topicSelections.map((s) => (
-                                  <span
-                                    key={s.id}
-                                    className="text-[10px] font-bold uppercase tracking-wider bg-blue/10 text-blue px-2 py-0.5"
-                                  >
-                                    {s.founder_name}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Seats + select */}
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className={`text-xs font-bold ${isFull ? 'text-red' : 'text-muted'}`}>
-                              {topicSelections.length}/{topic.capacity}
-                            </span>
-                            <button
-                              onClick={() => handleSelect(topic.id)}
-                              disabled={!displayName || (isFull && !isSelected)}
-                              className={`px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
-                                isSelected
-                                  ? 'bg-green text-white hover:bg-red'
-                                  : 'bg-black/5 text-muted hover:bg-black/10'
-                              }`}
-                            >
-                              {isSelected ? 'JOINED' : isFull ? 'FULL' : 'JOIN'}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
+        {trackOrder
+          .filter((track) => grouped[track])
+          .map((track) => (
+            <div key={track}>
+              <div className={`${trackColors[track]} text-white px-6 py-4 flex items-center justify-between`}>
+                <h2 className="text-sm font-bold tracking-widest uppercase">
+                  {trackLabels[track]}
+                </h2>
+                <span className="text-xs font-bold tracking-wider opacity-70">
+                  {grouped[track].length} TOPICS
+                </span>
               </div>
-            )
-          })}
+
+              <div className="border-l-2 border-r-2 border-b-2 border-black/10">
+                {grouped[track].map((topic, i) => {
+                  const interestCount = selections.filter((s) => s.topic_id === topic.id).length
+                  const isInterested = selections.some(
+                    (s) => s.topic_id === topic.id && s.founder_name === displayName
+                  )
+                  const isExpanded = expandedTopic === topic.id
+                  const topicSelections = selections.filter((s) => s.topic_id === topic.id)
+
+                  return (
+                    <div
+                      key={topic.id}
+                      className={`${i > 0 ? 'border-t border-black/5' : ''}`}
+                    >
+                      <div className="px-5 py-4 flex items-start gap-4">
+                        {/* Interest count */}
+                        <div className="shrink-0 w-12 text-center pt-0.5">
+                          <p className={`text-2xl font-bold ${interestCount > 0 ? 'text-black' : 'text-muted/30'}`}>
+                            {interestCount}
+                          </p>
+                          <p className="text-[8px] font-bold uppercase tracking-widest text-muted">
+                            {interestCount === 1 ? 'vote' : 'votes'}
+                          </p>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-bold">{topic.title}</h3>
+                          {topic.description && (
+                            <p className="text-xs text-muted mt-1">{topic.description}</p>
+                          )}
+                          <div className="flex items-center gap-3 mt-2 flex-wrap">
+                            {topic.facilitator && (
+                              <span className="text-[10px] font-bold text-blue uppercase tracking-wider">
+                                Facilitator: {topic.facilitator}
+                              </span>
+                            )}
+                            {topic.expert_guest && (
+                              <span className="text-[10px] font-bold text-gold uppercase tracking-wider">
+                                Guest: {topic.expert_guest}
+                              </span>
+                            )}
+                            {topic.session_id && (
+                              <span className="text-[10px] font-bold text-green uppercase tracking-wider">
+                                Assigned to session
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Founder list */}
+                          {interestCount > 0 && (
+                            <button
+                              onClick={() => setExpandedTopic(isExpanded ? null : topic.id)}
+                              className="mt-2 text-[10px] font-bold text-blue uppercase tracking-widest hover:text-red transition-colors"
+                            >
+                              {isExpanded ? 'Hide' : 'Show'} {interestCount} interested
+                            </button>
+                          )}
+
+                          {isExpanded && (
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {topicSelections.map((s) => (
+                                <span
+                                  key={s.id}
+                                  className="text-[10px] font-bold uppercase tracking-wider bg-blue/10 text-blue px-2 py-0.5"
+                                >
+                                  {s.founder_name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Interest button */}
+                        <button
+                          onClick={() => handleToggleInterest(topic.id)}
+                          disabled={!displayName}
+                          className={`shrink-0 px-4 py-2 text-[10px] font-bold tracking-widest uppercase transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+                            isInterested
+                              ? 'bg-green text-white hover:bg-red'
+                              : 'bg-black/5 text-muted hover:bg-black/10'
+                          }`}
+                        >
+                          {isInterested ? 'INTERESTED' : 'I\'M IN'}
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
       </div>
     </div>
   )

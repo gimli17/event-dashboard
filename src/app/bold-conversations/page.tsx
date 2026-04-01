@@ -14,7 +14,7 @@ export default function BoldConversationsPage() {
             Bold<br />Conversations
           </h1>
           <p className="text-xs font-bold tracking-[0.3em] uppercase text-white/50 mt-4">
-            4 Sessions &middot; 3 Tracks &middot; 12 Topics &middot; 15 Seats Per Topic
+            3 Tracks &middot; Indicate Your Interest &middot; Topics Assigned to Sessions Later
           </p>
         </div>
       </section>
