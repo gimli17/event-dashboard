@@ -81,7 +81,7 @@ export function Dashboard({
             The Founders Experience
           </p>
           <h1 className="text-6xl sm:text-8xl font-bold tracking-tight leading-none uppercase">
-            Boulder<br />Roots<br />Music Fest
+            Boulder Roots
           </h1>
           <div className="flex items-center gap-6 mt-8">
             <div className="bg-red px-4 py-2">
