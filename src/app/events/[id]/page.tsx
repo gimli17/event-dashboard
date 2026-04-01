@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getEvent, getEventTasks } from '@/lib/data'
+import { getSponsors, getSponsorsByEvent } from '@/lib/sponsor-data'
 import { Navbar } from '@/components/navbar'
 import { TaskList } from '@/components/task-list'
 
@@ -19,9 +20,17 @@ export default async function EventPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const event = await getEvent(id)
+  const [event, sponsors] = await Promise.all([getEvent(id), getSponsors()])
 
   if (!event) notFound()
+
+  // Overlay sponsor from portal
+  const sponsorMap = getSponsorsByEvent(sponsors)
+  const portalSponsor = sponsorMap[id]
+  if (portalSponsor) {
+    event.sponsor_name = portalSponsor.name
+    event.sponsorship_available = false
+  }
 
   const tasks = await getEventTasks(id)
 

@@ -141,31 +141,6 @@ export default async function HubPage() {
             })}
           </div>
 
-          {/* VIP Event Selections */}
-          {stats.vipSelections.length > 0 && (
-            <div className="mt-12">
-              <div className="bg-gold text-white px-6 py-4">
-                <h2 className="text-sm font-bold tracking-widest uppercase">Sponsor Event Selections</h2>
-              </div>
-              <div className="border-l-2 border-r-2 border-b-2 border-black/10">
-                {stats.vipSelections.map((s) => (
-                  <div key={s.id} className="px-5 py-4 flex items-center justify-between border-b border-black/5 last:border-0">
-                    <div>
-                      <p className="text-sm font-bold">{s.name}</p>
-                      <p className="text-xs text-muted mt-0.5">
-                        {s.vip_party_name || 'No party name set'}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-gold bg-gold/10 px-2 py-1">
-                        {s.vip_day}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </section>
 

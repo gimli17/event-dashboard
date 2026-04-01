@@ -78,3 +78,22 @@ export function getSponsorStats(sponsors: Sponsor[]) {
 export function mapVipToEvent(vipDay: string): string | null {
   return vipDayToEventId[vipDay] ?? null
 }
+
+// Returns a map of event_id -> sponsor name for events that have a confirmed sponsor
+export function getSponsorsByEvent(sponsors: Sponsor[]): Record<string, { name: string; partyName: string | null; tier: string | null }> {
+  const result: Record<string, { name: string; partyName: string | null; tier: string | null }> = {}
+
+  for (const s of sponsors) {
+    if (!s.vip_day || !s.vip_day.trim()) continue
+    const eventId = vipDayToEventId[s.vip_day]
+    if (eventId) {
+      result[eventId] = {
+        name: s.recognition_name || s.name,
+        partyName: s.vip_party_name || null,
+        tier: s.tier_id,
+      }
+    }
+  }
+
+  return result
+}
