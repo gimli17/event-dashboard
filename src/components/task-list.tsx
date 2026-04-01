@@ -81,8 +81,7 @@ export function TaskList({
   const [notesValue, setNotesValue] = useState('')
   const [editingTitle, setEditingTitle] = useState<string | null>(null)
   const [titleValue, setTitleValue] = useState('')
-  const [editingAssignee, setEditingAssignee] = useState<string | null>(null)
-  const [assigneeValue, setAssigneeValue] = useState('')
+  const teamMembers = ['Cody', 'Sabrina', 'Joe', 'Danny', 'Connor', 'Gib', 'Emily', 'Kendall', 'Alex', 'Liam', 'Dave', 'Tom', 'Kevin']
 
   // Realtime subscription for task updates from other users
   useEffect(() => {
@@ -218,32 +217,25 @@ export function TaskList({
       .eq('id', task.id)
   }
 
-  const handleAssigneeEdit = (task: EventTask) => {
-    setEditingAssignee(task.id)
-    setAssigneeValue(task.assignee ?? '')
-  }
+  const handleAssigneeChange = async (task: EventTask, newAssignee: string | null) => {
+    if (!displayName) return
+    const oldAssignee = task.assignee
 
-  const handleAssigneeSave = async (taskId: string) => {
-    const newAssignee = assigneeValue.trim() || null
-    setEditingAssignee(null)
-
-    const oldAssignee = tasks.find((t) => t.id === taskId)?.assignee
-    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, assignee: newAssignee } : t)))
+    setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, assignee: newAssignee } : t)))
 
     await supabase
       .from('event_tasks')
       .update({ assignee: newAssignee } as never)
-      .eq('id', taskId)
+      .eq('id', task.id)
 
-    if (newAssignee !== oldAssignee && displayName) {
-      const taskName = tasks.find((t) => t.id === taskId)?.title ?? ''
+    if (newAssignee !== oldAssignee) {
       await supabase.from('comments').insert({
         author: displayName,
         message: newAssignee
-          ? `Assigned "${taskName}" to ${newAssignee}`
-          : `Unassigned "${taskName}"`,
+          ? `Assigned "${task.title}" to ${newAssignee}`
+          : `Unassigned "${task.title}"`,
         event_id: eventId,
-        task_id: taskId,
+        task_id: task.id,
         type: 'task-update',
       } as never)
     }
@@ -369,33 +361,21 @@ export function TaskList({
 
                           {/* Actions */}
                           <div className="flex items-center gap-1.5 shrink-0">
-                            {editingAssignee === task.id ? (
-                              <input
-                                type="text"
-                                value={assigneeValue}
-                                onChange={(e) => setAssigneeValue(e.target.value)}
-                                onBlur={() => handleAssigneeSave(task.id)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') handleAssigneeSave(task.id)
-                                  if (e.key === 'Escape') setEditingAssignee(null)
-                                }}
-                                autoFocus
-                                placeholder="Name..."
-                                className="border-2 border-black bg-white px-2 py-1 text-[10px] font-bold text-black focus:outline-none focus:border-blue w-24"
-                              />
-                            ) : (
-                              <button
-                                onClick={() => handleAssigneeEdit(task)}
-                                className={`px-2 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-all cursor-pointer ${
-                                  task.assignee
-                                    ? 'text-blue bg-blue/10 hover:bg-blue/20'
-                                    : 'text-muted/40 bg-black/5 hover:bg-black/10'
-                                }`}
-                                title="Click to assign"
-                              >
-                                {task.assignee || 'ASSIGN'}
-                              </button>
-                            )}
+                            <select
+                              value={task.assignee || ''}
+                              onChange={(e) => handleAssigneeChange(task, e.target.value || null)}
+                              disabled={!displayName}
+                              className={`px-2 py-1.5 text-[10px] font-bold tracking-widest uppercase cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed border-0 focus:outline-none ${
+                                task.assignee
+                                  ? 'text-blue bg-blue/10'
+                                  : 'text-muted/40 bg-black/5'
+                              }`}
+                            >
+                              <option value="">ASSIGN</option>
+                              {teamMembers.map((name) => (
+                                <option key={name} value={name}>{name}</option>
+                              ))}
+                            </select>
                             <button
                               onClick={() => handlePriorityCycle(task)}
                               disabled={!displayName}

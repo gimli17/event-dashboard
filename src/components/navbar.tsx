@@ -11,12 +11,12 @@ export function Navbar() {
           <Link href="/" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
             Schedule
           </Link>
+          <Link href="/bold-conversations" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
+            Bold Conversations
+          </Link>
           <Link href="/pending" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
             Pending
           </Link>
-          <span className="text-xs font-bold tracking-widest uppercase text-white/30 cursor-default">
-            Sponsors
-          </span>
         </div>
       </div>
     </nav>
