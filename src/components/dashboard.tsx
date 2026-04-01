@@ -7,12 +7,12 @@ import { getProgress } from '@/lib/data'
 const dayOrder = ['wednesday', 'thursday', 'all-weekend', 'friday', 'saturday', 'sunday']
 
 const dayMeta: Record<string, { title: string; subtitle: string; color: string }> = {
-  wednesday: { title: 'WEDNESDAY', subtitle: 'AUG 26 \u2014 WARM UP DAY', color: 'bg-green text-white' },
-  thursday: { title: 'THURSDAY', subtitle: 'AUG 27 \u2014 DEEPENING THE WORK', color: 'bg-red text-white' },
+  wednesday: { title: 'WEDNESDAY', subtitle: 'AUG 26', color: 'bg-green text-white' },
+  thursday: { title: 'THURSDAY', subtitle: 'AUG 27', color: 'bg-red text-white' },
   'all-weekend': { title: 'ALL WEEKEND', subtitle: 'FRI\u2013SUN', color: 'bg-gold text-white' },
-  friday: { title: 'FRIDAY', subtitle: 'AUG 28 \u2014 INTEGRATION', color: 'bg-blue text-white' },
-  saturday: { title: 'SATURDAY', subtitle: 'AUG 29 \u2014 CULTURAL MOMENTUM', color: 'bg-orange text-white' },
-  sunday: { title: 'SUNDAY', subtitle: 'AUG 30 \u2014 RESOLUTION', color: 'bg-green text-white' },
+  friday: { title: 'FRIDAY', subtitle: 'AUG 28', color: 'bg-blue text-white' },
+  saturday: { title: 'SATURDAY', subtitle: 'AUG 29', color: 'bg-orange text-white' },
+  sunday: { title: 'SUNDAY', subtitle: 'AUG 30', color: 'bg-green text-white' },
 }
 
 const filters: { label: string; value: EventStatus | 'all' }[] = [
@@ -123,14 +123,28 @@ export function Dashboard({
                 .map((day) => (
                   <div key={day}>
                     {/* Day header */}
-                    <div className={`${dayMeta[day].color} px-6 py-4 flex items-baseline justify-between mt-8`}>
-                      <h2 className="text-2xl font-bold tracking-tight uppercase">
-                        {dayMeta[day].title}
-                      </h2>
-                      <span className="text-xs font-bold tracking-widest uppercase opacity-70">
-                        {dayMeta[day].subtitle}
-                      </span>
-                    </div>
+                    {(() => {
+                      const openSlots = grouped[day].filter(
+                        (e) => e.sponsorship_available && !e.sponsor_name
+                      ).length
+                      return (
+                        <div className={`${dayMeta[day].color} px-6 py-4 flex items-center justify-between mt-8`}>
+                          <div className="flex items-baseline gap-4">
+                            <h2 className="text-2xl font-bold tracking-tight uppercase">
+                              {dayMeta[day].title}
+                            </h2>
+                            <span className="text-xs font-bold tracking-widest uppercase opacity-70">
+                              {dayMeta[day].subtitle}
+                            </span>
+                          </div>
+                          {openSlots > 0 && (
+                            <span className="bg-white/20 px-3 py-1 text-xs font-bold tracking-widest uppercase">
+                              {openSlots} Open Sponsorship{openSlots !== 1 ? 's' : ''}
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })()}
 
                     {/* Events list */}
                     <div className="border-l-2 border-r-2 border-b-2 border-black/10">
@@ -169,8 +183,8 @@ export function Dashboard({
                                     {accessLabels[event.access]}
                                   </span>
                                   {event.sponsorship_available && !event.sponsor_name && (
-                                    <span className="text-xs font-bold text-red uppercase tracking-wider">
-                                      Open for Sponsorship
+                                    <span className="text-[10px] font-bold text-red uppercase tracking-widest bg-red/10 px-2 py-0.5">
+                                      Sponsor Slot Open
                                     </span>
                                   )}
                                   {event.sponsor_name && (
