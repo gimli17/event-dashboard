@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useUser } from './user-provider'
+import { useSidebar } from '@/lib/sidebar-context'
 import type { Comment, EventTask } from '@/lib/types'
 
 interface EventOption {
@@ -10,8 +11,6 @@ interface EventOption {
   title: string
   day_label: string
 }
-
-type Tab = 'chat' | 'add-task'
 
 const categories: { label: string; value: EventTask['category'] }[] = [
   { label: 'Venue', value: 'venue' },
@@ -22,10 +21,22 @@ const categories: { label: string; value: EventTask['category'] }[] = [
   { label: 'Production', value: 'production' },
 ]
 
+function renderMessage(text: string) {
+  const parts = text.split(/(@\w+)/g)
+  return parts.map((part, i) =>
+    part.startsWith('@') ? (
+      <span key={i} className="font-bold text-red">{part}</span>
+    ) : (
+      <span key={i}>{part}</span>
+    )
+  )
+}
+
 export function ChatSidebar() {
   const { displayName } = useUser()
-  const [open, setOpen] = useState(false)
-  const [tab, setTab] = useState<Tab>('chat')
+  const sidebar = useSidebar()
+  const { isOpen, eventFilter, tab } = sidebar
+
   const [messages, setMessages] = useState<Comment[]>([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
@@ -51,31 +62,27 @@ export function ChatSidebar() {
         .from('comments')
         .select('*')
         .order('created_at', { ascending: true })
-      if (data) setMessages(data)
+      if (data) setMessages(data as Comment[])
     }
     fetchMessages()
   }, [])
 
-  // Fetch events for dropdown when tab switches or sidebar opens
+  // Fetch events for dropdown
   useEffect(() => {
-    if (tab !== 'add-task' || !open) return
+    if (!isOpen) return
     if (events.length > 0) return
     async function fetchEvents() {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('events')
         .select('id, title, day_label, date')
         .order('date', { ascending: true })
-      if (error) {
-        console.error('Failed to fetch events:', error)
-        return
-      }
       if (data && data.length > 0) {
         setEvents(data as EventOption[])
         setSelectedEvent((data as EventOption[])[0].id)
       }
     }
     fetchEvents()
-  }, [tab, open, events.length])
+  }, [isOpen, events.length])
 
   // Realtime subscription
   useEffect(() => {
@@ -101,7 +108,12 @@ export function ChatSidebar() {
 
   useEffect(() => {
     scrollToBottom()
-  }, [messages, scrollToBottom])
+  }, [messages, scrollToBottom, eventFilter])
+
+  // Filter messages by event
+  const filteredMessages = eventFilter
+    ? messages.filter((m) => m.event_id === eventFilter || m.event_id === null)
+    : messages
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -114,6 +126,8 @@ export function ChatSidebar() {
     await supabase.from('comments').insert({
       author: displayName,
       message: trimmed,
+      event_id: eventFilter || null,
+      type: 'chat',
     } as never)
 
     setSending(false)
@@ -139,10 +153,12 @@ export function ChatSidebar() {
 
     if (!error) {
       const eventName = events.find((e) => e.id === selectedEvent)?.title ?? 'event'
-      // Log the action as a chat message
       await supabase.from('comments').insert({
         author: displayName,
         message: `Added task "${taskTitle.trim()}" to ${eventName} [${selectedCategory}]`,
+        event_id: selectedEvent,
+        task_id: taskId,
+        type: 'task-update',
       } as never)
 
       setTaskSuccess(`Added to ${eventName}`)
@@ -164,41 +180,42 @@ export function ChatSidebar() {
     return d.toLocaleDateString([], { month: 'short', day: 'numeric' })
   }
 
+  const filterEventName = eventFilter
+    ? events.find((e) => e.id === eventFilter)?.title
+    : null
+
   return (
     <>
       {/* Toggle button */}
       <button
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => (isOpen ? sidebar.closeSidebar() : sidebar.openSidebar())}
         className="fixed right-0 top-1/2 -translate-y-1/2 z-[9990] bg-black text-cream px-2 py-6 text-xs font-bold uppercase tracking-widest hover:bg-blue transition-colors border-2 border-r-0 border-black"
         style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
-        aria-label={open ? 'Close chat' : 'Open chat'}
+        aria-label={isOpen ? 'Close chat' : 'Open chat'}
       >
-        {open ? 'Close' : 'Chat'}
+        {isOpen ? 'Close' : 'Chat'}
       </button>
 
       {/* Overlay */}
-      {open && (
+      {isOpen && (
         <div
           className="fixed inset-0 z-[9991] bg-black/30"
-          onClick={() => setOpen(false)}
+          onClick={() => sidebar.closeSidebar()}
         />
       )}
 
       {/* Sidebar */}
       <div
         className={`fixed top-0 right-0 h-full w-full max-w-sm z-[9992] bg-cream border-l-4 border-black flex flex-col transition-transform duration-300 ease-in-out ${
-          open ? 'translate-x-0' : 'translate-x-full'
+          isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b-4 border-black bg-black text-cream">
-          <h2 className="text-sm font-bold uppercase tracking-widest">
-            BRMF
-          </h2>
+          <h2 className="text-sm font-bold uppercase tracking-widest">BRMF</h2>
           <button
-            onClick={() => setOpen(false)}
-            className="text-cream hover:text-red-bright text-lg font-bold leading-none"
-            aria-label="Close chat"
+            onClick={() => sidebar.closeSidebar()}
+            className="text-cream hover:text-red text-lg font-bold leading-none"
           >
             &times;
           </button>
@@ -207,21 +224,17 @@ export function ChatSidebar() {
         {/* Tabs */}
         <div className="flex border-b-2 border-black">
           <button
-            onClick={() => setTab('chat')}
+            onClick={() => sidebar.setTab('chat')}
             className={`flex-1 py-3 text-xs font-bold uppercase tracking-widest transition-colors ${
-              tab === 'chat'
-                ? 'bg-blue text-white'
-                : 'bg-cream-dark text-muted hover:text-black'
+              tab === 'chat' ? 'bg-blue text-white' : 'bg-cream-dark text-muted hover:text-black'
             }`}
           >
             Chat
           </button>
           <button
-            onClick={() => setTab('add-task')}
+            onClick={() => sidebar.setTab('add-task')}
             className={`flex-1 py-3 text-xs font-bold uppercase tracking-widest transition-colors border-l-2 border-black ${
-              tab === 'add-task'
-                ? 'bg-red text-white'
-                : 'bg-cream-dark text-muted hover:text-black'
+              tab === 'add-task' ? 'bg-red text-white' : 'bg-cream-dark text-muted hover:text-black'
             }`}
           >
             + Add Task
@@ -230,25 +243,69 @@ export function ChatSidebar() {
 
         {tab === 'chat' ? (
           <>
+            {/* Event filter */}
+            <div className="px-4 py-2 border-b border-black/10 bg-cream-dark flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted shrink-0">Filter:</span>
+              {eventFilter ? (
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue truncate">
+                    {filterEventName || 'Event'}
+                  </span>
+                  <button
+                    onClick={() => sidebar.setEventFilter(null)}
+                    className="text-[10px] font-bold text-red hover:text-black"
+                  >
+                    &times; CLEAR
+                  </button>
+                </div>
+              ) : (
+                <select
+                  value=""
+                  onChange={(e) => {
+                    if (e.target.value) sidebar.setEventFilter(e.target.value)
+                  }}
+                  className="flex-1 bg-transparent text-[10px] font-bold uppercase tracking-wider text-black border-0 focus:outline-none cursor-pointer"
+                >
+                  <option value="">All Events</option>
+                  {events.map((ev) => (
+                    <option key={ev.id} value={ev.id}>
+                      {ev.day_label} — {ev.title}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-              {messages.length === 0 && (
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+              {filteredMessages.length === 0 && (
                 <p className="text-xs uppercase tracking-wider text-muted text-center mt-8 font-medium">
-                  No messages yet. Start the conversation!
+                  No messages yet.
                 </p>
               )}
-              {messages.map((msg) => (
-                <div key={msg.id} className="border-b-2 border-cream-dark pb-3">
-                  <div className="flex items-baseline justify-between gap-2 mb-1">
-                    <span className="text-xs font-bold uppercase tracking-wider text-blue">
-                      {msg.author}
+              {filteredMessages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`pb-3 ${
+                    msg.type === 'task-update'
+                      ? 'border-l-4 border-gold pl-3 opacity-80'
+                      : 'border-b-2 border-cream-dark'
+                  }`}
+                >
+                  <div className="flex items-baseline justify-between gap-2 mb-0.5">
+                    <span className={`text-xs font-bold uppercase tracking-wider ${
+                      msg.type === 'task-update' ? 'text-gold' : 'text-blue'
+                    }`}>
+                      {msg.type === 'task-update' ? `${msg.author} \u00b7 update` : msg.author}
                     </span>
                     <span className="text-[10px] uppercase tracking-wider text-muted font-medium whitespace-nowrap">
                       {formatDate(msg.created_at)} {formatTime(msg.created_at)}
                     </span>
                   </div>
-                  <p className="text-sm text-black leading-relaxed">
-                    {msg.message}
+                  <p className={`text-sm leading-relaxed ${
+                    msg.type === 'task-update' ? 'text-muted italic' : 'text-black'
+                  }`}>
+                    {renderMessage(msg.message)}
                   </p>
                 </div>
               ))}
@@ -368,10 +425,6 @@ export function ChatSidebar() {
               >
                 {addingTask ? 'Adding...' : 'Add Task'}
               </button>
-
-              <p className="text-[10px] text-muted text-center uppercase tracking-wider">
-                Tasks are logged in chat and added to the event
-              </p>
             </form>
           </>
         )}

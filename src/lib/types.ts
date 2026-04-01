@@ -1,6 +1,7 @@
 export type EventStatus = 'planning' | 'in-progress' | 'confirmed' | 'complete'
 export type TaskStatus = 'not-started' | 'in-progress' | 'complete'
 export type AccessLevel = 'founders' | 'founders-premium' | 'all-access' | 'sponsor-private'
+export type CommentType = 'chat' | 'task-update'
 
 export interface Event {
   id: string
@@ -16,7 +17,7 @@ export interface Event {
   access: AccessLevel
   sponsorship_available: boolean
   sponsor_name: string | null
-  time_block: 'morning' | 'early-afternoon' | 'mid-afternoon' | 'late-afternoon' | 'evening' | 'prime-time' | 'after-hours' | 'all-day'
+  time_block: string
   created_at: string
 }
 
@@ -35,6 +36,9 @@ export interface Comment {
   id: string
   author: string
   message: string
+  event_id: string | null
+  task_id: string | null
+  type: CommentType
   created_at: string
 }
 

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { DM_Sans } from "next/font/google";
 import "./globals.css";
 import { UserProvider } from "@/components/user-provider";
+import { SidebarProvider } from "@/lib/sidebar-context";
 import { ChatSidebar } from "@/components/chat-sidebar";
 
 const dmSans = DM_Sans({
@@ -24,8 +25,10 @@ export default function RootLayout({
     <html lang="en" className={`${dmSans.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <UserProvider>
-          {children}
-          <ChatSidebar />
+          <SidebarProvider>
+            {children}
+            <ChatSidebar />
+          </SidebarProvider>
         </UserProvider>
       </body>
     </html>
