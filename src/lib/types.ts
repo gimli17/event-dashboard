@@ -31,6 +31,13 @@ export interface EventTask {
   created_at: string
 }
 
+export interface Comment {
+  id: string
+  author: string
+  message: string
+  created_at: string
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -38,12 +45,29 @@ export interface Database {
         Row: Event
         Insert: Omit<Event, 'id' | 'created_at'>
         Update: Partial<Omit<Event, 'id' | 'created_at'>>
+        Relationships: []
       }
       event_tasks: {
         Row: EventTask
         Insert: Omit<EventTask, 'id' | 'created_at'>
         Update: Partial<Omit<EventTask, 'id' | 'created_at'>>
+        Relationships: []
       }
+      comments: {
+        Row: Comment
+        Insert: Omit<Comment, 'id' | 'created_at'>
+        Update: Partial<Omit<Comment, 'id' | 'created_at'>>
+        Relationships: []
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
     }
   }
 }
