@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Navbar } from '@/components/navbar'
+import { getSponsors, getSponsorStats } from '@/lib/sponsor-data'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,7 +45,10 @@ const modules = [
   },
 ]
 
-export default function HubPage() {
+export default async function HubPage() {
+  const sponsors = await getSponsors()
+  const stats = getSponsorStats(sponsors)
+
   return (
     <>
       <Navbar />
@@ -63,15 +67,55 @@ export default function HubPage() {
         </div>
       </section>
 
+      {/* Sponsor stats bar */}
+      {stats.total > 0 && (
+        <section className="bg-cream-dark border-b-2 border-black/10">
+          <div className="max-w-5xl mx-auto px-6 py-5 flex items-center gap-8 flex-wrap">
+            <div>
+              <p className="text-xl font-bold">{stats.total}</p>
+              <p className="text-xs text-muted uppercase tracking-wider font-bold">Sponsors</p>
+            </div>
+            <div className="w-px h-8 bg-black/10" />
+            <div>
+              <p className="text-xl font-bold">{stats.tiered}</p>
+              <p className="text-xs text-muted uppercase tracking-wider font-bold">With Tier</p>
+            </div>
+            <div className="w-px h-8 bg-black/10" />
+            <div>
+              <p className="text-xl font-bold text-green">${(stats.totalRevenue / 1000).toFixed(0)}K</p>
+              <p className="text-xs text-muted uppercase tracking-wider font-bold">Committed</p>
+            </div>
+            <div className="w-px h-8 bg-black/10" />
+            <div>
+              <p className="text-xl font-bold">{stats.withPayment}</p>
+              <p className="text-xs text-muted uppercase tracking-wider font-bold">Payments</p>
+            </div>
+            <div className="w-px h-8 bg-black/10" />
+            <div>
+              <p className="text-xl font-bold">{stats.founders2025}</p>
+              <p className="text-xs text-muted uppercase tracking-wider font-bold">2025 Founders</p>
+            </div>
+            <div className="w-px h-8 bg-black/10" />
+            {Object.entries(stats.tierCounts).sort((a, b) => b[1] - a[1]).map(([tier, count]) => (
+              <div key={tier}>
+                <p className="text-xl font-bold">{count}</p>
+                <p className="text-xs text-muted uppercase tracking-wider font-bold">{tier}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="bg-cream flex-1">
         <div className="max-w-5xl mx-auto px-6 py-12">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {modules.map((mod) => {
+              const isExternal = (mod as { external?: boolean }).external
               const inner = (
                 <div className="group h-full">
                   <div className={`${mod.color} text-white px-5 py-3 flex items-center justify-between`}>
                     <h2 className="text-xs font-bold tracking-widest uppercase">{mod.title}</h2>
-                    {(mod as { external?: boolean }).external && (
+                    {isExternal && (
                       <span className="text-[9px] font-bold tracking-widest uppercase opacity-50">External</span>
                     )}
                   </div>
@@ -81,7 +125,7 @@ export default function HubPage() {
                 </div>
               )
 
-              if ((mod as { external?: boolean }).external) {
+              if (isExternal) {
                 return (
                   <a key={mod.title} href={mod.href} target="_blank" rel="noopener noreferrer">
                     {inner}
@@ -96,6 +140,32 @@ export default function HubPage() {
               )
             })}
           </div>
+
+          {/* VIP Event Selections */}
+          {stats.vipSelections.length > 0 && (
+            <div className="mt-12">
+              <div className="bg-gold text-white px-6 py-4">
+                <h2 className="text-sm font-bold tracking-widest uppercase">Sponsor Event Selections</h2>
+              </div>
+              <div className="border-l-2 border-r-2 border-b-2 border-black/10">
+                {stats.vipSelections.map((s) => (
+                  <div key={s.id} className="px-5 py-4 flex items-center justify-between border-b border-black/5 last:border-0">
+                    <div>
+                      <p className="text-sm font-bold">{s.name}</p>
+                      <p className="text-xs text-muted mt-0.5">
+                        {s.vip_party_name || 'No party name set'}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-gold bg-gold/10 px-2 py-1">
+                        {s.vip_day}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
