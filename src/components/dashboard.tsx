@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import type { Event, EventTask, EventStatus } from '@/lib/types'
 import { getProgress } from '@/lib/data'
 
@@ -77,6 +78,9 @@ export function Dashboard({
       {/* Hero */}
       <section className="bg-blue text-white py-20">
         <div className="max-w-7xl mx-auto px-6">
+          <Link href="/" className="inline-flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-white/50 hover:text-white mb-6 transition-colors">
+            <span>&larr;</span> Back
+          </Link>
           <p className="text-xs font-bold tracking-[0.3em] uppercase text-white/50 mb-4">
             The Founders Experience
           </p>

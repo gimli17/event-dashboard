@@ -148,6 +148,11 @@ export function ChatSidebar() {
     ? messages.filter((m) => m.event_id === eventFilter || m.event_id === null)
     : messages
 
+  const handleDeleteMessage = async (id: string) => {
+    setMessages((prev) => prev.filter((m) => m.id !== id))
+    await supabase.from('comments').delete().eq('id', id)
+  }
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault()
     const trimmed = input.trim()
@@ -328,14 +333,23 @@ export function ChatSidebar() {
                 <p className="text-xs uppercase tracking-wider text-muted text-center mt-8 font-medium">No messages yet.</p>
               )}
               {filteredMessages.map((msg) => (
-                <div key={msg.id} className={`pb-3 ${msg.type === 'task-update' ? 'border-l-4 border-gold pl-3 opacity-80' : 'border-b-2 border-cream-dark'}`}>
+                <div key={msg.id} className={`pb-3 group/msg ${msg.type === 'task-update' ? 'border-l-4 border-gold pl-3 opacity-80' : 'border-b-2 border-cream-dark'}`}>
                   <div className="flex items-baseline justify-between gap-2 mb-0.5">
                     <span className={`text-xs font-bold uppercase tracking-wider ${msg.type === 'task-update' ? 'text-gold' : 'text-blue'}`}>
                       {msg.type === 'task-update' ? `${msg.author} \u00b7 update` : msg.author}
                     </span>
-                    <span className="text-[10px] uppercase tracking-wider text-muted font-medium whitespace-nowrap">
-                      {formatDate(msg.created_at)} {formatTime(msg.created_at)}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] uppercase tracking-wider text-muted font-medium whitespace-nowrap">
+                        {formatDate(msg.created_at)} {formatTime(msg.created_at)}
+                      </span>
+                      <button
+                        onClick={() => handleDeleteMessage(msg.id)}
+                        className="text-muted/0 group-hover/msg:text-muted/40 hover:!text-red transition-colors text-xs font-bold"
+                        title="Delete"
+                      >
+                        &times;
+                      </button>
+                    </div>
                   </div>
                   <p className={`text-sm leading-relaxed ${msg.type === 'task-update' ? 'text-muted italic' : 'text-black'}`}>
                     {renderMessage(msg.message)}

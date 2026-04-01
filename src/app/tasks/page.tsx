@@ -1,5 +1,6 @@
 import { Navbar } from '@/components/navbar'
 import { MasterTaskList } from '@/components/master-task-list'
+import { BackLink } from '@/components/back-link'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,6 +11,7 @@ export default function TasksPage() {
 
       <section className="bg-red text-white py-12">
         <div className="max-w-6xl mx-auto px-6">
+          <BackLink />
           <p className="text-xs font-bold tracking-[0.3em] uppercase text-white/50 mb-4">
             W/C March 30th
           </p>

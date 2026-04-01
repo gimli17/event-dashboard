@@ -138,6 +138,11 @@ export function MasterTaskList() {
     }
   }
 
+  const handleDeleteComment = async (commentId: string) => {
+    setComments((prev) => prev.filter((c) => c.id !== commentId))
+    await supabase.from('master_task_comments').delete().eq('id', commentId)
+  }
+
   const handleAddComment = async (taskId: string) => {
     if (!commentInput.trim() || !displayName || sending) return
     setSending(true)
@@ -349,11 +354,20 @@ export function MasterTaskList() {
                               {taskComments.length > 0 && (
                                 <div className="space-y-2 mb-3 max-h-48 overflow-y-auto">
                                   {taskComments.map((c) => (
-                                    <div key={c.id} className="text-xs">
-                                      <span className="font-bold text-blue">{c.author}</span>
-                                      <span className="text-muted mx-1">&middot;</span>
-                                      <span className="text-muted">{new Date(c.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })} {new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                      <p className="mt-0.5">{c.message}</p>
+                                    <div key={c.id} className="text-xs group/comment flex items-start justify-between gap-2">
+                                      <div>
+                                        <span className="font-bold text-blue">{c.author}</span>
+                                        <span className="text-muted mx-1">&middot;</span>
+                                        <span className="text-muted">{new Date(c.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })} {new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                        <p className="mt-0.5">{c.message}</p>
+                                      </div>
+                                      <button
+                                        onClick={() => handleDeleteComment(c.id)}
+                                        className="text-muted/0 group-hover/comment:text-muted/40 hover:!text-red transition-colors text-sm font-bold shrink-0 mt-0.5"
+                                        title="Delete comment"
+                                      >
+                                        &times;
+                                      </button>
                                     </div>
                                   ))}
                                   <div ref={commentEndRef} />

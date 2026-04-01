@@ -1,5 +1,6 @@
 import { Navbar } from '@/components/navbar'
 import { BoldConversationsList } from '@/components/bold-conversations-list'
+import { BackLink } from '@/components/back-link'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,6 +11,7 @@ export default function BoldConversationsPage() {
 
       <section className="bg-green text-white py-12">
         <div className="max-w-5xl mx-auto px-6">
+          <BackLink />
           <h1 className="text-4xl sm:text-5xl font-bold tracking-tight leading-none uppercase">
             Bold<br />Conversations
           </h1>
