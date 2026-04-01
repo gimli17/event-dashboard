@@ -7,7 +7,7 @@ export function SponsorshipBadge({
 }) {
   if (sponsorName) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-accent-light text-accent px-2.5 py-0.5 text-xs font-medium">
+      <span className="inline-flex items-center gap-1 rounded-md border border-violet-100 bg-violet-50 text-violet-600 px-2 py-0.5 text-[11px] font-semibold">
         <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
           <path
             fillRule="evenodd"
@@ -15,15 +15,18 @@ export function SponsorshipBadge({
             clipRule="evenodd"
           />
         </svg>
-        Sponsored by {sponsorName}
+        {sponsorName}
       </span>
     )
   }
 
   if (available) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-success-light text-success px-2.5 py-0.5 text-xs font-medium animate-pulse">
-        <span className="w-1.5 h-1.5 rounded-full bg-success" />
+      <span className="inline-flex items-center gap-1.5 rounded-md border border-emerald-100 bg-emerald-50 text-emerald-600 px-2 py-0.5 text-[11px] font-semibold">
+        <span className="relative flex h-1.5 w-1.5">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+        </span>
         Open for Sponsorship
       </span>
     )

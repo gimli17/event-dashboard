@@ -19,45 +19,35 @@ export function EventCard({
   return (
     <Link
       href={`/events/${event.id}`}
-      className="block rounded-xl border border-card-border bg-card p-5 shadow-sm hover:shadow-md hover:border-accent/30 transition-all"
+      className="group block bg-white rounded-2xl border border-card-border p-6 shadow-sm hover:shadow-lg hover:border-accent/20 transition-all duration-200"
     >
-      <div className="flex items-start justify-between gap-3 mb-2">
-        <h3 className="font-semibold text-sm leading-tight">{event.title}</h3>
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <h3 className="font-bold text-sm leading-snug text-foreground group-hover:text-accent transition-colors">
+          {event.title}
+        </h3>
         <EventStatusBadge status={event.status} />
       </div>
 
-      <p className="text-xs text-muted mb-1">
+      <div className="flex items-center gap-1.5 text-xs text-muted mb-1">
+        <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
         {event.start_time} – {event.end_time}
-      </p>
+      </div>
 
-      <p className="text-xs text-muted mb-3 flex items-center gap-1.5">
-        <svg
-          className="w-3 h-3 shrink-0"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-          />
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-          />
+      <div className="flex items-center gap-1.5 text-xs text-muted mb-4">
+        <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
         <span className="truncate">{event.location}</span>
-      </p>
+      </div>
 
       <ProgressBar percent={progress} />
 
-      <div className="flex items-center justify-between mt-3 gap-2 flex-wrap">
+      <div className="flex items-center justify-between mt-4 gap-2 flex-wrap">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted">
+          <span className="text-xs text-muted font-medium">
             {completedTasks}/{tasks.length} tasks
           </span>
           <AccessBadge access={event.access} />

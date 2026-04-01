@@ -1,21 +1,25 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8f9fb;
-  --foreground: #111827;
+  --background: #ffffff;
+  --foreground: #1a1a2e;
   --card: #ffffff;
-  --card-border: #e5e7eb;
-  --muted: #6b7280;
-  --accent: #7c3aed;
-  --accent-light: #ede9fe;
-  --success: #059669;
-  --success-light: #d1fae5;
-  --warning: #d97706;
-  --warning-light: #fef3c7;
-  --danger: #dc2626;
-  --danger-light: #fee2e2;
-  --info: #2563eb;
-  --info-light: #dbeafe;
+  --card-border: #e8eaf0;
+  --muted: #6b7194;
+  --accent: #4a6cf7;
+  --accent-hover: #3b5de7;
+  --accent-light: #eef2ff;
+  --success: #10b981;
+  --success-light: #ecfdf5;
+  --warning: #f59e0b;
+  --warning-light: #fffbeb;
+  --danger: #ef4444;
+  --danger-light: #fef2f2;
+  --info: #3b82f6;
+  --info-light: #eff6ff;
+  --section-bg: #f8f9fc;
+  --hero-bg: #1a1a2e;
+  --hero-text: #ffffff;
 }
 
 @theme inline {
@@ -25,6 +29,7 @@
   --color-card-border: var(--card-border);
   --color-muted: var(--muted);
   --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
   --color-accent-light: var(--accent-light);
   --color-success: var(--success);
   --color-success-light: var(--success-light);
@@ -34,12 +39,16 @@
   --color-danger-light: var(--danger-light);
   --color-info: var(--info);
   --color-info-light: var(--info-light);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-section-bg: var(--section-bg);
+  --color-hero-bg: var(--hero-bg);
+  --color-hero-text: var(--hero-text);
+  --font-sans: "Lato", Arial, Helvetica, sans-serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }

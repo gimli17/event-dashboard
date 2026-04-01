@@ -1,5 +1,6 @@
 import { getEvents, getEventTasks } from '@/lib/data'
 import { Dashboard } from '@/components/dashboard'
+import { Navbar } from '@/components/navbar'
 import type { EventTask } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -15,5 +16,10 @@ export default async function HomePage() {
   )
   const tasksByEvent: Record<string, EventTask[]> = Object.fromEntries(taskEntries)
 
-  return <Dashboard events={events} tasksByEvent={tasksByEvent} />
+  return (
+    <>
+      <Navbar />
+      <Dashboard events={events} tasksByEvent={tasksByEvent} />
+    </>
+  )
 }
