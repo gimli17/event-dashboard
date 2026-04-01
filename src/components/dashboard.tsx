@@ -52,6 +52,11 @@ export function Dashboard({
   const totalTasks = allTasks.length
   const sponsorshipOpen = events.filter((e) => e.sponsorship_available && !e.sponsor_name).length
 
+  // Bold Conversations slot tracking
+  const boldEvents = events.filter((e) => e.id.includes('bold'))
+  const slotsTotal = boldEvents.reduce((sum, e) => sum + (e.sponsor_slots_total ?? 0), 0)
+  const slotsFilled = boldEvents.reduce((sum, e) => sum + (e.sponsor_slots_filled ?? 0), 0)
+
   return (
     <>
       {/* Hero */}
@@ -87,6 +92,12 @@ export function Dashboard({
           <Stat label="Talent Booked" value={`${allTasks.filter(t => t.category === 'talent' && t.status === 'complete').length}/${allTasks.filter(t => t.category === 'talent').length}`} />
           <div className="w-px h-8 bg-black/10 hidden sm:block" />
           <Stat label="In Progress" value={`${events.filter(e => e.status === 'in-progress').length}`} />
+          {slotsTotal > 0 && (
+            <>
+              <div className="w-px h-8 bg-black/10 hidden sm:block" />
+              <Stat label="Bold Conversations Slots" value={`${slotsFilled}/${slotsTotal}`} highlight={slotsFilled < slotsTotal} />
+            </>
+          )}
         </div>
       </section>
 
@@ -192,6 +203,11 @@ export function Dashboard({
                                       Sponsored: {event.sponsor_name}
                                     </span>
                                   )}
+                                  {(event.sponsor_slots_total ?? 0) > 0 && (
+                                    <span className="text-[10px] font-bold text-gold uppercase tracking-widest bg-gold/10 px-2 py-0.5">
+                                      Slots: {event.sponsor_slots_filled ?? 0}/{event.sponsor_slots_total}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
 
@@ -238,10 +254,10 @@ export function Dashboard({
   )
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
     <div>
-      <p className="text-xl font-bold tracking-tight">{value}</p>
+      <p className={`text-xl font-bold tracking-tight ${highlight ? 'text-red' : ''}`}>{value}</p>
       <p className="text-xs text-muted uppercase tracking-wider font-bold">{label}</p>
     </div>
   )

@@ -18,6 +18,8 @@ export interface Event {
   sponsorship_available: boolean
   sponsor_name: string | null
   time_block: string
+  sponsor_slots_total?: number
+  sponsor_slots_filled?: number
   created_at: string
 }
 
