@@ -57,7 +57,7 @@ export function Dashboard({
     if (!grouped[event.day]) grouped[event.day] = []
     grouped[event.day].push(event)
   }
-  // Sort events within each day by start time
+  // Sort events within each day by start time (chronological)
   for (const day of Object.keys(grouped)) {
     grouped[day].sort((a, b) => parseTime(a.start_time) - parseTime(b.start_time))
   }
