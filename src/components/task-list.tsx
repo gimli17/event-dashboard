@@ -61,6 +61,8 @@ export function TaskList({
   const [tasks, setTasks] = useState(initialTasks)
   const [editingNotes, setEditingNotes] = useState<string | null>(null)
   const [notesValue, setNotesValue] = useState('')
+  const [editingTitle, setEditingTitle] = useState<string | null>(null)
+  const [titleValue, setTitleValue] = useState('')
 
   // Realtime subscription for task updates from other users
   useEffect(() => {
@@ -138,6 +140,54 @@ export function TaskList({
       .eq('id', taskId)
   }
 
+  const handleTitleEdit = (task: EventTask) => {
+    setEditingTitle(task.id)
+    setTitleValue(task.title)
+  }
+
+  const handleTitleSave = async (taskId: string) => {
+    const newTitle = titleValue.trim()
+    if (!newTitle || !displayName) {
+      setEditingTitle(null)
+      return
+    }
+    setEditingTitle(null)
+
+    const oldTitle = tasks.find((t) => t.id === taskId)?.title ?? ''
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, title: newTitle } : t)))
+
+    await supabase
+      .from('event_tasks')
+      .update({ title: newTitle } as never)
+      .eq('id', taskId)
+
+    if (newTitle !== oldTitle) {
+      await supabase.from('comments').insert({
+        author: displayName,
+        message: `Renamed task "${oldTitle}" to "${newTitle}"`,
+        event_id: eventId,
+        task_id: taskId,
+        type: 'task-update',
+      } as never)
+    }
+  }
+
+  const handleDelete = async (task: EventTask) => {
+    if (!displayName) return
+    if (!confirm(`Delete "${task.title}"?`)) return
+
+    setTasks((prev) => prev.filter((t) => t.id !== task.id))
+
+    await supabase.from('event_tasks').delete().eq('id', task.id)
+
+    await supabase.from('comments').insert({
+      author: displayName,
+      message: `Removed task "${task.title}" [${task.category}]`,
+      event_id: eventId,
+      type: 'task-update',
+    } as never)
+  }
+
   // Group tasks by category
   const grouped: Record<string, EventTask[]> = {}
   for (const task of tasks) {
@@ -204,13 +254,31 @@ export function TaskList({
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1 min-w-0">
-                            <p
-                              className={`text-sm font-bold ${
-                                task.status === 'complete' ? 'line-through text-muted' : ''
-                              }`}
-                            >
-                              {task.title}
-                            </p>
+                            {/* Title display/edit */}
+                            {editingTitle === task.id ? (
+                              <input
+                                type="text"
+                                value={titleValue}
+                                onChange={(e) => setTitleValue(e.target.value)}
+                                onBlur={() => handleTitleSave(task.id)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleTitleSave(task.id)
+                                  if (e.key === 'Escape') setEditingTitle(null)
+                                }}
+                                autoFocus
+                                className="w-full border-2 border-black bg-white px-2 py-1 text-sm font-bold text-black focus:outline-none focus:border-blue"
+                              />
+                            ) : (
+                              <p
+                                onClick={() => handleTitleEdit(task)}
+                                className={`text-sm font-bold cursor-pointer hover:text-blue transition-colors ${
+                                  task.status === 'complete' ? 'line-through text-muted' : ''
+                                }`}
+                                title="Click to edit title"
+                              >
+                                {task.title}
+                              </p>
+                            )}
 
                             {/* Notes display/edit */}
                             {editingNotes === task.id ? (
@@ -241,15 +309,25 @@ export function TaskList({
                             )}
                           </div>
 
-                          {/* Status toggle */}
-                          <button
-                            onClick={() => handleStatusCycle(task)}
-                            disabled={!displayName}
-                            className={`shrink-0 px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${statusColors[task.status]}`}
-                            title={displayName ? `Click to change status` : 'Set your name first'}
-                          >
-                            {statusLabels[task.status]}
-                          </button>
+                          {/* Actions */}
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              onClick={() => handleStatusCycle(task)}
+                              disabled={!displayName}
+                              className={`px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${statusColors[task.status]}`}
+                              title={displayName ? 'Click to change status' : 'Set your name first'}
+                            >
+                              {statusLabels[task.status]}
+                            </button>
+                            <button
+                              onClick={() => handleDelete(task)}
+                              disabled={!displayName}
+                              className="text-muted/40 hover:text-red transition-colors text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+                              title="Delete task"
+                            >
+                              &times;
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
