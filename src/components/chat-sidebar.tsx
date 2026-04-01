@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useUser } from './user-provider'
-import { useSidebar } from '@/lib/sidebar-context'
-import type { Comment, EventTask } from '@/lib/types'
+import { useSidebar, type SidebarTab } from '@/lib/sidebar-context'
+import type { Comment, EventTask, AccessLevel } from '@/lib/types'
 
 interface EventOption {
   id: string
@@ -12,13 +12,41 @@ interface EventOption {
   day_label: string
 }
 
-const categories: { label: string; value: EventTask['category'] }[] = [
+interface PendingTask extends EventTask {
+  event_title?: string
+  event_date?: string
+  event_day_label?: string
+}
+
+const taskCategories: { label: string; value: EventTask['category'] }[] = [
   { label: 'Venue', value: 'venue' },
   { label: 'Talent', value: 'talent' },
   { label: 'Sponsorship', value: 'sponsorship' },
   { label: 'Logistics', value: 'logistics' },
   { label: 'Marketing', value: 'marketing' },
   { label: 'Production', value: 'production' },
+]
+
+const days = [
+  { label: 'Wed 8/26', value: 'wednesday', date: '2026-08-26', day_label: 'Wednesday 8/26' },
+  { label: 'Thu 8/27', value: 'thursday', date: '2026-08-27', day_label: 'Thursday 8/27' },
+  { label: 'Fri 8/28', value: 'friday', date: '2026-08-28', day_label: 'Friday 8/28' },
+  { label: 'Sat 8/29', value: 'saturday', date: '2026-08-29', day_label: 'Saturday 8/29' },
+  { label: 'Sun 8/30', value: 'sunday', date: '2026-08-30', day_label: 'Sunday 8/30' },
+]
+
+const accessOptions: { label: string; value: AccessLevel }[] = [
+  { label: 'Founders', value: 'founders' },
+  { label: 'Founders + Premium', value: 'founders-premium' },
+  { label: 'All Access', value: 'all-access' },
+  { label: 'Sponsor Private', value: 'sponsor-private' },
+]
+
+const tabs: { label: string; value: SidebarTab; color: string }[] = [
+  { label: 'Chat', value: 'chat', color: 'bg-blue' },
+  { label: '+ Task', value: 'add-task', color: 'bg-red' },
+  { label: '+ Event', value: 'add-event', color: 'bg-green' },
+  { label: 'Pending', value: 'pending', color: 'bg-orange' },
 ]
 
 function renderMessage(text: string) {
@@ -42,14 +70,31 @@ export function ChatSidebar() {
   const [sending, setSending] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
 
-  // Add task form state
+  // Shared events list
   const [events, setEvents] = useState<EventOption[]>([])
+
+  // Add task state
   const [selectedEvent, setSelectedEvent] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<EventTask['category']>('venue')
   const [taskTitle, setTaskTitle] = useState('')
   const [taskNotes, setTaskNotes] = useState('')
   const [addingTask, setAddingTask] = useState(false)
   const [taskSuccess, setTaskSuccess] = useState('')
+
+  // Add event state
+  const [eventTitle, setEventTitle] = useState('')
+  const [eventDay, setEventDay] = useState('friday')
+  const [eventStartTime, setEventStartTime] = useState('')
+  const [eventEndTime, setEventEndTime] = useState('')
+  const [eventLocation, setEventLocation] = useState('')
+  const [eventAccess, setEventAccess] = useState<AccessLevel>('founders')
+  const [eventSponsorship, setEventSponsorship] = useState(false)
+  const [addingEvent, setAddingEvent] = useState(false)
+  const [eventSuccess, setEventSuccess] = useState('')
+
+  // Pending tasks state
+  const [pendingTasks, setPendingTasks] = useState<PendingTask[]>([])
+  const [loadingPending, setLoadingPending] = useState(false)
 
   const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -67,22 +112,70 @@ export function ChatSidebar() {
     fetchMessages()
   }, [])
 
-  // Fetch events for dropdown
+  // Fetch events when sidebar opens
   useEffect(() => {
-    if (!isOpen) return
-    if (events.length > 0) return
+    if (!isOpen || events.length > 0) return
     async function fetchEvents() {
       const { data } = await supabase
         .from('events')
         .select('id, title, day_label, date')
         .order('date', { ascending: true })
       if (data && data.length > 0) {
-        setEvents(data as EventOption[])
-        setSelectedEvent((data as EventOption[])[0].id)
+        const typed = data as EventOption[]
+        setEvents(typed)
+        setSelectedEvent(typed[0].id)
       }
     }
     fetchEvents()
   }, [isOpen, events.length])
+
+  // Fetch pending tasks when tab switches
+  useEffect(() => {
+    if (tab !== 'pending' || !isOpen) return
+    async function fetchPending() {
+      setLoadingPending(true)
+      const { data: tasks } = await supabase
+        .from('event_tasks')
+        .select('*')
+        .in('status', ['not-started', 'in-progress'])
+        .order('status', { ascending: true })
+
+      if (tasks) {
+        // Fetch event info for each task
+        const eventIds = [...new Set((tasks as EventTask[]).map((t) => t.event_id))]
+        const { data: eventsData } = await supabase
+          .from('events')
+          .select('id, title, date, day_label')
+          .in('id', eventIds)
+          .order('date', { ascending: true })
+
+        const eventMap: Record<string, { title: string; date: string; day_label: string }> = {}
+        if (eventsData) {
+          for (const e of eventsData as { id: string; title: string; date: string; day_label: string }[]) {
+            eventMap[e.id] = { title: e.title, date: e.date, day_label: e.day_label }
+          }
+        }
+
+        const enriched: PendingTask[] = (tasks as EventTask[]).map((t) => ({
+          ...t,
+          event_title: eventMap[t.event_id]?.title,
+          event_date: eventMap[t.event_id]?.date,
+          event_day_label: eventMap[t.event_id]?.day_label,
+        }))
+
+        // Sort: in-progress first, then by event date
+        enriched.sort((a, b) => {
+          if (a.status === 'in-progress' && b.status !== 'in-progress') return -1
+          if (a.status !== 'in-progress' && b.status === 'in-progress') return 1
+          return (a.event_date ?? '').localeCompare(b.event_date ?? '')
+        })
+
+        setPendingTasks(enriched)
+      }
+      setLoadingPending(false)
+    }
+    fetchPending()
+  }, [tab, isOpen])
 
   // Realtime subscription
   useEffect(() => {
@@ -110,7 +203,6 @@ export function ChatSidebar() {
     scrollToBottom()
   }, [messages, scrollToBottom, eventFilter])
 
-  // Filter messages by event
   const filteredMessages = eventFilter
     ? messages.filter((m) => m.event_id === eventFilter || m.event_id === null)
     : messages
@@ -119,27 +211,22 @@ export function ChatSidebar() {
     e.preventDefault()
     const trimmed = input.trim()
     if (!trimmed || !displayName || sending) return
-
     setSending(true)
     setInput('')
-
     await supabase.from('comments').insert({
       author: displayName,
       message: trimmed,
       event_id: eventFilter || null,
       type: 'chat',
     } as never)
-
     setSending(false)
   }
 
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!taskTitle.trim() || !selectedEvent || !displayName || addingTask) return
-
     setAddingTask(true)
     setTaskSuccess('')
-
     const taskId = `t-${Date.now()}`
     const { error } = await supabase.from('event_tasks').insert({
       id: taskId,
@@ -150,7 +237,6 @@ export function ChatSidebar() {
       assignee: null,
       notes: taskNotes.trim() || null,
     } as never)
-
     if (!error) {
       const eventName = events.find((e) => e.id === selectedEvent)?.title ?? 'event'
       await supabase.from('comments').insert({
@@ -160,24 +246,67 @@ export function ChatSidebar() {
         task_id: taskId,
         type: 'task-update',
       } as never)
-
       setTaskSuccess(`Added to ${eventName}`)
       setTaskTitle('')
       setTaskNotes('')
       setTimeout(() => setTaskSuccess(''), 3000)
     }
-
     setAddingTask(false)
   }
 
+  const handleAddEvent = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!eventTitle.trim() || !eventStartTime || !eventEndTime || !displayName || addingEvent) return
+    setAddingEvent(true)
+    setEventSuccess('')
+
+    const dayInfo = days.find((d) => d.value === eventDay)!
+    const eventId = `evt-${Date.now()}`
+
+    const { error } = await supabase.from('events').insert({
+      id: eventId,
+      title: eventTitle.trim(),
+      day: dayInfo.value,
+      day_label: dayInfo.day_label,
+      date: dayInfo.date,
+      start_time: eventStartTime,
+      end_time: eventEndTime,
+      location: eventLocation.trim() || 'Location TBD',
+      description: null,
+      status: 'planning',
+      access: eventAccess,
+      sponsorship_available: eventSponsorship,
+      sponsor_name: null,
+      time_block: 'early-afternoon',
+    } as never)
+
+    if (!error) {
+      await supabase.from('comments').insert({
+        author: displayName,
+        message: `Created new event "${eventTitle.trim()}" on ${dayInfo.day_label}`,
+        event_id: eventId,
+        type: 'task-update',
+      } as never)
+
+      // Refresh events list
+      setEvents([])
+      setEventSuccess(`Event created!`)
+      setEventTitle('')
+      setEventStartTime('')
+      setEventEndTime('')
+      setEventLocation('')
+      setEventSponsorship(false)
+      setTimeout(() => setEventSuccess(''), 3000)
+    }
+    setAddingEvent(false)
+  }
+
   function formatTime(dateStr: string) {
-    const d = new Date(dateStr)
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   }
 
   function formatDate(dateStr: string) {
-    const d = new Date(dateStr)
-    return d.toLocaleDateString([], { month: 'short', day: 'numeric' })
+    return new Date(dateStr).toLocaleDateString([], { month: 'short', day: 'numeric' })
   }
 
   const filterEventName = eventFilter
@@ -191,17 +320,13 @@ export function ChatSidebar() {
         onClick={() => (isOpen ? sidebar.closeSidebar() : sidebar.openSidebar())}
         className="fixed right-0 top-1/2 -translate-y-1/2 z-[9990] bg-black text-cream px-2 py-6 text-xs font-bold uppercase tracking-widest hover:bg-blue transition-colors border-2 border-r-0 border-black"
         style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
-        aria-label={isOpen ? 'Close chat' : 'Open chat'}
       >
         {isOpen ? 'Close' : 'Chat'}
       </button>
 
       {/* Overlay */}
       {isOpen && (
-        <div
-          className="fixed inset-0 z-[9991] bg-black/30"
-          onClick={() => sidebar.closeSidebar()}
-        />
+        <div className="fixed inset-0 z-[9991] bg-black/30" onClick={() => sidebar.closeSidebar()} />
       )}
 
       {/* Sidebar */}
@@ -213,98 +338,63 @@ export function ChatSidebar() {
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b-4 border-black bg-black text-cream">
           <h2 className="text-sm font-bold uppercase tracking-widest">BRMF</h2>
-          <button
-            onClick={() => sidebar.closeSidebar()}
-            className="text-cream hover:text-red text-lg font-bold leading-none"
-          >
-            &times;
-          </button>
+          <button onClick={() => sidebar.closeSidebar()} className="text-cream hover:text-red text-lg font-bold">&times;</button>
         </div>
 
         {/* Tabs */}
         <div className="flex border-b-2 border-black">
-          <button
-            onClick={() => sidebar.setTab('chat')}
-            className={`flex-1 py-3 text-xs font-bold uppercase tracking-widest transition-colors ${
-              tab === 'chat' ? 'bg-blue text-white' : 'bg-cream-dark text-muted hover:text-black'
-            }`}
-          >
-            Chat
-          </button>
-          <button
-            onClick={() => sidebar.setTab('add-task')}
-            className={`flex-1 py-3 text-xs font-bold uppercase tracking-widest transition-colors border-l-2 border-black ${
-              tab === 'add-task' ? 'bg-red text-white' : 'bg-cream-dark text-muted hover:text-black'
-            }`}
-          >
-            + Add Task
-          </button>
+          {tabs.map((t, i) => (
+            <button
+              key={t.value}
+              onClick={() => sidebar.setTab(t.value)}
+              className={`flex-1 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                i > 0 ? 'border-l border-black/20' : ''
+              } ${tab === t.value ? `${t.color} text-white` : 'bg-cream-dark text-muted hover:text-black'}`}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
 
-        {tab === 'chat' ? (
+        {/* ── CHAT TAB ── */}
+        {tab === 'chat' && (
           <>
-            {/* Event filter */}
             <div className="px-4 py-2 border-b border-black/10 bg-cream-dark flex items-center gap-2">
               <span className="text-[10px] font-bold uppercase tracking-widest text-muted shrink-0">Filter:</span>
               {eventFilter ? (
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue truncate">
-                    {filterEventName || 'Event'}
-                  </span>
-                  <button
-                    onClick={() => sidebar.setEventFilter(null)}
-                    className="text-[10px] font-bold text-red hover:text-black"
-                  >
-                    &times; CLEAR
-                  </button>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue truncate">{filterEventName || 'Event'}</span>
+                  <button onClick={() => sidebar.setEventFilter(null)} className="text-[10px] font-bold text-red hover:text-black">&times; CLEAR</button>
                 </div>
               ) : (
                 <select
                   value=""
-                  onChange={(e) => {
-                    if (e.target.value) sidebar.setEventFilter(e.target.value)
-                  }}
+                  onChange={(e) => { if (e.target.value) sidebar.setEventFilter(e.target.value) }}
                   className="flex-1 bg-transparent text-[10px] font-bold uppercase tracking-wider text-black border-0 focus:outline-none cursor-pointer"
                 >
                   <option value="">All Events</option>
                   {events.map((ev) => (
-                    <option key={ev.id} value={ev.id}>
-                      {ev.day_label} — {ev.title}
-                    </option>
+                    <option key={ev.id} value={ev.id}>{ev.day_label} — {ev.title}</option>
                   ))}
                 </select>
               )}
             </div>
 
-            {/* Messages */}
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
               {filteredMessages.length === 0 && (
-                <p className="text-xs uppercase tracking-wider text-muted text-center mt-8 font-medium">
-                  No messages yet.
-                </p>
+                <p className="text-xs uppercase tracking-wider text-muted text-center mt-8 font-medium">No messages yet.</p>
               )}
               {filteredMessages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`pb-3 ${
-                    msg.type === 'task-update'
-                      ? 'border-l-4 border-gold pl-3 opacity-80'
-                      : 'border-b-2 border-cream-dark'
-                  }`}
-                >
+                <div key={msg.id} className={`pb-3 ${msg.type === 'task-update' ? 'border-l-4 border-gold pl-3 opacity-80' : 'border-b-2 border-cream-dark'}`}>
                   <div className="flex items-baseline justify-between gap-2 mb-0.5">
-                    <span className={`text-xs font-bold uppercase tracking-wider ${
-                      msg.type === 'task-update' ? 'text-gold' : 'text-blue'
-                    }`}>
+                    <span className={`text-xs font-bold uppercase tracking-wider ${msg.type === 'task-update' ? 'text-gold' : 'text-blue'}`}>
                       {msg.type === 'task-update' ? `${msg.author} \u00b7 update` : msg.author}
                     </span>
                     <span className="text-[10px] uppercase tracking-wider text-muted font-medium whitespace-nowrap">
                       {formatDate(msg.created_at)} {formatTime(msg.created_at)}
                     </span>
                   </div>
-                  <p className={`text-sm leading-relaxed ${
-                    msg.type === 'task-update' ? 'text-muted italic' : 'text-black'
-                  }`}>
+                  <p className={`text-sm leading-relaxed ${msg.type === 'task-update' ? 'text-muted italic' : 'text-black'}`}>
                     {renderMessage(msg.message)}
                   </p>
                 </div>
@@ -312,11 +402,7 @@ export function ChatSidebar() {
               <div ref={bottomRef} />
             </div>
 
-            {/* Chat input */}
-            <form
-              onSubmit={handleSend}
-              className="border-t-4 border-black px-4 py-3 bg-cream-dark flex gap-2"
-            >
+            <form onSubmit={handleSend} className="border-t-4 border-black px-4 py-3 bg-cream-dark flex gap-2">
               <input
                 type="text"
                 value={input}
@@ -328,105 +414,153 @@ export function ChatSidebar() {
               <button
                 type="submit"
                 disabled={!input.trim() || !displayName || sending}
-                className="bg-black text-cream px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-blue transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="bg-black text-cream px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-blue transition-colors disabled:opacity-40"
               >
                 Send
               </button>
             </form>
           </>
-        ) : (
-          <>
-            {/* Add Task Form */}
-            <form onSubmit={handleAddTask} className="flex-1 overflow-y-auto px-4 py-6 space-y-5">
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">
-                  Event
-                </label>
-                {events.length === 0 ? (
-                  <p className="text-xs text-muted py-2">Loading events...</p>
-                ) : (
-                  <div className="relative">
-                    <select
-                      value={selectedEvent}
-                      onChange={(e) => setSelectedEvent(e.target.value)}
-                      className="w-full border-2 border-black bg-white px-3 py-2.5 pr-8 text-xs font-bold text-black focus:outline-none focus:border-blue cursor-pointer"
-                    >
-                      {events.map((ev) => (
-                        <option key={ev.id} value={ev.id}>
-                          {ev.day_label} — {ev.title}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-black text-xs">
-                      &#9660;
-                    </div>
-                  </div>
-                )}
-              </div>
+        )}
 
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">
-                  Category
-                </label>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {categories.map((cat) => (
-                    <button
-                      key={cat.value}
-                      type="button"
-                      onClick={() => setSelectedCategory(cat.value)}
-                      className={`py-2 text-[10px] font-bold uppercase tracking-widest border-2 transition-all ${
-                        selectedCategory === cat.value
-                          ? 'bg-black text-white border-black'
-                          : 'bg-white text-black border-black/20 hover:border-black'
-                      }`}
-                    >
-                      {cat.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">
-                  Task Title
-                </label>
-                <input
-                  type="text"
-                  value={taskTitle}
-                  onChange={(e) => setTaskTitle(e.target.value)}
-                  placeholder="E.G., BOOK SOUND ENGINEER"
-                  className="w-full border-2 border-black bg-white px-3 py-2.5 text-xs font-bold text-black placeholder:text-muted/50 focus:outline-none focus:border-blue"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">
-                  Notes (optional)
-                </label>
-                <input
-                  type="text"
-                  value={taskNotes}
-                  onChange={(e) => setTaskNotes(e.target.value)}
-                  placeholder="ANY ADDITIONAL DETAILS..."
-                  className="w-full border-2 border-black bg-white px-3 py-2.5 text-xs font-bold text-black placeholder:text-muted/50 focus:outline-none focus:border-blue"
-                />
-              </div>
-
-              {taskSuccess && (
-                <div className="bg-green text-white px-4 py-3 text-xs font-bold uppercase tracking-widest text-center">
-                  {taskSuccess}
+        {/* ── ADD TASK TAB ── */}
+        {tab === 'add-task' && (
+          <form onSubmit={handleAddTask} className="flex-1 overflow-y-auto px-4 py-6 space-y-5">
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Event</label>
+              {events.length === 0 ? (
+                <p className="text-xs text-muted py-2">Loading events...</p>
+              ) : (
+                <div className="relative">
+                  <select value={selectedEvent} onChange={(e) => setSelectedEvent(e.target.value)} className="w-full border-2 border-black bg-white px-3 py-2.5 pr-8 text-xs font-bold text-black focus:outline-none focus:border-blue cursor-pointer">
+                    {events.map((ev) => <option key={ev.id} value={ev.id}>{ev.day_label} — {ev.title}</option>)}
+                  </select>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-black text-xs">&#9660;</div>
                 </div>
               )}
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Category</label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {taskCategories.map((cat) => (
+                  <button key={cat.value} type="button" onClick={() => setSelectedCategory(cat.value)}
+                    className={`py-2 text-[10px] font-bold uppercase tracking-widest border-2 transition-all ${selectedCategory === cat.value ? 'bg-black text-white border-black' : 'bg-white text-black border-black/20 hover:border-black'}`}>
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Task Title</label>
+              <input type="text" value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} placeholder="E.G., BOOK SOUND ENGINEER" className="w-full border-2 border-black bg-white px-3 py-2.5 text-xs font-bold text-black placeholder:text-muted/50 focus:outline-none focus:border-blue" />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Notes (optional)</label>
+              <input type="text" value={taskNotes} onChange={(e) => setTaskNotes(e.target.value)} placeholder="ANY ADDITIONAL DETAILS..." className="w-full border-2 border-black bg-white px-3 py-2.5 text-xs font-bold text-black placeholder:text-muted/50 focus:outline-none focus:border-blue" />
+            </div>
+            {taskSuccess && <div className="bg-green text-white px-4 py-3 text-xs font-bold uppercase tracking-widest text-center">{taskSuccess}</div>}
+            <button type="submit" disabled={!taskTitle.trim() || !selectedEvent || !displayName || addingTask} className="w-full bg-red text-white py-3 text-xs font-bold uppercase tracking-widest hover:bg-red-bright transition-colors disabled:opacity-40">
+              {addingTask ? 'Adding...' : 'Add Task'}
+            </button>
+          </form>
+        )}
 
-              <button
-                type="submit"
-                disabled={!taskTitle.trim() || !selectedEvent || !displayName || addingTask}
-                className="w-full bg-red text-white py-3 text-xs font-bold uppercase tracking-widest hover:bg-red-bright transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {addingTask ? 'Adding...' : 'Add Task'}
-              </button>
-            </form>
-          </>
+        {/* ── ADD EVENT TAB ── */}
+        {tab === 'add-event' && (
+          <form onSubmit={handleAddEvent} className="flex-1 overflow-y-auto px-4 py-6 space-y-5">
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Event Title</label>
+              <input type="text" value={eventTitle} onChange={(e) => setEventTitle(e.target.value)} placeholder="E.G., OPENING NIGHT PARTY" className="w-full border-2 border-black bg-white px-3 py-2.5 text-xs font-bold text-black placeholder:text-muted/50 focus:outline-none focus:border-blue" />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Day</label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {days.map((d) => (
+                  <button key={d.value} type="button" onClick={() => setEventDay(d.value)}
+                    className={`py-2 text-[10px] font-bold uppercase tracking-widest border-2 transition-all ${eventDay === d.value ? 'bg-black text-white border-black' : 'bg-white text-black border-black/20 hover:border-black'}`}>
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Start Time</label>
+                <input type="text" value={eventStartTime} onChange={(e) => setEventStartTime(e.target.value)} placeholder="E.G., 7:00 PM" className="w-full border-2 border-black bg-white px-3 py-2.5 text-xs font-bold text-black placeholder:text-muted/50 focus:outline-none focus:border-blue" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">End Time</label>
+                <input type="text" value={eventEndTime} onChange={(e) => setEventEndTime(e.target.value)} placeholder="E.G., 10:00 PM" className="w-full border-2 border-black bg-white px-3 py-2.5 text-xs font-bold text-black placeholder:text-muted/50 focus:outline-none focus:border-blue" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Location</label>
+              <input type="text" value={eventLocation} onChange={(e) => setEventLocation(e.target.value)} placeholder="VENUE NAME OR TBD" className="w-full border-2 border-black bg-white px-3 py-2.5 text-xs font-bold text-black placeholder:text-muted/50 focus:outline-none focus:border-blue" />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Access Level</label>
+              <div className="grid grid-cols-2 gap-1.5">
+                {accessOptions.map((a) => (
+                  <button key={a.value} type="button" onClick={() => setEventAccess(a.value)}
+                    className={`py-2 text-[10px] font-bold uppercase tracking-widest border-2 transition-all ${eventAccess === a.value ? 'bg-black text-white border-black' : 'bg-white text-black border-black/20 hover:border-black'}`}>
+                    {a.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input type="checkbox" checked={eventSponsorship} onChange={(e) => setEventSponsorship(e.target.checked)} className="w-4 h-4 border-2 border-black accent-red" />
+              <span className="text-xs font-bold uppercase tracking-widest">Open for Sponsorship</span>
+            </label>
+            {eventSuccess && <div className="bg-green text-white px-4 py-3 text-xs font-bold uppercase tracking-widest text-center">{eventSuccess}</div>}
+            <button type="submit" disabled={!eventTitle.trim() || !eventStartTime || !eventEndTime || !displayName || addingEvent} className="w-full bg-green text-white py-3 text-xs font-bold uppercase tracking-widest hover:bg-green-light transition-colors disabled:opacity-40">
+              {addingEvent ? 'Creating...' : 'Create Event'}
+            </button>
+          </form>
+        )}
+
+        {/* ── PENDING TASKS TAB ── */}
+        {tab === 'pending' && (
+          <div className="flex-1 overflow-y-auto">
+            {loadingPending ? (
+              <p className="text-xs uppercase tracking-wider text-muted text-center mt-8 font-medium">Loading...</p>
+            ) : pendingTasks.length === 0 ? (
+              <p className="text-xs uppercase tracking-wider text-muted text-center mt-8 font-medium">All tasks complete!</p>
+            ) : (
+              <>
+                <div className="px-4 py-3 bg-cream-dark border-b border-black/10">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted">
+                    {pendingTasks.length} pending &middot; In-progress tasks shown first, then by event date
+                  </p>
+                </div>
+                <div className="divide-y divide-black/5">
+                  {pendingTasks.map((task) => (
+                    <a
+                      key={task.id}
+                      href={`/events/${task.event_id}`}
+                      className="block px-4 py-3 hover:bg-cream-dark transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold leading-tight">{task.title}</p>
+                          <p className="text-[10px] text-muted mt-0.5">
+                            {task.event_day_label} &middot; {task.event_title}
+                          </p>
+                          <p className="text-[10px] text-muted uppercase tracking-wider mt-0.5">
+                            {task.category}
+                          </p>
+                        </div>
+                        <span className={`shrink-0 px-2 py-1 text-[9px] font-bold tracking-widest uppercase ${
+                          task.status === 'in-progress' ? 'text-orange bg-orange/10' : 'text-muted bg-black/5'
+                        }`}>
+                          {task.status === 'in-progress' ? 'IN PROGRESS' : 'NOT STARTED'}
+                        </span>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         )}
       </div>
     </>

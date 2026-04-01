@@ -2,17 +2,19 @@
 
 import { createContext, useContext, useState, useCallback } from 'react'
 
+export type SidebarTab = 'chat' | 'add-task' | 'add-event' | 'pending'
+
 interface SidebarState {
   isOpen: boolean
   eventFilter: string | null
-  tab: 'chat' | 'add-task'
+  tab: SidebarTab
 }
 
 interface SidebarContextValue extends SidebarState {
   openSidebar: () => void
   closeSidebar: () => void
   openForEvent: (eventId: string) => void
-  setTab: (tab: 'chat' | 'add-task') => void
+  setTab: (tab: SidebarTab) => void
   setEventFilter: (eventId: string | null) => void
 }
 
@@ -37,7 +39,7 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
     setState({ isOpen: true, eventFilter: eventId, tab: 'chat' })
   }, [])
 
-  const setTab = useCallback((tab: 'chat' | 'add-task') => {
+  const setTab = useCallback((tab: SidebarTab) => {
     setState((s) => ({ ...s, tab }))
   }, [])
 
