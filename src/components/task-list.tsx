@@ -81,6 +81,8 @@ export function TaskList({
   const [notesValue, setNotesValue] = useState('')
   const [editingTitle, setEditingTitle] = useState<string | null>(null)
   const [titleValue, setTitleValue] = useState('')
+  const [editingAssignee, setEditingAssignee] = useState<string | null>(null)
+  const [assigneeValue, setAssigneeValue] = useState('')
 
   // Realtime subscription for task updates from other users
   useEffect(() => {
@@ -216,6 +218,37 @@ export function TaskList({
       .eq('id', task.id)
   }
 
+  const handleAssigneeEdit = (task: EventTask) => {
+    setEditingAssignee(task.id)
+    setAssigneeValue(task.assignee ?? '')
+  }
+
+  const handleAssigneeSave = async (taskId: string) => {
+    const newAssignee = assigneeValue.trim() || null
+    setEditingAssignee(null)
+
+    const oldAssignee = tasks.find((t) => t.id === taskId)?.assignee
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, assignee: newAssignee } : t)))
+
+    await supabase
+      .from('event_tasks')
+      .update({ assignee: newAssignee } as never)
+      .eq('id', taskId)
+
+    if (newAssignee !== oldAssignee && displayName) {
+      const taskName = tasks.find((t) => t.id === taskId)?.title ?? ''
+      await supabase.from('comments').insert({
+        author: displayName,
+        message: newAssignee
+          ? `Assigned "${taskName}" to ${newAssignee}`
+          : `Unassigned "${taskName}"`,
+        event_id: eventId,
+        task_id: taskId,
+        type: 'task-update',
+      } as never)
+    }
+  }
+
   // Group tasks by category
   const grouped: Record<string, EventTask[]> = {}
   for (const task of tasks) {
@@ -332,8 +365,32 @@ export function TaskList({
                               </button>
                             )}
 
-                            {task.assignee && (
-                              <span className="text-xs text-muted mt-1 block">{task.assignee}</span>
+                            {/* Assignee display/edit */}
+                            {editingAssignee === task.id ? (
+                              <input
+                                type="text"
+                                value={assigneeValue}
+                                onChange={(e) => setAssigneeValue(e.target.value)}
+                                onBlur={() => handleAssigneeSave(task.id)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleAssigneeSave(task.id)
+                                  if (e.key === 'Escape') setEditingAssignee(null)
+                                }}
+                                autoFocus
+                                placeholder="Assign to..."
+                                className="mt-1 border-2 border-black bg-white px-2 py-0.5 text-xs font-bold text-black focus:outline-none focus:border-blue w-40"
+                              />
+                            ) : (
+                              <button
+                                onClick={() => handleAssigneeEdit(task)}
+                                className="mt-1 text-xs font-bold uppercase tracking-wider hover:text-blue transition-colors text-left"
+                              >
+                                {task.assignee ? (
+                                  <span className="text-blue">{task.assignee}</span>
+                                ) : (
+                                  <span className="text-muted/40">+ Assign</span>
+                                )}
+                              </button>
                             )}
                           </div>
 

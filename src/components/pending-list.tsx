@@ -53,7 +53,7 @@ const nextPriority: Record<Priority, Priority> = {
   high: 'low',
 }
 
-type SortBy = 'priority' | 'date' | 'category'
+type SortBy = 'priority' | 'date' | 'category' | 'assignee'
 
 export function PendingList() {
   const { displayName } = useUser()
@@ -61,6 +61,7 @@ export function PendingList() {
   const [loading, setLoading] = useState(true)
   const [sortBy, setSortBy] = useState<SortBy>('priority')
   const [filterCategory, setFilterCategory] = useState<string>('all')
+  const [filterAssignee, setFilterAssignee] = useState<string>('all')
 
   useEffect(() => {
     fetchTasks()
@@ -126,9 +127,15 @@ export function PendingList() {
   }
 
   // Filter
-  const filtered = filterCategory === 'all'
+  let filtered = filterCategory === 'all'
     ? tasks
     : tasks.filter((t) => t.category === filterCategory)
+
+  if (filterAssignee === 'unassigned') {
+    filtered = filtered.filter((t) => !t.assignee)
+  } else if (filterAssignee !== 'all') {
+    filtered = filtered.filter((t) => t.assignee === filterAssignee)
+  }
 
   // Sort
   const sorted = [...filtered].sort((a, b) => {
@@ -145,6 +152,13 @@ export function PendingList() {
       if (dDiff !== 0) return dDiff
       return priorityOrder[a.priority || 'medium'] - priorityOrder[b.priority || 'medium']
     }
+    if (sortBy === 'assignee') {
+      const aName = a.assignee ?? 'zzz'
+      const bName = b.assignee ?? 'zzz'
+      const nDiff = aName.localeCompare(bName)
+      if (nDiff !== 0) return nDiff
+      return priorityOrder[a.priority || 'medium'] - priorityOrder[b.priority || 'medium']
+    }
     // category
     const cDiff = a.category.localeCompare(b.category)
     if (cDiff !== 0) return cDiff
@@ -152,6 +166,7 @@ export function PendingList() {
   })
 
   const categories = ['all', ...new Set(tasks.map((t) => t.category))]
+  const assignees = ['all', 'unassigned', ...new Set(tasks.map((t) => t.assignee).filter(Boolean) as string[])]
 
   const highCount = tasks.filter((t) => t.priority === 'high').length
   const inProgressCount = tasks.filter((t) => t.status === 'in-progress').length
@@ -182,7 +197,7 @@ export function PendingList() {
       <div className="flex items-center gap-4 mb-6 flex-wrap">
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Sort:</span>
-          {(['priority', 'date', 'category'] as SortBy[]).map((s) => (
+          {(['priority', 'date', 'category', 'assignee'] as SortBy[]).map((s) => (
             <button
               key={s}
               onClick={() => setSortBy(s)}
@@ -205,6 +220,20 @@ export function PendingList() {
               }`}
             >
               {cat}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Assignee:</span>
+          {assignees.map((a) => (
+            <button
+              key={a}
+              onClick={() => setFilterAssignee(a)}
+              className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border-2 transition-all ${
+                filterAssignee === a ? 'bg-black text-white border-black' : 'bg-white text-black border-black/20 hover:border-black'
+              }`}
+            >
+              {a}
             </button>
           ))}
         </div>
@@ -245,6 +274,12 @@ export function PendingList() {
                     {task.event_day_label} &middot; {task.event_title}
                   </a>
                   <span className="text-[10px] text-muted uppercase tracking-wider">{task.category}</span>
+                  {task.assignee && (
+                    <span className="text-[10px] font-bold text-blue uppercase tracking-wider">{task.assignee}</span>
+                  )}
+                  {!task.assignee && (
+                    <span className="text-[10px] text-muted/40 uppercase tracking-wider">Unassigned</span>
+                  )}
                 </div>
                 {task.notes && (
                   <p className="text-xs text-muted italic mt-1">{task.notes}</p>
