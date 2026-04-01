@@ -33,6 +33,12 @@ const trackLabels: Record<string, string> = {
   tech: 'Tech & Innovation',
 }
 
+const trackSubtitles: Record<string, string> = {
+  health: 'Performance, Energy, and Personal Mastery',
+  culture: "Building Boulder's Next Chapter",
+  tech: 'Innovation, Collaboration, and the Colorado Edge',
+}
+
 const trackOrder = ['health', 'culture', 'tech']
 
 export function BoldConversationsList() {
@@ -135,13 +141,18 @@ export function BoldConversationsList() {
           .filter((track) => grouped[track])
           .map((track) => (
             <div key={track}>
-              <div className={`${trackColors[track]} text-white px-6 py-4 flex items-center justify-between`}>
-                <h2 className="text-sm font-bold tracking-widest uppercase">
-                  {trackLabels[track]}
-                </h2>
-                <span className="text-xs font-bold tracking-wider opacity-70">
-                  {grouped[track].length} TOPICS
-                </span>
+              <div className={`${trackColors[track]} text-white px-6 py-4`}>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-bold tracking-widest uppercase">
+                    {trackLabels[track]}
+                  </h2>
+                  <span className="text-xs font-bold tracking-wider opacity-70">
+                    {grouped[track].length} TOPICS
+                  </span>
+                </div>
+                <p className="text-xs font-medium text-white/60 mt-1 italic">
+                  {trackSubtitles[track]}
+                </p>
               </div>
 
               <div className="border-l-2 border-r-2 border-b-2 border-black/10">
