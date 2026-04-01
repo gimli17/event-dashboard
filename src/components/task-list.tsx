@@ -81,6 +81,8 @@ export function TaskList({
   const [notesValue, setNotesValue] = useState('')
   const [editingTitle, setEditingTitle] = useState<string | null>(null)
   const [titleValue, setTitleValue] = useState('')
+  const [addingToCategory, setAddingToCategory] = useState<string | null>(null)
+  const [newTaskTitle, setNewTaskTitle] = useState('')
   const teamMembers = ['Cody', 'Sabrina', 'Joe', 'Danny', 'Connor', 'Gib', 'Emily', 'Kendall', 'Alex', 'Liam', 'Dave', 'Tom', 'Kevin']
 
   // Realtime subscription for task updates from other users
@@ -215,6 +217,45 @@ export function TaskList({
       .from('event_tasks')
       .update({ priority: newPriority } as never)
       .eq('id', task.id)
+  }
+
+  const handleAddInlineTask = async (category: EventTask['category']) => {
+    if (!newTaskTitle.trim() || !displayName) return
+
+    const taskId = `t-${Date.now()}`
+    const newTask: EventTask = {
+      id: taskId,
+      event_id: eventId,
+      title: newTaskTitle.trim(),
+      category,
+      status: 'not-started',
+      priority: 'medium',
+      assignee: null,
+      notes: null,
+      created_at: new Date().toISOString(),
+    }
+
+    setTasks((prev) => [...prev, newTask])
+    setAddingToCategory(null)
+    setNewTaskTitle('')
+
+    await supabase.from('event_tasks').insert({
+      id: taskId,
+      event_id: eventId,
+      title: newTask.title,
+      category,
+      status: 'not-started',
+      assignee: null,
+      notes: null,
+    } as never)
+
+    await supabase.from('comments').insert({
+      author: displayName,
+      message: `Added task "${newTask.title}" [${category}]`,
+      event_id: eventId,
+      task_id: taskId,
+      type: 'task-update',
+    } as never)
   }
 
   const handleAssigneeChange = async (task: EventTask, newAssignee: string | null) => {
@@ -404,6 +445,45 @@ export function TaskList({
                         </div>
                       </div>
                     ))}
+
+                    {/* Add task inline */}
+                    {addingToCategory === catKey ? (
+                      <div className="px-5 py-3 border-t border-black/5 flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={newTaskTitle}
+                          onChange={(e) => setNewTaskTitle(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleAddInlineTask(catKey)
+                            if (e.key === 'Escape') { setAddingToCategory(null); setNewTaskTitle('') }
+                          }}
+                          autoFocus
+                          placeholder="New task title..."
+                          className="flex-1 border-2 border-black bg-white px-2 py-1.5 text-xs font-bold text-black focus:outline-none focus:border-blue"
+                        />
+                        <button
+                          onClick={() => handleAddInlineTask(catKey)}
+                          disabled={!newTaskTitle.trim()}
+                          className="bg-black text-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-blue transition-colors disabled:opacity-40"
+                        >
+                          Add
+                        </button>
+                        <button
+                          onClick={() => { setAddingToCategory(null); setNewTaskTitle('') }}
+                          className="text-muted hover:text-red text-sm font-bold"
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => { setAddingToCategory(catKey); setNewTaskTitle('') }}
+                        disabled={!displayName}
+                        className="w-full px-5 py-2.5 border-t border-black/5 text-[10px] font-bold uppercase tracking-widest text-muted/40 hover:text-black hover:bg-cream-dark transition-colors text-left disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        + Add Task
+                      </button>
+                    )}
                   </div>
                 </div>
               )
