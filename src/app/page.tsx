@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Navbar } from '@/components/navbar'
 import { getSponsors, getSponsorStats } from '@/lib/sponsor-data'
+import { getTicketStats } from '@/lib/ticket-data'
 
 export const dynamic = 'force-dynamic'
 
@@ -46,7 +47,7 @@ const modules = [
 ]
 
 export default async function HubPage() {
-  const sponsors = await getSponsors()
+  const [sponsors, ticketStats] = await Promise.all([getSponsors(), getTicketStats()])
   const stats = getSponsorStats(sponsors)
 
   return (
@@ -67,44 +68,24 @@ export default async function HubPage() {
         </div>
       </section>
 
-      {/* Sponsor stats bar */}
-      {stats.total > 0 && (
-        <section className="bg-cream-dark border-b-2 border-black/10">
-          <div className="max-w-5xl mx-auto px-6 py-5 flex items-center gap-8 flex-wrap">
-            <div>
-              <p className="text-xl font-bold">{stats.total}</p>
-              <p className="text-xs text-muted uppercase tracking-wider font-bold">Sponsors</p>
-            </div>
-            <div className="w-px h-8 bg-black/10" />
-            <div>
-              <p className="text-xl font-bold">{stats.tiered}</p>
-              <p className="text-xs text-muted uppercase tracking-wider font-bold">With Tier</p>
-            </div>
-            <div className="w-px h-8 bg-black/10" />
-            <div>
-              <p className="text-xl font-bold text-green">${(stats.totalRevenue / 1000).toFixed(0)}K</p>
-              <p className="text-xs text-muted uppercase tracking-wider font-bold">Committed</p>
-            </div>
-            <div className="w-px h-8 bg-black/10" />
-            <div>
-              <p className="text-xl font-bold">{stats.withPayment}</p>
-              <p className="text-xs text-muted uppercase tracking-wider font-bold">Payments</p>
-            </div>
-            <div className="w-px h-8 bg-black/10" />
-            <div>
-              <p className="text-xl font-bold">{stats.founders2025}</p>
-              <p className="text-xs text-muted uppercase tracking-wider font-bold">2025 Founders</p>
-            </div>
-            <div className="w-px h-8 bg-black/10" />
-            {Object.entries(stats.tierCounts).sort((a, b) => b[1] - a[1]).map(([tier, count]) => (
-              <div key={tier}>
-                <p className="text-xl font-bold">{count}</p>
-                <p className="text-xs text-muted uppercase tracking-wider font-bold">{tier}</p>
-              </div>
-            ))}
+      {/* Key metrics bar */}
+      <section className="bg-cream-dark border-b-2 border-black/10">
+        <div className="max-w-5xl mx-auto px-6 py-6 flex items-center justify-center gap-16">
+          <div className="text-center">
+            <p className="text-3xl font-bold text-green">
+              {stats.totalRevenue > 0 ? `$${(stats.totalRevenue / 1000).toFixed(0)}K` : '$0'}
+            </p>
+            <p className="text-xs text-muted uppercase tracking-widest font-bold mt-1">Sponsor Revenue</p>
           </div>
-        </section>
-      )}
+          <div className="w-px h-12 bg-black/10" />
+          <div className="text-center">
+            <p className="text-3xl font-bold">
+              {ticketStats.totalSold > 0 ? ticketStats.totalSold : '\u2014'}
+            </p>
+            <p className="text-xs text-muted uppercase tracking-widest font-bold mt-1">Tickets Sold</p>
+          </div>
+        </div>
+      </section>
 
       <section className="bg-cream flex-1">
         <div className="max-w-5xl mx-auto px-6 py-12">
