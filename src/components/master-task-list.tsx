@@ -600,7 +600,10 @@ export function MasterTaskList() {
                     return (
                       <SortableRow key={task.id} id={task.id}>
                       <div className={i > 0 ? 'border-t border-black/5' : ''}>
-                        <div className="px-5 py-4 hover:bg-cream-dark transition-colors">
+                        <button
+                          onClick={() => { setExpandedTask(isExpanded ? null : task.id); setCommentInput('') }}
+                          className="w-full text-left px-5 py-4 hover:bg-cream-dark transition-colors"
+                        >
                           <div className="flex items-start gap-4">
                             <div className="flex-1 min-w-0">
                               {editingTitle === task.id ? (
@@ -609,6 +612,7 @@ export function MasterTaskList() {
                                   value={titleValue}
                                   onChange={(e) => setTitleValue(e.target.value)}
                                   onBlur={() => handleTitleSave(task.id)}
+                                  onClick={(e) => e.stopPropagation()}
                                   onKeyDown={(e) => {
                                     if (e.key === 'Enter') handleTitleSave(task.id)
                                     if (e.key === 'Escape') setEditingTitle(null)
@@ -618,23 +622,15 @@ export function MasterTaskList() {
                                 />
                               ) : (
                                 <h3
-                                  className="text-sm font-bold leading-tight cursor-pointer hover:text-blue transition-colors"
-                                  onClick={() => handleTitleEdit(task)}
-                                  title="Click to edit title"
+                                  className="text-sm font-bold leading-tight"
+                                  onDoubleClick={(e) => { e.stopPropagation(); handleTitleEdit(task) }}
                                 >
                                   {task.title}
                                 </h3>
                               )}
                               <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                                <select
-                                  value={task.assignee || ''}
-                                  onChange={(e) => handleAssigneeChange(task, e.target.value || null)}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className={`text-[10px] font-bold uppercase tracking-wider border-0 bg-transparent focus:outline-none cursor-pointer ${task.assignee ? 'text-blue' : 'text-muted/40'}`}
-                                >
-                                  <option value="">Unassigned</option>
-                                  {teamMembers.map((n) => <option key={n} value={n}>{n}</option>)}
-                                </select>
+                                {task.assignee && <span className="text-[10px] font-bold text-blue uppercase tracking-wider">{task.assignee}</span>}
+                                {!task.assignee && <span className="text-[10px] text-muted/40 uppercase tracking-wider">Unassigned</span>}
                                 {task.deadline && <span className="text-[10px] text-muted uppercase tracking-wider">Due {task.deadline}</span>}
                                 {taskComments.length > 0 && (
                                   <span className="text-[10px] font-bold text-gold uppercase tracking-wider">{taskComments.length} comment{taskComments.length !== 1 ? 's' : ''}</span>
@@ -647,25 +643,29 @@ export function MasterTaskList() {
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className={`px-3 py-1 text-[10px] font-bold tracking-widest uppercase ${statusColors[task.status]}`}>
-                                {statusLabels[task.status]}
-                              </span>
-                              <button
-                                onClick={() => { setExpandedTask(isExpanded ? null : task.id); setCommentInput('') }}
-                                className="text-muted/40 hover:text-black transition-colors text-xs font-bold px-1"
-                                title={isExpanded ? 'Collapse' : 'Expand'}
-                              >
-                                {isExpanded ? '\u25B2' : '\u25BC'}
-                              </button>
-                            </div>
+                            <span className={`shrink-0 px-3 py-1 text-[10px] font-bold tracking-widest uppercase ${statusColors[task.status]}`}>
+                              {statusLabels[task.status]}
+                            </span>
                           </div>
-                        </div>
+                        </button>
 
                         {/* Expanded detail */}
                         {isExpanded && (
                           <div className="px-5 pb-5 border-t border-black/5 bg-white">
-                            <div className="grid gap-4 sm:grid-cols-2 pt-4">
+                            {/* Assignee */}
+                            <div className="flex items-center gap-2 pt-4 mb-4">
+                              <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Owner:</span>
+                              <select
+                                value={task.assignee || ''}
+                                onChange={(e) => handleAssigneeChange(task, e.target.value || null)}
+                                className={`border-2 border-black/20 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black cursor-pointer ${task.assignee ? 'text-blue' : 'text-muted/40'}`}
+                              >
+                                <option value="">Unassigned</option>
+                                {teamMembers.map((n) => <option key={n} value={n}>{n}</option>)}
+                              </select>
+                            </div>
+
+                            <div className="grid gap-4 sm:grid-cols-2">
                               <EditableField taskId={task.id} field="current_status" label="Current Status" value={task.current_status} editingField={editingField} editValue={editValue} setEditValue={setEditValue} startEditing={startEditing} saveField={saveField} setEditingField={setEditingField} />
                               <EditableField taskId={task.id} field="overview" label="Overview" value={task.overview} editingField={editingField} editValue={editValue} setEditValue={setEditValue} startEditing={startEditing} saveField={saveField} setEditingField={setEditingField} />
                             </div>
