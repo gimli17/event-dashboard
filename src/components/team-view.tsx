@@ -40,8 +40,11 @@ export function TeamView() {
   const [selectedPerson, setSelectedPerson] = useState<string>('all')
   const [showComplete, setShowComplete] = useState(false)
   const [viewMode, setViewMode] = useState<'team' | 'review'>('team')
-  const [masterTasks, setMasterTasks] = useState<{ id: string; title: string; status: string; assignee: string | null; priority: string; links: string | null }[]>([])
+  const [masterTasks, setMasterTasks] = useState<{ id: string; title: string; status: string; assignee: string | null; priority: string; links: string | null; current_status: string | null; overview: string | null; action_items: string | null; dan_comments: string | null }[]>([])
   const [masterComments, setMasterComments] = useState<{ id: string; task_id: string; author: string; message: string; created_at: string }[]>([])
+  const [expandedReview, setExpandedReview] = useState<string | null>(null)
+  const [reviewComment, setReviewComment] = useState('')
+  const [sendingReview, setSendingReview] = useState(false)
 
   useEffect(() => {
     async function fetch() {
@@ -75,7 +78,7 @@ export function TeamView() {
       setTasks(rows)
 
       // Fetch master tasks in review + their comments
-      const { data: mt } = await supabase.from('master_tasks').select('id, title, status, assignee, priority, links').eq('status', 'review')
+      const { data: mt } = await supabase.from('master_tasks').select('id, title, status, assignee, priority, links, current_status, overview, action_items, dan_comments').eq('status', 'review')
       if (mt) setMasterTasks(mt as typeof masterTasks)
 
       // Fetch comments for master tasks in review
@@ -89,6 +92,33 @@ export function TeamView() {
     }
     fetch()
   }, [])
+
+  const handleReviewComment = async (taskId: string) => {
+    if (!reviewComment.trim() || !displayName || sendingReview) return
+    setSendingReview(true)
+    const c = { id: `temp-${Date.now()}`, task_id: taskId, author: displayName, message: reviewComment.trim(), created_at: new Date().toISOString() }
+    setMasterComments((prev) => [...prev, c])
+    await supabase.from('master_task_comments').insert({ task_id: taskId, author: displayName, message: reviewComment.trim() } as never)
+    setReviewComment('')
+    setSendingReview(false)
+  }
+
+  const handleReviewAction = async (taskId: string, action: 'approve' | 'revise') => {
+    const newStatus = action === 'approve' ? 'complete' : 'in-progress'
+    // Update master task
+    setMasterTasks((prev) => prev.filter((t) => t.id !== taskId))
+    await supabase.from('master_tasks').update({ status: newStatus, updated_at: new Date().toISOString() } as never).eq('id', taskId)
+    if (displayName) {
+      const msg = action === 'approve' ? 'Approved and marked complete' : 'Sent back for revisions'
+      await supabase.from('master_task_comments').insert({ task_id: taskId, author: displayName, message: msg } as never)
+    }
+  }
+
+  const handleEventTaskReview = async (taskId: string, action: 'approve' | 'revise') => {
+    const newStatus = action === 'approve' ? 'complete' : 'in-progress'
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)))
+    await supabase.from('event_tasks').update({ status: newStatus } as never).eq('id', taskId)
+  }
 
   const handleStatusCycle = async (taskId: string) => {
     const task = tasks.find((t) => t.id === taskId)
@@ -178,88 +208,162 @@ export function TeamView() {
           {reviewCount === 0 ? (
             <p className="text-muted text-center py-12 uppercase tracking-widest text-xs font-bold">No items awaiting review.</p>
           ) : (
-            <div className="space-y-6">
-              {/* Master tasks in review */}
-              {masterTasks.length > 0 && (
-                <div>
-                  <div className="bg-blue text-white px-6 py-3 flex items-center justify-between">
-                    <h2 className="text-sm font-bold tracking-widest uppercase">Master Tasks for Review</h2>
-                    <span className="text-xs font-bold tracking-wider opacity-70">{masterTasks.length}</span>
-                  </div>
-                  <div className="border-l-2 border-r-2 border-b-2 border-black/10">
-                    {masterTasks.map((mt, i) => {
-                      const mtComments = masterComments.filter(c => c.task_id === mt.id)
-                      return (
-                        <div key={mt.id} className={`px-5 py-4 ${i > 0 ? 'border-t border-black/5' : ''}`}>
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1">
-                              <a href={`/tasks`} className="text-sm font-bold hover:text-blue transition-colors">{mt.title}</a>
-                              <div className="flex items-center gap-2 mt-1">
-                                {mt.assignee && <span className="text-[10px] font-bold text-blue uppercase tracking-wider">{mt.assignee}</span>}
-                                <span className={`text-[10px] font-bold uppercase tracking-wider ${mt.priority === 'ultra-high' ? 'text-red' : mt.priority === 'high' ? 'text-orange' : 'text-muted'}`}>{mt.priority}</span>
-                              </div>
-                              {mt.links && (
-                                <div className="mt-2 space-y-0.5">
-                                  {mt.links.split('\n').filter(Boolean).map((link, li) => (
-                                    <a key={li} href={link.trim().startsWith('http') ? link.trim() : `https://${link.trim()}`} target="_blank" rel="noopener noreferrer" className="text-xs text-blue hover:text-red underline block truncate">{link.trim()}</a>
-                                  ))}
-                                </div>
-                              )}
-                              {mtComments.length > 0 && (
-                                <div className="mt-2 border-l-2 border-black/10 pl-3 space-y-1">
-                                  {mtComments.slice(-3).map(c => (
-                                    <div key={c.id} className="text-xs">
-                                      <span className="font-bold text-blue">{c.author}</span>
-                                      <span className="text-muted mx-1">&middot;</span>
-                                      <span className="text-muted">{new Date(c.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
-                                      <p className="mt-0.5">{c.message}</p>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-blue bg-blue/10 px-3 py-1">FOR REVIEW</span>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
+            <div className="space-y-0">
+              <div className="bg-blue text-white px-6 py-4 flex items-center justify-between">
+                <h2 className="text-sm font-bold tracking-widest uppercase">Awaiting Review</h2>
+                <span className="text-xs font-bold tracking-wider opacity-70">{reviewCount} ITEMS</span>
+              </div>
 
-              {/* Event tasks in review */}
-              {(() => {
-                const reviewTasks = tasks.filter(t => t.status === 'review')
-                if (reviewTasks.length === 0) return null
-                return (
-                  <div>
-                    <div className="bg-blue text-white px-6 py-3 flex items-center justify-between">
-                      <h2 className="text-sm font-bold tracking-widest uppercase">Event Tasks for Review</h2>
-                      <span className="text-xs font-bold tracking-wider opacity-70">{reviewTasks.length}</span>
-                    </div>
-                    <div className="border-l-2 border-r-2 border-b-2 border-black/10">
-                      {reviewTasks.map((task, i) => (
-                        <div key={task.id} className={`px-5 py-3 flex items-start justify-between gap-4 ${i > 0 ? 'border-t border-black/5' : ''}`}>
-                          <div className="flex-1">
-                            <p className="text-sm font-bold">{task.event_title} — {task.title}</p>
+              <div className="border-l-2 border-r-2 border-b-2 border-black/10">
+                {/* Master tasks */}
+                {masterTasks.map((mt, i) => {
+                  const mtComments = masterComments.filter(c => c.task_id === mt.id)
+                  const isExpanded = expandedReview === mt.id
+
+                  return (
+                    <div key={mt.id} className={i > 0 ? 'border-t border-black/5' : ''}>
+                      <button
+                        onClick={() => { setExpandedReview(isExpanded ? null : mt.id); setReviewComment('') }}
+                        className="w-full text-left px-5 py-4 hover:bg-cream-dark transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <h3 className="text-sm font-bold">{mt.title}</h3>
                             <div className="flex items-center gap-2 mt-1">
-                              {task.assignee && <span className="text-[10px] font-bold text-blue uppercase tracking-wider">{task.assignee}</span>}
-                              <span className="text-[10px] text-muted uppercase tracking-wider">{task.category}</span>
-                              {task.event_id && <a href={`/events/${task.event_id}`} className="text-[10px] font-bold text-blue uppercase tracking-widest hover:text-red">View Event &rarr;</a>}
+                              {mt.assignee && <span className="text-[10px] font-bold text-blue uppercase tracking-wider">{mt.assignee}</span>}
+                              <span className={`text-[10px] font-bold uppercase tracking-wider ${mt.priority === 'ultra-high' ? 'text-red' : mt.priority === 'high' ? 'text-orange' : 'text-muted'}`}>{mt.priority}</span>
+                              {mtComments.length > 0 && <span className="text-[10px] font-bold text-gold uppercase tracking-wider">{mtComments.length} comments</span>}
                             </div>
                           </div>
-                          <button
-                            onClick={() => handleStatusCycle(task.id)}
-                            className="text-[10px] font-bold uppercase tracking-widest text-blue bg-blue/10 px-3 py-1 hover:bg-green/10 hover:text-green transition-colors"
-                          >
-                            FOR REVIEW
-                          </button>
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-blue bg-blue/10 px-3 py-1 shrink-0">FOR REVIEW</span>
                         </div>
-                      ))}
+                      </button>
+
+                      {isExpanded && (
+                        <div className="px-5 pb-5 border-t border-black/5 bg-white">
+                          {/* Full detail */}
+                          <div className="grid gap-4 sm:grid-cols-2 pt-4">
+                            {mt.current_status && (
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Current Status</p>
+                                <p className="text-xs">{mt.current_status}</p>
+                              </div>
+                            )}
+                            {mt.overview && (
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Overview</p>
+                                <p className="text-xs">{mt.overview}</p>
+                              </div>
+                            )}
+                          </div>
+
+                          {mt.action_items && (
+                            <div className="mt-4">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Action Items</p>
+                              <ul className="space-y-1">
+                                {mt.action_items.split('\n').map((item, idx) => (
+                                  <li key={idx} className="text-xs flex items-start gap-2">
+                                    <span className="text-muted mt-0.5">&mdash;</span>
+                                    <span>{item}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {mt.dan_comments && (
+                            <div className="mt-4 border-l-4 border-red pl-3">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-red mb-1">Dan&apos;s Previous Comments</p>
+                              <p className="text-xs italic">{mt.dan_comments}</p>
+                            </div>
+                          )}
+
+                          {/* Links */}
+                          {mt.links && (
+                            <div className="mt-4">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Links</p>
+                              <div className="space-y-1">
+                                {mt.links.split('\n').filter(Boolean).map((link, li) => (
+                                  <a key={li} href={link.trim().startsWith('http') ? link.trim() : `https://${link.trim()}`} target="_blank" rel="noopener noreferrer" className="text-xs text-blue hover:text-red underline block truncate">{link.trim()}</a>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Comments thread */}
+                          <div className="mt-4 border-t-2 border-black/5 pt-4">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Discussion</p>
+                            {mtComments.length > 0 && (
+                              <div className="space-y-2 mb-3 max-h-48 overflow-y-auto border border-black/5">
+                                {mtComments.map((c, ci) => (
+                                  <div key={c.id} className={`text-xs px-3 py-2 ${ci > 0 ? 'border-t border-black/5' : ''}`}>
+                                    <span className="font-bold text-blue">{c.author}</span>
+                                    <span className="text-muted mx-1">&middot;</span>
+                                    <span className="text-muted">{new Date(c.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })} {new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                    <p className="mt-0.5">{c.message}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={reviewComment}
+                                onChange={(e) => setReviewComment(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') handleReviewComment(mt.id) }}
+                                placeholder="Leave feedback..."
+                                className="flex-1 border-2 border-black bg-white px-3 py-2 text-xs font-bold text-black placeholder:text-muted/50 focus:outline-none focus:border-blue"
+                              />
+                              <button onClick={() => handleReviewComment(mt.id)} disabled={!reviewComment.trim() || sendingReview}
+                                className="bg-black text-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-blue transition-colors disabled:opacity-40">
+                                Post
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="mt-4 flex gap-2">
+                            <button onClick={() => handleReviewAction(mt.id, 'approve')}
+                              className="bg-green text-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-green-light transition-colors">
+                              Approve &amp; Complete
+                            </button>
+                            <button onClick={() => handleReviewAction(mt.id, 'revise')}
+                              className="bg-orange text-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-red transition-colors">
+                              Send Back for Revisions
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+
+                {/* Event tasks in review */}
+                {tasks.filter(t => t.status === 'review').map((task, i) => (
+                  <div key={task.id} className={`border-t border-black/5`}>
+                    <div className="px-5 py-4 flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <p className="text-sm font-bold">{task.event_title} &mdash; {task.title}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          {task.assignee && <span className="text-[10px] font-bold text-blue uppercase tracking-wider">{task.assignee}</span>}
+                          <span className="text-[10px] text-muted uppercase tracking-wider">{task.category}</span>
+                          {task.event_id && <a href={`/events/${task.event_id}`} className="text-[10px] font-bold text-blue uppercase tracking-widest hover:text-red">View Event &rarr;</a>}
+                        </div>
+                      </div>
+                      <div className="flex gap-1 shrink-0">
+                        <button onClick={() => handleEventTaskReview(task.id, 'approve')}
+                          className="text-[10px] font-bold uppercase tracking-widest text-green bg-green/10 px-2 py-1 hover:bg-green/20 transition-colors">
+                          Done
+                        </button>
+                        <button onClick={() => handleEventTaskReview(task.id, 'revise')}
+                          className="text-[10px] font-bold uppercase tracking-widest text-orange bg-orange/10 px-2 py-1 hover:bg-orange/20 transition-colors">
+                          Revise
+                        </button>
+                      </div>
                     </div>
                   </div>
-                )
-              })()}
+                ))}
+              </div>
             </div>
           )}
         </div>

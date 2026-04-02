@@ -232,24 +232,11 @@ export function MasterTaskList() {
   const handleStatusChange = async (task: MasterTask, newStatus: string) => {
     setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: newStatus } : t)))
     await supabase.from('master_tasks').update({ status: newStatus, updated_at: new Date().toISOString() } as never).eq('id', task.id)
-
-    if (displayName) {
-      const c: TaskComment = { id: `temp-${Date.now()}`, task_id: task.id, author: displayName, message: `Changed status to ${statusLabels[newStatus]}`, created_at: new Date().toISOString() }
-      setComments((prev) => [...prev, c])
-      await supabase.from('master_task_comments').insert({ task_id: task.id, author: displayName, message: c.message } as never)
-    }
   }
 
   const handlePriorityChange = async (task: MasterTask, newPriority: string) => {
-    const oldPriority = task.priority
     setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, priority: newPriority } : t)))
     await supabase.from('master_tasks').update({ priority: newPriority, updated_at: new Date().toISOString() } as never).eq('id', task.id)
-
-    if (displayName && oldPriority !== newPriority) {
-      const c: TaskComment = { id: `temp-${Date.now()}`, task_id: task.id, author: displayName, message: `Changed priority from ${priorityLabels[oldPriority]} to ${priorityLabels[newPriority]}`, created_at: new Date().toISOString() }
-      setComments((prev) => [...prev, c])
-      await supabase.from('master_task_comments').insert({ task_id: task.id, author: displayName, message: c.message } as never)
-    }
   }
 
   const handleAddMasterTask = async () => {
