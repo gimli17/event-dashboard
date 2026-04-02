@@ -64,6 +64,8 @@ export function TeamView() {
   const [personNewDeadline, setPersonNewDeadline] = useState('')
   const [personNewNotes, setPersonNewNotes] = useState('')
   const [personNewLinks, setPersonNewLinks] = useState('')
+  const [personNewChecklist, setPersonNewChecklist] = useState<{ id: string; text: string; checked: boolean }[]>([])
+  const [personNewCheckInput, setPersonNewCheckInput] = useState('')
   const [editingCheckItem, setEditingCheckItem] = useState<string | null>(null)
   const [editCheckText, setEditCheckText] = useState('')
 
@@ -163,7 +165,7 @@ export function TeamView() {
       dan_comments: null,
       update_to_dan: null,
       dan_feedback: null,
-      dan_checklist: [],
+      dan_checklist: personNewChecklist.length > 0 ? personNewChecklist : [],
       created_by: displayName || selectedPerson,
     }
     setAllMasterTasks((prev) => [task, ...prev])
@@ -173,6 +175,8 @@ export function TeamView() {
     setPersonNewDeadline('')
     setPersonNewNotes('')
     setPersonNewLinks('')
+    setPersonNewChecklist([])
+    setPersonNewCheckInput('')
 
     await supabase.from('master_tasks').insert({
       ...task,
@@ -719,12 +723,14 @@ export function TeamView() {
               </div>
 
               {showPersonNewTask && (
-                <div className="border-l-2 border-r-2 border-b-2 border-blue/20 bg-white px-6 py-5 space-y-3">
+                <div className="border-l-2 border-r-2 border-b-2 border-blue/20 bg-white px-6 py-6 space-y-4">
+                  {/* Title */}
                   <input type="text" value={personNewTitle} onChange={(e) => setPersonNewTitle(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' && personNewTitle.trim()) handlePersonCreateTask() }}
-                    placeholder="WHAT NEEDS TO BE DONE..."
+                    placeholder="Task title..."
                     autoFocus
-                    className="w-full border-2 border-black bg-white px-4 py-3 text-sm font-bold text-black placeholder:text-muted/40 focus:outline-none focus:border-blue" />
+                    className="w-full border-2 border-black bg-white px-4 py-3 text-lg font-bold text-black placeholder:text-muted/40 focus:outline-none focus:border-blue" />
+
+                  {/* Priority + Deadline */}
                   <div className="flex gap-3 flex-wrap">
                     <select value={personNewPriority} onChange={(e) => setPersonNewPriority(e.target.value)}
                       className="border-2 border-black/20 bg-white px-3 py-2 text-xs font-bold uppercase tracking-widest focus:outline-none focus:border-black">
@@ -737,15 +743,74 @@ export function TeamView() {
                     <input type="date" value={personNewDeadline} onChange={(e) => setPersonNewDeadline(e.target.value)}
                       className="border-2 border-black/20 bg-white px-3 py-2 text-xs font-bold uppercase tracking-widest focus:outline-none focus:border-black cursor-pointer" />
                   </div>
-                  <textarea value={personNewNotes} onChange={(e) => setPersonNewNotes(e.target.value)}
-                    placeholder="Notes or context (optional)..."
-                    rows={3}
-                    className="w-full border-2 border-black/20 bg-white px-4 py-3 text-sm text-black leading-relaxed focus:outline-none focus:border-blue placeholder:text-muted/30" />
-                  <input type="text" value={personNewLinks} onChange={(e) => setPersonNewLinks(e.target.value)}
-                    placeholder="Links (paste URLs, one per line)"
-                    className="w-full border-2 border-black/20 bg-white px-4 py-2.5 text-sm text-black focus:outline-none focus:border-blue placeholder:text-muted/30" />
+
+                  {/* Rich text area with toolbar */}
+                  <div>
+                    <div className="flex items-center gap-1 border-2 border-b-0 border-black/20 bg-cream-dark px-2 py-1.5">
+                      <button type="button" onClick={() => document.execCommand('bold')}
+                        className="px-2 py-1 text-xs font-bold hover:bg-black/10 transition-colors" title="Bold"><strong>B</strong></button>
+                      <button type="button" onClick={() => document.execCommand('italic')}
+                        className="px-2 py-1 text-xs italic hover:bg-black/10 transition-colors" title="Italic"><em>I</em></button>
+                      <button type="button" onClick={() => document.execCommand('underline')}
+                        className="px-2 py-1 text-xs underline hover:bg-black/10 transition-colors" title="Underline">U</button>
+                      <div className="w-px h-4 bg-black/10 mx-1" />
+                      <button type="button" onClick={() => document.execCommand('insertUnorderedList')}
+                        className="px-2 py-1 text-xs hover:bg-black/10 transition-colors" title="Bullet list">&bull; List</button>
+                    </div>
+                    <div
+                      contentEditable
+                      suppressContentEditableWarning
+                      onBlur={(e) => setPersonNewNotes(e.currentTarget.innerHTML)}
+                      className="w-full border-2 border-black/20 bg-white px-4 py-4 text-sm text-black leading-relaxed focus:outline-none focus:border-blue min-h-[150px] resize-y overflow-auto"
+                      style={{ resize: 'vertical' }}
+                      data-placeholder="Notes, context, instructions..."
+                    />
+                    <style>{`[contenteditable]:empty:before { content: attr(data-placeholder); color: #c4b89a; }`}</style>
+                  </div>
+
+                  {/* Links */}
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Links</p>
+                    <input type="text" value={personNewLinks} onChange={(e) => setPersonNewLinks(e.target.value)}
+                      placeholder="Paste URLs (one per line)"
+                      className="w-full border-2 border-black/20 bg-white px-4 py-2.5 text-sm text-black focus:outline-none focus:border-blue placeholder:text-muted/30" />
+                  </div>
+
+                  {/* Checklist for Dan */}
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-purple mb-2">Dan Advise Checklist</p>
+                    {personNewChecklist.length > 0 && (
+                      <div className="space-y-1.5 mb-2">
+                        {personNewChecklist.map((item) => (
+                          <div key={item.id} className="flex items-center gap-2">
+                            <span className="text-sm">{'\u2610'} {item.text}</span>
+                            <button onClick={() => setPersonNewChecklist(prev => prev.filter(i => i.id !== item.id))}
+                              className="text-muted/30 hover:text-red text-lg font-bold">&times;</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <input type="text" value={personNewCheckInput} onChange={(e) => setPersonNewCheckInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && personNewCheckInput.trim()) {
+                            setPersonNewChecklist(prev => [...prev, { id: `ci-${Date.now()}`, text: personNewCheckInput.trim(), checked: false }])
+                            setPersonNewCheckInput('')
+                          }
+                        }}
+                        placeholder="Add checkbox item for Dan..."
+                        className="flex-1 border-2 border-purple-light/40 bg-white px-3 py-2 text-sm text-black focus:outline-none focus:border-purple placeholder:text-muted/30" />
+                      <button onClick={() => {
+                        if (!personNewCheckInput.trim()) return
+                        setPersonNewChecklist(prev => [...prev, { id: `ci-${Date.now()}`, text: personNewCheckInput.trim(), checked: false }])
+                        setPersonNewCheckInput('')
+                      }} className="bg-purple text-white px-3 py-2 text-xs font-bold uppercase tracking-widest hover:bg-purple-light transition-colors">Add</button>
+                    </div>
+                  </div>
+
+                  {/* Create button */}
                   <button onClick={handlePersonCreateTask} disabled={!personNewTitle.trim()}
-                    className="bg-blue text-white px-8 py-3 text-sm font-bold uppercase tracking-widest hover:bg-blue-light transition-colors disabled:opacity-40">
+                    className="w-full bg-blue text-white px-8 py-3.5 text-sm font-bold uppercase tracking-widest hover:bg-blue-light transition-colors disabled:opacity-40">
                     Create Task
                   </button>
                 </div>
