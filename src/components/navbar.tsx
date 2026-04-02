@@ -1,10 +1,24 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useSidebar } from '@/lib/sidebar-context'
+import { supabase } from '@/lib/supabase'
 
 export function Navbar() {
   const sidebar = useSidebar()
+  const [reviewCount, setReviewCount] = useState(0)
+
+  useEffect(() => {
+    async function fetchCount() {
+      const { count } = await supabase
+        .from('master_tasks')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'review')
+      setReviewCount(count || 0)
+    }
+    fetchCount()
+  }, [])
 
   return (
     <nav className="bg-blue text-white">
@@ -25,8 +39,13 @@ export function Navbar() {
           <Link href="/private-parties" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
             Private Parties
           </Link>
-          <Link href="/team" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
+          <Link href="/team" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors relative">
             Team Workspace
+            {reviewCount > 0 && (
+              <span className="absolute -top-2 -right-4 bg-red text-white text-[9px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                {reviewCount}
+              </span>
+            )}
           </Link>
         </div>
       </div>

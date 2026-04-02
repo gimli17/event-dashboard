@@ -145,6 +145,16 @@ export function TeamView() {
     await supabase.from('master_tasks').update({ dan_checklist: checklist } as never).eq('id', taskId)
   }
 
+  const handleDanReassign = async (taskId: string, newAssignee: string | null) => {
+    setReviewTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, assignee: newAssignee } : t)))
+    await supabase.from('master_tasks').update({ assignee: newAssignee, updated_at: new Date().toISOString() } as never).eq('id', taskId)
+  }
+
+  const handleDanPriority = async (taskId: string, newPriority: string) => {
+    setReviewTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, priority: newPriority } : t)))
+    await supabase.from('master_tasks').update({ priority: newPriority, updated_at: new Date().toISOString() } as never).eq('id', taskId)
+  }
+
   const handleSaveUpdate = async (taskId: string) => {
     await supabase.from('master_tasks').update({ update_to_dan: updateText, updated_at: new Date().toISOString() } as never).eq('id', taskId)
   }
@@ -399,6 +409,33 @@ export function TeamView() {
                             <p className="text-base italic text-muted">{task.dan_comments}</p>
                           </div>
                         )}
+
+                        {/* Reassign + Priority */}
+                        <div className="flex items-center gap-6 mb-6 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold uppercase tracking-widest text-muted">Assign:</span>
+                            <select
+                              value={task.assignee || ''}
+                              onChange={(e) => handleDanReassign(task.id, e.target.value || null)}
+                              className="border-2 border-black/20 bg-white px-3 py-2 text-sm font-bold focus:outline-none focus:border-purple cursor-pointer"
+                            >
+                              <option value="">Unassigned</option>
+                              {teamMembers.map((n) => <option key={n} value={n}>{n}</option>)}
+                            </select>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold uppercase tracking-widest text-muted">Priority:</span>
+                            {['ultra-high', 'high', 'medium', 'backlog'].map((p) => (
+                              <button key={p} onClick={() => handleDanPriority(task.id, p)}
+                                className={`px-3 py-1.5 text-xs font-bold tracking-widest uppercase transition-all ${task.priority === p
+                                  ? p === 'ultra-high' ? 'bg-red text-white' : p === 'high' ? 'bg-orange text-white' : p === 'medium' ? 'bg-gold text-white' : 'bg-black/20 text-black'
+                                  : 'bg-black/5 text-muted/40 hover:text-muted'
+                                }`}>
+                                {p === 'ultra-high' ? 'ULTRA' : p.toUpperCase()}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
 
                         {/* Dan's feedback input */}
                         <div className="border-t-2 border-purple-light/40 pt-6">
