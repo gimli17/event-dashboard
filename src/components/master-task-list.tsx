@@ -766,14 +766,35 @@ export function MasterTaskList() {
                             <div className="flex items-center gap-4 mb-4 flex-wrap">
                               <div className="flex items-center gap-2">
                                 <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Owner:</span>
+                                <span className={`text-[10px] font-bold uppercase tracking-wider ${task.assignee ? 'text-blue' : 'text-muted/40'}`}>{task.assignee || 'Unassigned'}</span>
                                 <select
-                                  value={task.assignee || ''}
-                                  onChange={(e) => handleAssigneeChange(task, e.target.value || null)}
-                                  className={`border-2 border-black/20 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black cursor-pointer ${task.assignee ? 'text-blue' : 'text-muted/40'}`}
+                                  value=""
+                                  onChange={(e) => {
+                                    if (!e.target.value) return
+                                    const current = task.assignee || ''
+                                    const names = current.split(', ').filter(Boolean)
+                                    if (names.includes(e.target.value)) return
+                                    handleAssigneeChange(task, names.length > 0 ? current + ', ' + e.target.value : e.target.value)
+                                  }}
+                                  className="border-2 border-black/20 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black cursor-pointer"
                                 >
-                                  <option value="">Unassigned</option>
-                                  {teamMembers.map((n) => <option key={n} value={n}>{n}</option>)}
+                                  <option value="">+ Add</option>
+                                  {teamMembers.filter(n => !(task.assignee || '').includes(n)).map((n) => <option key={n} value={n}>{n}</option>)}
                                 </select>
+                                {task.assignee && (
+                                  <select
+                                    value=""
+                                    onChange={(e) => {
+                                      if (!e.target.value) return
+                                      const names = (task.assignee || '').split(', ').filter(n => n !== e.target.value)
+                                      handleAssigneeChange(task, names.length > 0 ? names.join(', ') : null)
+                                    }}
+                                    className="border-2 border-black/20 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-red cursor-pointer"
+                                  >
+                                    <option value="">- Remove</option>
+                                    {(task.assignee || '').split(', ').filter(Boolean).map((n) => <option key={n} value={n}>{n}</option>)}
+                                  </select>
+                                )}
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Deadline:</span>
