@@ -34,12 +34,16 @@ interface EventProgress {
   done: number
 }
 
-interface EventWithTasks {
+interface EventTaskRow {
   id: string
+  event_id: string
+  event_title: string
+  event_day_label: string
   title: string
-  day: string
-  day_label: string
-  tasks: { id: string; title: string; status: string; category: string; assignee: string | null }[]
+  status: string
+  category: string
+  assignee: string | null
+  priority: string | null
 }
 
 const priorityOrder = ['ultra-high', 'high', 'medium', 'backlog']
@@ -86,10 +90,9 @@ export function MasterTaskList() {
   const [tasks, setTasks] = useState<MasterTask[]>([])
   const [comments, setComments] = useState<TaskComment[]>([])
   const [eventProgress, setEventProgress] = useState<EventProgress[]>([])
-  const [eventsWithTasks, setEventsWithTasks] = useState<EventWithTasks[]>([])
+  const [eventTaskRows, setEventTaskRows] = useState<EventTaskRow[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedTask, setExpandedTask] = useState<string | null>(null)
-  const [expandedEvent, setExpandedEvent] = useState<string | null>(null)
   const [commentInput, setCommentInput] = useState('')
   const [sending, setSending] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('all')
@@ -118,17 +121,27 @@ export function MasterTaskList() {
           Object.entries(progressMap).map(([event_id, p]) => ({ event_id, ...p }))
         )
 
-        // Build events with tasks for the summary section
-        const { data: events } = await supabase.from('events').select('id, title, day, day_label').order('date')
+        // Build flat event task rows for the summary section
+        const { data: events } = await supabase.from('events').select('id, title, day, day_label, date').order('date')
         if (events) {
-          const ewt: EventWithTasks[] = (events as { id: string; title: string; day: string; day_label: string }[])
-            .map((e) => ({
-              ...e,
-              tasks: (eventTasks as { id: string; event_id: string; title: string; status: string; category: string; assignee: string | null }[])
-                .filter((t) => t.event_id === e.id),
+          const eventMap: Record<string, { title: string; day_label: string }> = {}
+          for (const e of events as { id: string; title: string; day_label: string }[]) {
+            eventMap[e.id] = { title: e.title, day_label: e.day_label }
+          }
+          const rows: EventTaskRow[] = (eventTasks as { id: string; event_id: string; title: string; status: string; category: string; assignee: string | null; priority?: string | null }[])
+            .filter((t) => eventMap[t.event_id])
+            .map((t) => ({
+              id: t.id,
+              event_id: t.event_id,
+              event_title: eventMap[t.event_id].title,
+              event_day_label: eventMap[t.event_id].day_label,
+              title: t.title,
+              status: t.status,
+              category: t.category,
+              assignee: t.assignee,
+              priority: t.priority ?? 'medium',
             }))
-            .filter((e) => e.tasks.length > 0)
-          setEventsWithTasks(ewt)
+          setEventTaskRows(rows)
         }
       }
 
@@ -164,6 +177,23 @@ export function MasterTaskList() {
   const handleDeleteComment = async (commentId: string) => {
     setComments((prev) => prev.filter((c) => c.id !== commentId))
     await supabase.from('master_task_comments').delete().eq('id', commentId)
+  }
+
+  const handleEventTaskPriority = async (taskId: string) => {
+    const nextP: Record<string, string> = { low: 'medium', medium: 'high', high: 'low' }
+    setEventTaskRows((prev) => prev.map((t) => t.id === taskId ? { ...t, priority: nextP[t.priority || 'medium'] } : t))
+    const row = eventTaskRows.find((t) => t.id === taskId)
+    const newP = nextP[row?.priority || 'medium']
+    await supabase.from('event_tasks').update({ priority: newP } as never).eq('id', taskId)
+  }
+
+  const handleEventTaskStatus = async (taskId: string) => {
+    const nextS: Record<string, string> = { 'not-started': 'in-progress', 'in-progress': 'complete', complete: 'not-started' }
+    const row = eventTaskRows.find((t) => t.id === taskId)
+    if (!row) return
+    const newS = nextS[row.status]
+    setEventTaskRows((prev) => prev.map((t) => t.id === taskId ? { ...t, status: newS } : t))
+    await supabase.from('event_tasks').update({ status: newS } as never).eq('id', taskId)
   }
 
   const handleAddComment = async (taskId: string) => {
@@ -427,76 +457,54 @@ export function MasterTaskList() {
         </div>
       )}
 
-      {/* Founders Experience Events — event tasks as summary rows */}
-      {viewMode === 'all' && eventsWithTasks.length > 0 && (
+      {/* Founders Experience Events — every event task as a flat row */}
+      {viewMode === 'all' && eventTaskRows.length > 0 && (
         <div className="mt-6">
           <div className="bg-blue text-white px-6 py-4 flex items-center justify-between">
-            <div className="flex items-baseline gap-4">
-              <h2 className="text-sm font-bold tracking-widest uppercase">
-                Founders Experience Events
-              </h2>
-            </div>
+            <h2 className="text-sm font-bold tracking-widest uppercase">
+              Founders Experience Events
+            </h2>
             <span className="text-xs font-bold tracking-wider opacity-70">
-              {eventsWithTasks.reduce((s, e) => s + e.tasks.length, 0)} TASKS ACROSS {eventsWithTasks.length} EVENTS
+              {eventTaskRows.length} TASKS
             </span>
           </div>
 
           <div className="border-l-2 border-r-2 border-b-2 border-black/10">
-            {eventsWithTasks.map((event, i) => {
-              const done = event.tasks.filter((t) => t.status === 'complete').length
-              const total = event.tasks.length
-              const pct = total > 0 ? Math.round((done / total) * 100) : 0
-              const isExpanded = expandedEvent === event.id
-
-              return (
-                <div key={event.id} className={i > 0 ? 'border-t border-black/5' : ''}>
-                  <button
-                    onClick={() => setExpandedEvent(isExpanded ? null : event.id)}
-                    className="w-full text-left px-5 py-3 hover:bg-cream-dark transition-colors"
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-bold leading-tight">{event.title}</h3>
-                        <span className="text-[10px] text-muted uppercase tracking-wider">{event.day_label}</span>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className={`text-[10px] font-bold uppercase tracking-widest ${pct === 100 ? 'text-green' : pct > 0 ? 'text-blue' : 'text-muted'}`}>
-                          {done}/{total} ({pct}%)
-                        </span>
-                        <a
-                          href={`/events/${event.id}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-[10px] font-bold text-blue uppercase tracking-widest hover:text-red transition-colors"
-                        >
-                          View &rarr;
-                        </a>
-                      </div>
-                    </div>
-                  </button>
-
-                  {isExpanded && (
-                    <div className="bg-white border-t border-black/5">
-                      {event.tasks.map((task, j) => (
-                        <div key={task.id} className={`px-5 py-2.5 flex items-center justify-between gap-4 ${j > 0 ? 'border-t border-black/3' : ''}`}>
-                          <div className="flex items-center gap-3 min-w-0">
-                            <span className="text-[10px] text-muted uppercase tracking-wider w-20 shrink-0">{task.category}</span>
-                            <span className={`text-xs ${task.status === 'complete' ? 'line-through text-muted' : ''}`}>{task.title}</span>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            {task.assignee && <span className="text-[10px] font-bold text-blue uppercase tracking-wider">{task.assignee}</span>}
-                            <span className={`text-[10px] font-bold uppercase tracking-widest ${
-                              task.status === 'complete' ? 'text-green' : task.status === 'in-progress' ? 'text-orange' : 'text-muted'
-                            }`}>
-                              {task.status === 'complete' ? 'DONE' : task.status === 'in-progress' ? 'IN PROGRESS' : 'NOT STARTED'}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+            {eventTaskRows.map((row, i) => (
+              <div key={row.id} className={`px-5 py-3 flex items-start justify-between gap-4 hover:bg-cream-dark transition-colors ${i > 0 ? 'border-t border-black/5' : ''}`}>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-bold leading-tight ${row.status === 'complete' ? 'line-through text-muted' : ''}`}>
+                    {row.event_title} — {row.title}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[10px] text-muted uppercase tracking-wider">{row.category}</span>
+                    {row.assignee && <span className="text-[10px] font-bold text-blue uppercase tracking-wider">{row.assignee}</span>}
+                    <a href={`/events/${row.event_id}`} className="text-[10px] font-bold text-blue uppercase tracking-widest hover:text-red transition-colors">
+                      View Event &rarr;
+                    </a>
+                  </div>
                 </div>
-              )
-            })}
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    onClick={() => handleEventTaskPriority(row.id)}
+                    className={`px-2 py-1 text-[9px] font-bold tracking-widest uppercase cursor-pointer ${
+                      row.priority === 'high' ? 'text-red bg-red/10' : row.priority === 'medium' ? 'text-gold bg-gold/10' : 'text-muted bg-black/5'
+                    }`}
+                    title="Click to change priority"
+                  >
+                    {row.priority === 'high' ? 'HIGH' : row.priority === 'medium' ? 'MED' : 'LOW'}
+                  </button>
+                  <button
+                    onClick={() => handleEventTaskStatus(row.id)}
+                    className={`px-2 py-1 text-[9px] font-bold tracking-widest uppercase cursor-pointer ${statusColors[row.status]}`}
+                    title="Click to change status"
+                  >
+                    {statusLabels[row.status]}
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
