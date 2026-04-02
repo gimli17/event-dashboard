@@ -396,6 +396,45 @@ export function TeamView() {
               </div>
             )}
 
+            {/* Priority, Owner, Deadline controls */}
+            <div className="flex items-center gap-6 mb-6 flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold uppercase tracking-widest text-muted">Priority:</span>
+                {['ultra-high', 'high', 'medium', 'low', 'backlog'].map((p) => (
+                  <button key={p} onClick={() => handleDanPriority(task.id, p)}
+                    className={`px-3 py-1.5 text-xs font-bold tracking-widest uppercase transition-all ${task.priority === p ? priorityColors[p] : 'bg-black/5 text-muted/40 hover:text-muted'}`}>
+                    {p === 'ultra-high' ? 'VERY HIGH' : p.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center gap-6 mb-6 flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold uppercase tracking-widest text-muted">Owner:</span>
+                <select
+                  value={task.assignee || ''}
+                  onChange={(e) => handleDanReassign(task.id, e.target.value || null)}
+                  className="border-2 border-black/20 bg-white px-3 py-2 text-sm font-bold focus:outline-none focus:border-purple cursor-pointer"
+                >
+                  <option value="">Unassigned</option>
+                  {allTeamMembers.map((n) => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold uppercase tracking-widest text-muted">Deadline:</span>
+                <input
+                  type="date"
+                  value={task.deadline || ''}
+                  onChange={async (e) => {
+                    const val = e.target.value || null
+                    setAllMasterTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, deadline: val } : t)))
+                    await supabase.from('master_tasks').update({ deadline: val, updated_at: new Date().toISOString() } as never).eq('id', task.id)
+                  }}
+                  className="border-2 border-black/20 bg-white px-3 py-2 text-sm font-bold focus:outline-none focus:border-purple cursor-pointer"
+                />
+              </div>
+            </div>
+
             <div className="border-t-2 border-purple-light/40 pt-6">
               <div className="flex gap-3 flex-wrap">
                 {task.status === 'review' ? (
