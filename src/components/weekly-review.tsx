@@ -16,7 +16,7 @@ interface ScheduledChange {
 }
 
 const priorityLabels: Record<string, string> = {
-  'ultra-high': 'ULTRA-HIGH',
+  'ultra-high': 'VERY HIGH',
   high: 'HIGH',
   medium: 'MEDIUM',
   backlog: 'BACKLOG',

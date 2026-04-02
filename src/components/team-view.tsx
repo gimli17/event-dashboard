@@ -33,7 +33,7 @@ interface TeamMember {
 
 const allTeamMembers = ['Cody', 'Sabrina', 'Joe', 'Danny', 'Connor', 'Gib', 'Emily', 'Kendall', 'Alex', 'Liam', 'Dave', 'Tom', 'Kevin']
 
-const priorityLabels: Record<string, string> = { 'ultra-high': 'ULTRA-HIGH', high: 'HIGH', medium: 'MEDIUM', backlog: 'BACKLOG' }
+const priorityLabels: Record<string, string> = { 'ultra-high': 'VERY HIGH', high: 'HIGH', medium: 'MEDIUM', backlog: 'BACKLOG' }
 const priorityColors: Record<string, string> = { 'ultra-high': 'bg-red text-white', high: 'bg-orange text-white', medium: 'bg-gold text-white', backlog: 'bg-black/20 text-black' }
 
 export function TeamView() {
@@ -293,7 +293,7 @@ export function TeamView() {
                 {['ultra-high', 'high', 'medium', 'backlog'].map((p) => (
                   <button key={p} onClick={() => handleDanPriority(task.id, p)}
                     className={`px-3 py-1.5 text-xs font-bold tracking-widest uppercase transition-all ${task.priority === p ? priorityColors[p] : 'bg-black/5 text-muted/40 hover:text-muted'}`}>
-                    {p === 'ultra-high' ? 'ULTRA' : p.toUpperCase()}
+                    {p === 'ultra-high' ? 'VERY' : p.toUpperCase()}
                   </button>
                 ))}
               </div>

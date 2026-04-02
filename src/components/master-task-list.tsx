@@ -78,7 +78,7 @@ const priorityColors: Record<string, string> = {
 }
 
 const priorityLabels: Record<string, string> = {
-  'ultra-high': 'ULTRA-HIGH PRIORITY',
+  'ultra-high': 'VERY HIGH PRIORITY',
   high: 'HIGH PRIORITY',
   medium: 'MEDIUM PRIORITY',
   backlog: 'BACKLOG — DEPRIORITIZED',
@@ -285,11 +285,6 @@ export function MasterTaskList() {
     setNewTaskDeadline('')
 
     await supabase.from('master_tasks').insert(newTask as never)
-    await supabase.from('master_task_comments').insert({
-      task_id: taskId,
-      author: displayName,
-      message: `Created task`,
-    } as never)
   }
 
   // Parse comments for priority keywords and auto-reprioritize
@@ -339,21 +334,6 @@ export function MasterTaskList() {
       if (task && task.priority !== newPriority) {
         setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, priority: newPriority! } : t)))
         await supabase.from('master_tasks').update({ priority: newPriority, updated_at: new Date().toISOString() } as never).eq('id', taskId)
-
-        const sysComment: TaskComment = {
-          id: `temp-sys-${Date.now()}`,
-          task_id: taskId,
-          author: 'System',
-          message: `Auto-reprioritized to ${priorityLabels[newPriority]} based on comment`,
-          created_at: new Date().toISOString(),
-        }
-        setComments((prev) => [...prev, sysComment])
-
-        await supabase.from('master_task_comments').insert({
-          task_id: taskId,
-          author: 'System',
-          message: sysComment.message,
-        } as never)
       }
     }
 
@@ -469,12 +449,6 @@ export function MasterTaskList() {
     if (autoPriority && autoPriority !== task.priority) {
       updates.priority = autoPriority
       setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, deadline: newDeadline, priority: autoPriority! } : t)))
-
-      if (displayName) {
-        const c: TaskComment = { id: `temp-${Date.now()}`, task_id: task.id, author: 'System', message: `Deadline set to ${newDeadline} → auto-prioritized to ${priorityLabels[autoPriority]}`, created_at: new Date().toISOString() }
-        setComments((prev) => [...prev, c])
-        await supabase.from('master_task_comments').insert({ task_id: task.id, author: 'System', message: c.message } as never)
-      }
     } else {
       setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, deadline: newDeadline } : t)))
     }
@@ -561,7 +535,7 @@ export function MasterTaskList() {
       {/* Stats */}
       <div className="flex items-center gap-8 mb-8 flex-wrap">
         <div><p className="text-3xl font-bold">{tasks.length}</p><p className="text-xs font-bold uppercase tracking-widest text-muted">Total</p></div>
-        <div><p className="text-3xl font-bold text-red">{ultraHighCount}</p><p className="text-xs font-bold uppercase tracking-widest text-muted">Ultra-High</p></div>
+        <div><p className="text-3xl font-bold text-red">{ultraHighCount}</p><p className="text-xs font-bold uppercase tracking-widest text-muted">Very High</p></div>
         <div><p className="text-3xl font-bold text-orange">{highCount}</p><p className="text-xs font-bold uppercase tracking-widest text-muted">High</p></div>
         <div><p className="text-3xl font-bold text-green">{completeCount}</p><p className="text-xs font-bold uppercase tracking-widest text-muted">Complete</p></div>
         {blockedCount > 0 && (
@@ -620,7 +594,7 @@ export function MasterTaskList() {
             </select>
             <select value={newTaskPriority} onChange={(e) => setNewTaskPriority(e.target.value)}
               className="border-2 border-black/20 bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black">
-              {priorityOrder.map((p) => <option key={p} value={p}>{p === 'ultra-high' ? 'Ultra-High' : p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
+              {priorityOrder.map((p) => <option key={p} value={p}>{p === 'ultra-high' ? 'Very High' : p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
             </select>
             <input type="date" value={newTaskDeadline} onChange={(e) => {
               setNewTaskDeadline(e.target.value)
@@ -901,7 +875,7 @@ export function MasterTaskList() {
                               {priorityOrder.map((p) => (
                                 <button key={p} onClick={() => handlePriorityChange(task, p)}
                                   className={`px-2 py-1 text-[9px] font-bold tracking-widest uppercase transition-all ${task.priority === p ? priorityColors[p] : 'bg-black/5 text-muted/40 hover:text-muted'}`}>
-                                  {p === 'ultra-high' ? 'ULTRA' : p.toUpperCase()}
+                                  {p === 'ultra-high' ? 'VERY' : p.toUpperCase()}
                                 </button>
                               ))}
                             </div>
