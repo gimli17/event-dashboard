@@ -17,8 +17,8 @@ export function Navbar() {
           <Link href="/bold-conversations" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
             Bold Conversations
           </Link>
-          <Link href="/pending" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
-            Pending
+          <Link href="/private-parties" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
+            Private Parties
           </Link>
         </div>
       </div>

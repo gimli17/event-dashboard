@@ -8,38 +8,38 @@ export const dynamic = 'force-dynamic'
 const modules = [
   {
     title: 'Event Schedule',
-    description: 'Full festival timeline with task tracking per event',
+    description: 'Full festival timeline — Wed through Sun with task tracking per event',
     href: '/schedule',
     color: 'bg-blue',
   },
   {
     title: 'Master Tasks',
-    description: 'All BRMF priorities with status, owners, and Dan\'s comments',
+    description: 'All BRMF priorities — ultra-high to backlog — with owners and Dan\'s comments',
     href: '/tasks',
     color: 'bg-red',
   },
   {
     title: 'Bold Conversations',
-    description: 'Topics, tracks, and founder interest signals',
+    description: '18 topics across 3 tracks — Health, Culture, Tech — with founder interest signals',
     href: '/bold-conversations',
     color: 'bg-green',
   },
   {
-    title: 'Pending Activities',
-    description: 'All incomplete event tasks ranked by priority',
-    href: '/pending',
-    color: 'bg-orange',
+    title: 'Private Parties',
+    description: '9 sponsor event slots across Fri–Sun — see which are claimed, which are open',
+    href: '/private-parties',
+    color: 'bg-gold',
   },
   {
     title: 'Sponsor Portal',
-    description: 'Manage sponsors, tiers, and package selections',
+    description: 'Manage sponsors, tiers, packages, and event selections',
     href: 'https://brmf-sponsor-portal.vercel.app/',
-    color: 'bg-gold',
+    color: 'bg-orange',
     external: true,
   },
   {
     title: 'Ticket Tracker',
-    description: 'Live ticket sales and revenue tracking',
+    description: 'Live Eventbrite ticket sales, revenue, and capacity tracking',
     href: 'https://boulderrootstickettracker.vercel.app/',
     color: 'bg-black',
     external: true,
@@ -68,7 +68,7 @@ export default async function HubPage() {
         </div>
       </section>
 
-      {/* Key metrics bar */}
+      {/* Key metrics */}
       <section className="bg-cream-dark border-b-2 border-black/10">
         <div className="max-w-5xl mx-auto px-6 py-6 flex items-center justify-center gap-16">
           <div className="text-center">
@@ -96,19 +96,19 @@ export default async function HubPage() {
 
       <section className="bg-cream flex-1">
         <div className="max-w-5xl mx-auto px-6 py-12">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2">
             {modules.map((mod) => {
               const isExternal = (mod as { external?: boolean }).external
               const inner = (
                 <div className="group h-full">
-                  <div className={`${mod.color} text-white px-5 py-3 flex items-center justify-between`}>
-                    <h2 className="text-xs font-bold tracking-widest uppercase">{mod.title}</h2>
+                  <div className={`${mod.color} text-white px-6 py-4 flex items-center justify-between`}>
+                    <h2 className="text-sm font-bold tracking-widest uppercase">{mod.title}</h2>
                     {isExternal && (
                       <span className="text-[9px] font-bold tracking-widest uppercase opacity-50">External</span>
                     )}
                   </div>
-                  <div className="border-l-2 border-r-2 border-b-2 border-black/10 px-5 py-4 bg-white group-hover:bg-cream-dark transition-colors">
-                    <p className="text-xs text-muted">{mod.description}</p>
+                  <div className="border-l-2 border-r-2 border-b-2 border-black/10 px-6 py-5 bg-white group-hover:bg-cream-dark transition-colors">
+                    <p className="text-sm text-muted leading-relaxed">{mod.description}</p>
                   </div>
                 </div>
               )
@@ -128,7 +128,6 @@ export default async function HubPage() {
               )
             })}
           </div>
-
         </div>
       </section>
 
