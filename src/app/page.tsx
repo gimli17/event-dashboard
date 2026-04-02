@@ -13,10 +13,10 @@ export default async function HubPage() {
     <>
       <Navbar />
 
-      <section className="bg-blue text-white py-8">
+      <section className="bg-blue text-white py-6">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold tracking-tight leading-none uppercase">
+            <h1 className="text-3xl font-bold tracking-tight leading-none uppercase">
               Boulder Roots
             </h1>
             <p className="text-xs text-white/50 mt-1">

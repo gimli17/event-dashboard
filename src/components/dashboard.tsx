@@ -96,28 +96,19 @@ export function Dashboard({
   return (
     <>
       {/* Hero */}
-      <section className="bg-blue text-white py-20">
-        <div className="max-w-7xl mx-auto px-6">
-          <Link href="/" className="inline-flex items-center gap-2 bg-white/20 hover:bg-white/30 px-4 py-2 text-xs font-bold tracking-widest uppercase text-white mb-6 transition-colors">
-            <span>&larr;</span> Back
-          </Link>
-          <p className="text-xs font-bold tracking-[0.3em] uppercase text-white/50 mb-4">
-            The Founders Experience
-          </p>
-          <h1 className="text-6xl sm:text-8xl font-bold tracking-tight leading-none uppercase">
-            Boulder Roots
-          </h1>
-          <div className="flex items-center gap-6 mt-8">
-            <div className="bg-red px-4 py-2">
-              <span className="text-xs font-bold tracking-widest uppercase">Aug 26\u201330, 2026</span>
-            </div>
-            <div className="bg-green px-4 py-2">
-              <span className="text-xs font-bold tracking-widest uppercase">{events.length} Events</span>
-            </div>
-            <div className="bg-orange px-4 py-2">
-              <span className="text-xs font-bold tracking-widest uppercase">{sponsorshipOpen} Open Sponsorships</span>
-            </div>
+      <section className="bg-blue text-white py-6">
+        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/" className="inline-flex items-center gap-1.5 bg-white/20 hover:bg-white/30 px-3 py-1.5 text-xs font-bold tracking-widest uppercase text-white transition-colors">
+              <span>&larr;</span> Back
+            </Link>
+            <h1 className="text-2xl font-bold tracking-tight leading-none uppercase">
+              Event Schedule
+            </h1>
           </div>
+          <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/50">
+            {events.length} Events &middot; {sponsorshipOpen} Open Sponsorships
+          </p>
         </div>
       </section>
 

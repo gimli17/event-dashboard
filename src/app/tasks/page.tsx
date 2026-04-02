@@ -9,15 +9,17 @@ export default function TasksPage() {
     <>
       <Navbar />
 
-      <section className="bg-red text-white py-12">
-        <div className="max-w-6xl mx-auto px-6">
-          <BackLink />
-          <p className="text-xs font-bold tracking-[0.3em] uppercase text-white/50 mb-4">
+      <section className="bg-red text-white py-6">
+        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <BackLink />
+            <h1 className="text-2xl font-bold tracking-tight leading-none uppercase">
+              BRMF Priorities
+            </h1>
+          </div>
+          <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/50">
             W/C March 30th
           </p>
-          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight leading-none uppercase">
-            BRMF Priorities
-          </h1>
         </div>
       </section>
 

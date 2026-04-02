@@ -9,14 +9,16 @@ export default function BoldConversationsPage() {
     <>
       <Navbar />
 
-      <section className="bg-green text-white py-12">
-        <div className="max-w-5xl mx-auto px-6">
-          <BackLink />
-          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight leading-none uppercase">
-            Bold<br />Conversations
-          </h1>
-          <p className="text-xs font-bold tracking-[0.3em] uppercase text-white/50 mt-4">
-            3 Tracks &middot; Indicate Your Interest &middot; Topics Assigned to Sessions Later
+      <section className="bg-green text-white py-6">
+        <div className="max-w-5xl mx-auto px-6 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <BackLink />
+            <h1 className="text-2xl font-bold tracking-tight leading-none uppercase">
+              Bold Conversations
+            </h1>
+          </div>
+          <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/50">
+            3 Tracks &middot; Indicate Interest
           </p>
         </div>
       </section>

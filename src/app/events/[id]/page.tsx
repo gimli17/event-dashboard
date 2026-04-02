@@ -39,28 +39,22 @@ export default async function EventPage({
       <Navbar />
 
       {/* Hero */}
-      <section className="bg-blue text-white py-12">
-        <div className="max-w-5xl mx-auto px-6">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-white/50 hover:text-white mb-8 transition-colors"
-          >
-            <span>&larr;</span> Back to Schedule
-          </Link>
-
-          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight leading-none uppercase">
-            {event.title}
-          </h1>
-          <div className="flex items-center gap-4 mt-4 flex-wrap">
-            <div className="bg-red px-3 py-1.5">
-              <span className="text-xs font-bold tracking-widest uppercase">
-                {event.day_label}
-              </span>
-            </div>
-            <span className="text-sm text-white/60">
-              {event.start_time} &ndash; {event.end_time}
-            </span>
+      <section className="bg-blue text-white py-6">
+        <div className="max-w-5xl mx-auto px-6 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link
+              href="/schedule"
+              className="inline-flex items-center gap-1.5 bg-white/20 hover:bg-white/30 px-3 py-1.5 text-xs font-bold tracking-widest uppercase text-white transition-colors"
+            >
+              <span>&larr;</span> Back
+            </Link>
+            <h1 className="text-2xl font-bold tracking-tight leading-none uppercase">
+              {event.title}
+            </h1>
           </div>
+          <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/50">
+            {event.day_label} &middot; {event.start_time} &ndash; {event.end_time}
+          </p>
         </div>
       </section>
 

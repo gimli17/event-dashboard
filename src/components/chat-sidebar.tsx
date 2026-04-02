@@ -261,38 +261,6 @@ export function ChatSidebar() {
 
   return (
     <>
-      {/* Toggle buttons */}
-      <div className="fixed right-6 top-1/3 -translate-y-1/2 z-[9990] flex flex-col gap-3">
-        <button
-          onClick={() => {
-            if (isOpen && tab === 'chat') { sidebar.closeSidebar() }
-            else { sidebar.setTab('chat'); sidebar.openSidebar() }
-          }}
-          className={`px-6 py-5 text-sm font-bold uppercase tracking-widest shadow-xl flex items-center gap-3 transition-colors ${
-            isOpen && tab === 'chat' ? 'bg-black text-white' : 'bg-blue text-white hover:bg-black'
-          }`}
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-          </svg>
-          Chat
-        </button>
-        <button
-          onClick={() => {
-            if (isOpen && (tab === 'add-task' || tab === 'add-event')) { sidebar.closeSidebar() }
-            else { sidebar.setTab('add-task'); sidebar.openSidebar() }
-          }}
-          className={`px-6 py-5 text-sm font-bold uppercase tracking-widest shadow-xl flex items-center gap-3 transition-colors ${
-            isOpen && (tab === 'add-task' || tab === 'add-event') ? 'bg-black text-white' : 'bg-red text-white hover:bg-black'
-          }`}
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Actions
-        </button>
-      </div>
-
       {/* Overlay */}
       {isOpen && (
         <div className="fixed inset-0 z-[9991] bg-black/30" onClick={() => sidebar.closeSidebar()} />

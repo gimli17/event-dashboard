@@ -41,14 +41,16 @@ export default async function PrivatePartiesPage() {
     <>
       <Navbar />
 
-      <section className="bg-gold text-white py-12">
-        <div className="max-w-5xl mx-auto px-6">
-          <BackLink />
-          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight leading-none uppercase">
-            Private Parties
-          </h1>
-          <p className="text-xs font-bold tracking-[0.3em] uppercase text-white/50 mt-4">
-            Sponsor Event Slots — Founders Experience
+      <section className="bg-gold text-white py-6">
+        <div className="max-w-5xl mx-auto px-6 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <BackLink />
+            <h1 className="text-2xl font-bold tracking-tight leading-none uppercase">
+              Private Parties
+            </h1>
+          </div>
+          <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/50">
+            Sponsor Event Slots
           </p>
         </div>
       </section>
