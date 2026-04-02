@@ -228,11 +228,9 @@ export function MasterTaskList() {
     await supabase.from('master_tasks').update({ status: newStatus, updated_at: new Date().toISOString() } as never).eq('id', task.id)
 
     if (displayName) {
-      await supabase.from('master_task_comments').insert({
-        task_id: task.id,
-        author: displayName,
-        message: `Changed status to ${statusLabels[newStatus]}`,
-      } as never)
+      const c: TaskComment = { id: `temp-${Date.now()}`, task_id: task.id, author: displayName, message: `Changed status to ${statusLabels[newStatus]}`, created_at: new Date().toISOString() }
+      setComments((prev) => [...prev, c])
+      await supabase.from('master_task_comments').insert({ task_id: task.id, author: displayName, message: c.message } as never)
     }
   }
 
@@ -242,11 +240,9 @@ export function MasterTaskList() {
     await supabase.from('master_tasks').update({ priority: newPriority, updated_at: new Date().toISOString() } as never).eq('id', task.id)
 
     if (displayName && oldPriority !== newPriority) {
-      await supabase.from('master_task_comments').insert({
-        task_id: task.id,
-        author: displayName,
-        message: `Changed priority from ${priorityLabels[oldPriority]} to ${priorityLabels[newPriority]}`,
-      } as never)
+      const c: TaskComment = { id: `temp-${Date.now()}`, task_id: task.id, author: displayName, message: `Changed priority from ${priorityLabels[oldPriority]} to ${priorityLabels[newPriority]}`, created_at: new Date().toISOString() }
+      setComments((prev) => [...prev, c])
+      await supabase.from('master_task_comments').insert({ task_id: task.id, author: displayName, message: c.message } as never)
     }
   }
 
@@ -303,21 +299,47 @@ export function MasterTaskList() {
       newPriority = 'backlog'
     }
 
-    await supabase.from('master_task_comments').insert({
+    // Optimistically add to local state
+    const tempId = `temp-${Date.now()}`
+    const newComment: TaskComment = {
+      id: tempId,
       task_id: taskId,
       author: displayName,
       message: msg,
-    } as never)
+      created_at: new Date().toISOString(),
+    }
+    setComments((prev) => [...prev, newComment])
+
+    const { data } = await supabase.from('master_task_comments').insert({
+      task_id: taskId,
+      author: displayName,
+      message: msg,
+    } as never).select().single()
+
+    // Replace temp with real ID
+    if (data) {
+      setComments((prev) => prev.map((c) => c.id === tempId ? data as TaskComment : c))
+    }
 
     if (newPriority) {
       const task = tasks.find((t) => t.id === taskId)
       if (task && task.priority !== newPriority) {
         setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, priority: newPriority! } : t)))
         await supabase.from('master_tasks').update({ priority: newPriority, updated_at: new Date().toISOString() } as never).eq('id', taskId)
-        await supabase.from('master_task_comments').insert({
+
+        const sysComment: TaskComment = {
+          id: `temp-sys-${Date.now()}`,
           task_id: taskId,
           author: 'System',
           message: `Auto-reprioritized to ${priorityLabels[newPriority]} based on comment`,
+          created_at: new Date().toISOString(),
+        }
+        setComments((prev) => [...prev, sysComment])
+
+        await supabase.from('master_task_comments').insert({
+          task_id: taskId,
+          author: 'System',
+          message: sysComment.message,
         } as never)
       }
     }
