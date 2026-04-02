@@ -103,20 +103,22 @@ export function mapVipToEvent(vipDay: string): string | null {
   return vipDayToEventId[vipDay] ?? null
 }
 
-// Returns a map of event_id -> sponsor name for events that have a confirmed sponsor
+// Returns a map of event_id -> sponsor info for events that have confirmed sponsors
+// Supports multiple sponsors per event (co-sponsorship)
 export function getSponsorsByEvent(sponsors: Sponsor[]): Record<string, { name: string; partyName: string | null; tier: string | null }> {
-  const result: Record<string, { name: string; partyName: string | null; tier: string | null }> = {}
+  const collected: Record<string, { names: string[]; partyName: string | null; tier: string | null }> = {}
 
   for (const s of sponsors) {
     // Check VIP day selections (private party slots)
     if (s.vip_day && s.vip_day.trim()) {
       const eventId = vipDayToEventId[s.vip_day]
       if (eventId) {
-        result[eventId] = {
-          name: s.recognition_name || s.name,
-          partyName: s.vip_party_name || null,
-          tier: s.tier_id,
+        if (!collected[eventId]) {
+          collected[eventId] = { names: [], partyName: null, tier: null }
         }
+        collected[eventId].names.push(s.recognition_name || s.name)
+        if (s.vip_party_name) collected[eventId].partyName = s.vip_party_name
+        if (s.tier_id) collected[eventId].tier = s.tier_id
       }
     }
 
@@ -124,12 +126,22 @@ export function getSponsorsByEvent(sponsors: Sponsor[]): Record<string, { name: 
     if (s.add_recog_detail && s.add_recog_detail.trim()) {
       const eventId = recogDetailToEventId[s.add_recog_detail]
       if (eventId) {
-        result[eventId] = {
-          name: s.recognition_name || s.name,
-          partyName: null,
-          tier: s.tier_id,
+        if (!collected[eventId]) {
+          collected[eventId] = { names: [], partyName: null, tier: null }
         }
+        collected[eventId].names.push(s.recognition_name || s.name)
+        if (s.tier_id) collected[eventId].tier = s.tier_id
       }
+    }
+  }
+
+  // Merge names into a single string
+  const result: Record<string, { name: string; partyName: string | null; tier: string | null }> = {}
+  for (const [eventId, info] of Object.entries(collected)) {
+    result[eventId] = {
+      name: [...new Set(info.names)].join(' & '),
+      partyName: info.partyName,
+      tier: info.tier,
     }
   }
 
