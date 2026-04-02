@@ -82,6 +82,11 @@ export function ChatSidebar() {
   const [taskNotes, setTaskNotes] = useState('')
   const [addingTask, setAddingTask] = useState(false)
   const [taskSuccess, setTaskSuccess] = useState('')
+  const [taskType, setTaskType] = useState<'event' | 'master'>('master')
+  const [taskAssignee, setTaskAssignee] = useState('')
+  const [taskPriority, setTaskPriority] = useState('medium')
+  const [taskDeadline, setTaskDeadline] = useState('')
+  const teamMembers = ['Cody', 'Sabrina', 'Joe', 'Danny', 'Connor', 'Gib', 'Emily', 'Kendall', 'Alex', 'Liam', 'Dave', 'Tom', 'Kevin']
 
   // Add event state
   const [eventTitle, setEventTitle] = useState('')
@@ -229,33 +234,59 @@ export function ChatSidebar() {
 
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!taskTitle.trim() || !selectedEvent || !displayName || addingTask) return
+    if (!taskTitle.trim() || !displayName || addingTask) return
+    if (taskType === 'event' && !selectedEvent) return
     setAddingTask(true)
     setTaskSuccess('')
-    const taskId = `t-${Date.now()}`
-    const { error } = await supabase.from('event_tasks').insert({
-      id: taskId,
-      event_id: selectedEvent,
-      title: taskTitle.trim(),
-      category: selectedCategory,
-      status: 'not-started',
-      assignee: null,
-      notes: taskNotes.trim() || null,
-    } as never)
-    if (!error) {
-      const eventName = events.find((e) => e.id === selectedEvent)?.title ?? 'event'
-      await supabase.from('comments').insert({
-        author: displayName,
-        message: `Added task "${taskTitle.trim()}" to ${eventName} [${selectedCategory}]`,
-        event_id: selectedEvent,
-        task_id: taskId,
-        type: 'task-update',
+    const taskId = taskType === 'master' ? `mt-${Date.now()}` : `t-${Date.now()}`
+
+    if (taskType === 'master') {
+      await supabase.from('master_tasks').insert({
+        id: taskId,
+        title: taskTitle.trim(),
+        assignee: taskAssignee || null,
+        priority: taskPriority,
+        status: 'not-started',
+        deadline: taskDeadline || null,
+        current_status: null,
+        overview: taskNotes.trim() || null,
+        action_items: null,
+        dan_comments: null,
+        links: null,
+        update_to_dan: null,
+        dan_feedback: null,
+        dan_checklist: [],
+        sort_order: 999,
+        event_id: null,
+        week_of: null,
       } as never)
+      setTaskSuccess('Master task created')
+    } else {
+      await supabase.from('event_tasks').insert({
+        id: taskId,
+        event_id: selectedEvent,
+        title: taskTitle.trim(),
+        category: selectedCategory,
+        status: 'not-started',
+        assignee: taskAssignee || null,
+        notes: taskNotes.trim() || null,
+      } as never)
+      const eventName = events.find((ev) => ev.id === selectedEvent)?.title ?? 'event'
       setTaskSuccess(`Added to ${eventName}`)
-      setTaskTitle('')
-      setTaskNotes('')
-      setTimeout(() => setTaskSuccess(''), 3000)
     }
+
+    await supabase.from('comments').insert({
+      author: displayName,
+      message: `Created: "${taskTitle.trim()}"${taskAssignee ? ` → ${taskAssignee}` : ''}`,
+      event_id: taskType === 'event' ? selectedEvent : null,
+      type: 'chat',
+    } as never)
+
+    setTaskTitle('')
+    setTaskNotes('')
+    setTaskAssignee('')
+    setTaskDeadline('')
+    setTimeout(() => setTaskSuccess(''), 3000)
     setAddingTask(false)
   }
 
@@ -523,42 +554,88 @@ export function ChatSidebar() {
 
         {/* ── ADD TASK TAB ── */}
         {tab === 'add-task' && (
-          <form onSubmit={handleAddTask} className="flex-1 overflow-y-auto px-4 py-6 space-y-5">
+          <form onSubmit={handleAddTask} className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
+            {/* Type toggle */}
+            <div className="flex gap-1.5">
+              <button type="button" onClick={() => setTaskType('master')}
+                className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest border-2 transition-all ${taskType === 'master' ? 'bg-red text-white border-red' : 'bg-white text-black border-black/20'}`}>
+                Master Task
+              </button>
+              <button type="button" onClick={() => setTaskType('event')}
+                className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest border-2 transition-all ${taskType === 'event' ? 'bg-blue text-white border-blue' : 'bg-white text-black border-black/20'}`}>
+                Event Task
+              </button>
+            </div>
+
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Event</label>
-              {events.length === 0 ? (
-                <p className="text-xs text-muted py-2">Loading events...</p>
-              ) : (
-                <div className="relative">
-                  <select value={selectedEvent} onChange={(e) => setSelectedEvent(e.target.value)} className="w-full border-2 border-black bg-white px-3 py-2.5 pr-8 text-xs font-bold text-black focus:outline-none focus:border-blue cursor-pointer">
-                    {events.map((ev) => <option key={ev.id} value={ev.id}>{ev.day_label} — {ev.title}</option>)}
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Title</label>
+              <input type="text" value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} placeholder="WHAT NEEDS TO BE DONE..." className="w-full border-2 border-black bg-white px-3 py-2.5 text-xs font-bold text-black placeholder:text-muted/50 focus:outline-none focus:border-blue" />
+            </div>
+
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Assign To</label>
+                <select value={taskAssignee} onChange={(e) => setTaskAssignee(e.target.value)}
+                  className="w-full border-2 border-black/20 bg-white px-2 py-2 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black">
+                  <option value="">Unassigned</option>
+                  {teamMembers.map((n) => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </div>
+              {taskType === 'master' && (
+                <div className="flex-1">
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Priority</label>
+                  <select value={taskPriority} onChange={(e) => setTaskPriority(e.target.value)}
+                    className="w-full border-2 border-black/20 bg-white px-2 py-2 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black">
+                    <option value="ultra-high">Very High</option>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="backlog">Backlog</option>
                   </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-black text-xs">&#9660;</div>
                 </div>
               )}
             </div>
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Category</label>
-              <div className="grid grid-cols-3 gap-1.5">
-                {taskCategories.map((cat) => (
-                  <button key={cat.value} type="button" onClick={() => setSelectedCategory(cat.value)}
-                    className={`py-2 text-[10px] font-bold uppercase tracking-widest border-2 transition-all ${selectedCategory === cat.value ? 'bg-black text-white border-black' : 'bg-white text-black border-black/20 hover:border-black'}`}>
-                    {cat.label}
-                  </button>
-                ))}
+
+            {taskType === 'master' && (
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Deadline</label>
+                <input type="date" value={taskDeadline} onChange={(e) => setTaskDeadline(e.target.value)}
+                  className="w-full border-2 border-black/20 bg-white px-2 py-2 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black cursor-pointer" />
               </div>
-            </div>
+            )}
+
+            {taskType === 'event' && (
+              <>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Event</label>
+                  <select value={selectedEvent} onChange={(e) => setSelectedEvent(e.target.value)}
+                    className="w-full border-2 border-black bg-white px-3 py-2 text-xs font-bold text-black focus:outline-none focus:border-blue cursor-pointer">
+                    <option value="">Select event...</option>
+                    {events.map((ev) => <option key={ev.id} value={ev.id}>{ev.day_label} — {ev.title}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Category</label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {taskCategories.map((cat) => (
+                      <button key={cat.value} type="button" onClick={() => setSelectedCategory(cat.value)}
+                        className={`py-2 text-[10px] font-bold uppercase tracking-widest border-2 transition-all ${selectedCategory === cat.value ? 'bg-black text-white border-black' : 'bg-white text-black border-black/20 hover:border-black'}`}>
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Task Title</label>
-              <input type="text" value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} placeholder="E.G., BOOK SOUND ENGINEER" className="w-full border-2 border-black bg-white px-3 py-2.5 text-xs font-bold text-black placeholder:text-muted/50 focus:outline-none focus:border-blue" />
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Notes (optional)</label>
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">{taskType === 'master' ? 'Overview (optional)' : 'Notes (optional)'}</label>
               <input type="text" value={taskNotes} onChange={(e) => setTaskNotes(e.target.value)} placeholder="ANY ADDITIONAL DETAILS..." className="w-full border-2 border-black bg-white px-3 py-2.5 text-xs font-bold text-black placeholder:text-muted/50 focus:outline-none focus:border-blue" />
             </div>
+
             {taskSuccess && <div className="bg-green text-white px-4 py-3 text-xs font-bold uppercase tracking-widest text-center">{taskSuccess}</div>}
-            <button type="submit" disabled={!taskTitle.trim() || !selectedEvent || !displayName || addingTask} className="w-full bg-red text-white py-3 text-xs font-bold uppercase tracking-widest hover:bg-red-bright transition-colors disabled:opacity-40">
-              {addingTask ? 'Adding...' : 'Add Task'}
+            <button type="submit" disabled={!taskTitle.trim() || (taskType === 'event' && !selectedEvent) || !displayName || addingTask}
+              className={`w-full text-white py-3 text-xs font-bold uppercase tracking-widest transition-colors disabled:opacity-40 ${taskType === 'master' ? 'bg-red hover:bg-red-bright' : 'bg-blue hover:bg-blue-light'}`}>
+              {addingTask ? 'Adding...' : taskType === 'master' ? 'Create Master Task' : 'Create Event Task'}
             </button>
           </form>
         )}
