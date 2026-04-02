@@ -377,67 +377,6 @@ export function ChatSidebar() {
           </div>
         )}
 
-        {/* ── BULLETIN BOARD TAB ── */}
-        {tab === 'chat' && (
-          <>
-            {/* Board header */}
-            <div className="px-4 py-3 bg-amber-50 border-b-2 border-amber-200">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700">Bulletin Board</p>
-            </div>
-
-            {/* Notes */}
-            <div className="flex-1 overflow-y-auto px-3 py-4 bg-amber-50/50" style={{ backgroundImage: 'radial-gradient(circle, #e5e7eb 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
-              {filteredMessages.length === 0 && (
-                <p className="text-sm text-muted text-center mt-12 italic">Pin a note to the board!</p>
-              )}
-              <div className="space-y-3">
-                {filteredMessages.map((msg, idx) => {
-                  const noteColors = [
-                    'bg-yellow-100 border-yellow-300',
-                    'bg-blue-50 border-blue-200',
-                    'bg-green-50 border-green-200',
-                    'bg-pink-50 border-pink-200',
-                    'bg-purple-50 border-purple-200',
-                    'bg-orange-50 border-orange-200',
-                  ]
-                  const color = noteColors[msg.author.length % noteColors.length]
-                  const rotations = ['-rotate-1', 'rotate-0', 'rotate-1']
-                  const rotation = rotations[idx % rotations.length]
-                  return (
-                    <div key={msg.id} className={`${color} border-2 px-4 py-3 shadow-md ${rotation} relative group/note`}>
-                      <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-red shadow-sm border border-red/50" />
-                      <div className="flex items-start justify-between gap-2 mt-1">
-                        <div className="flex-1">
-                          <p className="text-sm leading-relaxed whitespace-pre-wrap">{renderMessage(msg.message)}</p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <span className="text-[10px] font-bold text-black/50">&mdash; {msg.author}</span>
-                            <span className="text-[10px] text-black/30">{formatDate(msg.created_at)} {formatTime(msg.created_at)}</span>
-                          </div>
-                        </div>
-                        <button onClick={() => handleDeleteMessage(msg.id)}
-                          className="text-black/10 hover:text-red transition-colors text-lg font-bold shrink-0 opacity-0 group-hover/note:opacity-100">&times;</button>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-              <div ref={bottomRef} />
-            </div>
-
-            {/* Post a note */}
-            <div className="border-t-2 border-amber-200 px-4 py-3 bg-amber-50">
-              <textarea value={input} onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(e) } }}
-                placeholder={displayName ? 'Write a note... (Shift+Enter for new line)' : 'Set your name first'}
-                disabled={!displayName} rows={2}
-                className="w-full border-2 border-amber-300 bg-yellow-50 px-3 py-2 text-sm text-black leading-relaxed focus:outline-none focus:border-amber-500 disabled:opacity-40 placeholder:text-amber-400 resize-none" />
-              <button onClick={(e) => handleSend(e)} disabled={!input.trim() || !displayName || sending}
-                className="mt-2 w-full bg-amber-600 text-white py-2 text-xs font-bold uppercase tracking-widest hover:bg-amber-700 transition-colors disabled:opacity-40">
-                {sending ? 'Pinning...' : 'Pin to Board'}
-              </button>
-            </div>
-          </>
-        )}
 
 
         {/* ── ADD TASK TAB ── */}

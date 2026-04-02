@@ -352,18 +352,34 @@ export function TeamView() {
           </div>
         </div>
 
-        {/* Links */}
-        {task.links && (
-          <div className="mb-6">
-            <p className="text-sm font-bold uppercase tracking-widest text-muted mb-2">Attachments</p>
-            <div className="space-y-2">
+        {/* Links — editable */}
+        <div className="mb-6">
+          <p className="text-sm font-bold uppercase tracking-widest text-muted mb-2">Links &amp; Attachments</p>
+          {task.links && (
+            <div className="space-y-1.5 mb-2">
               {task.links.split('\n').filter(Boolean).map((link, li) => (
                 <a key={li} href={link.trim().startsWith('http') ? link.trim() : `https://${link.trim()}`} target="_blank" rel="noopener noreferrer"
                   className="text-base text-blue hover:text-red underline block">{link.trim()}</a>
               ))}
             </div>
-          </div>
-        )}
+          )}
+          <input
+            type="text"
+            placeholder="Paste a link and press Enter..."
+            className="w-full border-2 border-black/20 bg-white px-4 py-2.5 text-sm text-black focus:outline-none focus:border-blue placeholder:text-muted/30"
+            onKeyDown={async (e) => {
+              if (e.key === 'Enter') {
+                const val = (e.target as HTMLInputElement).value.trim()
+                if (!val) return
+                const currentLinks = task.links || ''
+                const newLinks = currentLinks ? currentLinks + '\n' + val : val
+                setAllMasterTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, links: newLinks } : t)))
+                ;(e.target as HTMLInputElement).value = ''
+                await supabase.from('master_tasks').update({ links: newLinks, updated_at: new Date().toISOString() } as never).eq('id', task.id)
+              }
+            }}
+          />
+        </div>
 
         {/* Context */}
         {(task.current_status || task.overview || task.action_items) && (
