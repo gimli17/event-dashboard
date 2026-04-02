@@ -316,7 +316,11 @@ export function TeamView() {
                 className="bg-purple text-white px-8 py-3.5 text-sm font-bold uppercase tracking-widest hover:bg-purple-light transition-colors">
                 Submit for Dan&apos;s Review
               </button>
-              <button onClick={() => { setAllMasterTasks((prev) => prev.filter((t) => t.id !== task.id)); supabase.from('master_tasks').update({ status: 'complete', updated_at: new Date().toISOString() } as never).eq('id', task.id); setExpandedTask(null) }}
+              <button onClick={async () => {
+                await supabase.from('master_tasks').update({ status: 'complete', updated_at: new Date().toISOString() } as never).eq('id', task.id)
+                setAllMasterTasks((prev) => prev.filter((t) => t.id !== task.id))
+                setExpandedTask(null)
+              }}
                 className="bg-green text-white px-8 py-3.5 text-sm font-bold uppercase tracking-widest hover:bg-green-light transition-colors">
                 Mark as Done
               </button>
