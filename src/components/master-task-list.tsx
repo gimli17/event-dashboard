@@ -650,7 +650,7 @@ export function MasterTaskList() {
                                       </div>
                                       <button
                                         onClick={() => handleDeleteComment(c.id)}
-                                        className="text-muted/30 hover:text-red transition-colors shrink-0 w-6 h-6 flex items-center justify-center text-base font-bold"
+                                        className="text-muted/40 hover:text-red hover:bg-red/10 transition-colors shrink-0 w-8 h-8 flex items-center justify-center text-xl font-bold rounded"
                                         title="Delete comment"
                                       >
                                         &times;
