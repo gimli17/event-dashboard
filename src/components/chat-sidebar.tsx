@@ -85,7 +85,6 @@ export function ChatSidebar() {
   const [taskAssignee, setTaskAssignee] = useState('')
   const [taskPriority, setTaskPriority] = useState('medium')
   const [taskDeadline, setTaskDeadline] = useState('')
-  const teamMembers = ['Cody', 'Sabrina', 'Joe', 'Danny', 'Connor', 'Gib', 'Emily', 'Kendall', 'Alex', 'Liam', 'Dave', 'Tom', 'Kevin']
 
   // Add event state
   const [eventTitle, setEventTitle] = useState('')
