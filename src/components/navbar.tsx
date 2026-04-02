@@ -26,7 +26,7 @@ export function Navbar() {
             Private Parties
           </Link>
           <Link href="/team" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
-            Team
+            Team Workspace
           </Link>
         </div>
       </div>
