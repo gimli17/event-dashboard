@@ -377,167 +377,68 @@ export function ChatSidebar() {
           </div>
         )}
 
-        {/* ── CHAT TAB ── */}
+        {/* ── BULLETIN BOARD TAB ── */}
         {tab === 'chat' && (
           <>
-            {/* Toolbar */}
-            <div className="px-4 py-2 border-b border-black/10 bg-cream-dark flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                {eventFilter ? (
-                  <>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-blue truncate">{filterEventName || 'Event'}</span>
-                    <button onClick={() => sidebar.setEventFilter(null)} className="text-[10px] font-bold text-red hover:text-black">&times;</button>
-                  </>
-                ) : (
-                  <select
-                    value=""
-                    onChange={(e) => { if (e.target.value) sidebar.setEventFilter(e.target.value) }}
-                    className="bg-transparent text-[10px] font-bold uppercase tracking-wider text-black border-0 focus:outline-none cursor-pointer"
-                  >
-                    <option value="">All Events</option>
-                    {events.map((ev) => (
-                      <option key={ev.id} value={ev.id}>{ev.day_label} — {ev.title}</option>
-                    ))}
-                  </select>
-                )}
-              </div>
-              <button
-                onClick={() => setShowLogs(!showLogs)}
-                className={`text-[9px] font-bold uppercase tracking-widest px-2 py-1 transition-colors ${showLogs ? 'bg-gold/20 text-gold' : 'bg-black/5 text-muted'}`}
-              >
-                Logs {logCount > 0 ? `(${logCount})` : ''}
-              </button>
+            {/* Board header */}
+            <div className="px-4 py-3 bg-amber-50 border-b-2 border-amber-200">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700">Bulletin Board</p>
             </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+            {/* Notes */}
+            <div className="flex-1 overflow-y-auto px-3 py-4 bg-amber-50/50" style={{ backgroundImage: 'radial-gradient(circle, #e5e7eb 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
               {filteredMessages.length === 0 && (
-                <p className="text-xs uppercase tracking-wider text-muted text-center mt-8 font-medium">
-                  {showLogs ? 'No messages yet.' : 'No messages yet. Start the conversation!'}
-                </p>
+                <p className="text-sm text-muted text-center mt-12 italic">Pin a note to the board!</p>
               )}
-              {filteredMessages.map((msg) => (
-                <div key={msg.id} className={`pb-3 group/msg ${msg.type === 'task-update' ? 'border-l-4 border-gold pl-3 opacity-60 text-xs' : 'border-b border-cream-dark'}`}>
-                  <div className="flex items-baseline justify-between gap-2 mb-0.5">
-                    <span className={`text-xs font-bold uppercase tracking-wider ${msg.type === 'task-update' ? 'text-gold' : 'text-blue'}`}>
-                      {msg.author}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] uppercase tracking-wider text-muted font-medium whitespace-nowrap">
-                        {formatTime(msg.created_at)}
-                      </span>
-                      <button
-                        onClick={() => handleDeleteMessage(msg.id)}
-                        className="text-muted/20 hover:text-red transition-colors text-xs font-bold"
-                        title="Delete"
-                      >
-                        &times;
-                      </button>
+              <div className="space-y-3">
+                {filteredMessages.map((msg, idx) => {
+                  const noteColors = [
+                    'bg-yellow-100 border-yellow-300',
+                    'bg-blue-50 border-blue-200',
+                    'bg-green-50 border-green-200',
+                    'bg-pink-50 border-pink-200',
+                    'bg-purple-50 border-purple-200',
+                    'bg-orange-50 border-orange-200',
+                  ]
+                  const color = noteColors[msg.author.length % noteColors.length]
+                  const rotations = ['-rotate-1', 'rotate-0', 'rotate-1']
+                  const rotation = rotations[idx % rotations.length]
+                  return (
+                    <div key={msg.id} className={`${color} border-2 px-4 py-3 shadow-md ${rotation} relative group/note`}>
+                      <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-red shadow-sm border border-red/50" />
+                      <div className="flex items-start justify-between gap-2 mt-1">
+                        <div className="flex-1">
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap">{renderMessage(msg.message)}</p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className="text-[10px] font-bold text-black/50">&mdash; {msg.author}</span>
+                            <span className="text-[10px] text-black/30">{formatDate(msg.created_at)} {formatTime(msg.created_at)}</span>
+                          </div>
+                        </div>
+                        <button onClick={() => handleDeleteMessage(msg.id)}
+                          className="text-black/10 hover:text-red transition-colors text-lg font-bold shrink-0 opacity-0 group-hover/note:opacity-100">&times;</button>
+                      </div>
                     </div>
-                  </div>
-                  <p className={`leading-relaxed ${msg.type === 'task-update' ? 'text-muted italic text-xs' : 'text-black text-sm'}`}>
-                    {renderMessage(msg.message)}
-                  </p>
-                </div>
-              ))}
+                  )
+                })}
+              </div>
               <div ref={bottomRef} />
             </div>
 
-            {/* Assign panel */}
-            {assignMode && (
-              <div className="border-t-2 border-black/10 px-4 py-3 bg-cream-dark space-y-2">
-                <div className="flex gap-2">
-                  <select
-                    value={assignTo}
-                    onChange={(e) => setAssignTo(e.target.value)}
-                    className="flex-1 border-2 border-black bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider focus:outline-none focus:border-blue"
-                  >
-                    <option value="">Unassigned</option>
-                    {teamMembers.map((n) => <option key={n} value={n}>{n}</option>)}
-                  </select>
-                  <select
-                    value={assignPriority}
-                    onChange={(e) => setAssignPriority(e.target.value)}
-                    className="border-2 border-black bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider focus:outline-none focus:border-blue"
-                  >
-                    <option value="high">High</option>
-                    <option value="medium">Medium</option>
-                    <option value="low">Low</option>
-                  </select>
-                </div>
-                <div className="flex gap-2">
-                  <select
-                    value={assignCategory}
-                    onChange={(e) => setAssignCategory(e.target.value as EventTask['category'])}
-                    className="border-2 border-black bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider focus:outline-none focus:border-blue"
-                  >
-                    {taskCategories.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-                  </select>
-                  <select
-                    value={assignEvent}
-                    onChange={(e) => setAssignEvent(e.target.value)}
-                    className="flex-1 border-2 border-black bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider focus:outline-none focus:border-blue"
-                  >
-                    <option value="">General</option>
-                    {events.map((ev) => <option key={ev.id} value={ev.id}>{ev.day_label} — {ev.title}</option>)}
-                  </select>
-                  <input
-                    type="text"
-                    value={assignDeadline}
-                    onChange={(e) => setAssignDeadline(e.target.value)}
-                    placeholder="Due e.g. 4/5"
-                    className="w-24 border-2 border-black bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider focus:outline-none focus:border-blue placeholder:text-muted/40"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Input */}
-            <div className="border-t-4 border-black px-4 py-3 bg-cream-dark">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !assignMode) handleSend(e)
-                    if (e.key === 'Enter' && assignMode) handleAssignTask()
-                  }}
-                  placeholder={displayName ? (
-                    assignMode ? 'DESCRIBE THE TASK...' : 'TYPE A MESSAGE...'
-                  ) : 'SET NAME FIRST'}
-                  disabled={!displayName}
-                  className="flex-1 border-2 border-black bg-white px-3 py-2 text-xs font-bold uppercase tracking-wider text-black placeholder:text-muted/50 focus:outline-none focus:border-blue disabled:opacity-40"
-                />
-                {assignMode ? (
-                  <button
-                    onClick={handleAssignTask}
-                    disabled={!input.trim() || !assignTo || !displayName || sending}
-                    className="bg-red text-white px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-orange transition-colors disabled:opacity-40"
-                  >
-                    Assign
-                  </button>
-                ) : (
-                  <button
-                    onClick={(e) => handleSend(e)}
-                    disabled={!input.trim() || !displayName || sending}
-                    className="bg-black text-cream px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-blue transition-colors disabled:opacity-40"
-                  >
-                    Send
-                  </button>
-                )}
-              </div>
-              <div className="flex items-center gap-2 mt-2">
-                <button
-                  onClick={() => setAssignMode(!assignMode)}
-                  className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 transition-colors ${assignMode ? 'bg-red text-white' : 'bg-black/5 text-muted hover:text-black'}`}
-                >
-                  {assignMode ? 'Cancel' : '+ Create Task'}
-                </button>
-              </div>
+            {/* Post a note */}
+            <div className="border-t-2 border-amber-200 px-4 py-3 bg-amber-50">
+              <textarea value={input} onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(e) } }}
+                placeholder={displayName ? 'Write a note... (Shift+Enter for new line)' : 'Set your name first'}
+                disabled={!displayName} rows={2}
+                className="w-full border-2 border-amber-300 bg-yellow-50 px-3 py-2 text-sm text-black leading-relaxed focus:outline-none focus:border-amber-500 disabled:opacity-40 placeholder:text-amber-400 resize-none" />
+              <button onClick={(e) => handleSend(e)} disabled={!input.trim() || !displayName || sending}
+                className="mt-2 w-full bg-amber-600 text-white py-2 text-xs font-bold uppercase tracking-widest hover:bg-amber-700 transition-colors disabled:opacity-40">
+                {sending ? 'Pinning...' : 'Pin to Board'}
+              </button>
             </div>
           </>
         )}
+
 
         {/* ── ADD TASK TAB ── */}
         {tab === 'add-task' && (
