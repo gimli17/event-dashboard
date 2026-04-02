@@ -48,6 +48,8 @@ export function TeamView() {
   const [updateText, setUpdateText] = useState('')
   const [feedbackText, setFeedbackText] = useState('')
   const [newCheckItem, setNewCheckItem] = useState('')
+  const [editingCheckItem, setEditingCheckItem] = useState<string | null>(null)
+  const [editCheckText, setEditCheckText] = useState('')
 
   useEffect(() => {
     async function fetch() {
@@ -128,6 +130,18 @@ export function TeamView() {
     if (!task) return
     const checklist = (task.dan_checklist || []).filter((item) => item.id !== itemId)
     setReviewTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, dan_checklist: checklist } : t)))
+    await supabase.from('master_tasks').update({ dan_checklist: checklist } as never).eq('id', taskId)
+  }
+
+  const handleEditCheckItem = async (taskId: string, itemId: string) => {
+    if (!editCheckText.trim()) { setEditingCheckItem(null); return }
+    const task = reviewTasks.find((t) => t.id === taskId)
+    if (!task) return
+    const checklist = (task.dan_checklist || []).map((item) =>
+      item.id === itemId ? { ...item, text: editCheckText.trim() } : item
+    )
+    setReviewTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, dan_checklist: checklist } : t)))
+    setEditingCheckItem(null)
     await supabase.from('master_tasks').update({ dan_checklist: checklist } as never).eq('id', taskId)
   }
 
@@ -280,19 +294,39 @@ export function TeamView() {
                           {(task.dan_checklist || []).length > 0 && (
                             <div className="space-y-2 mb-3">
                               {(task.dan_checklist || []).map((item) => (
-                                <div key={item.id} className="flex items-start gap-3 group">
+                                <div key={item.id} className="flex items-start gap-3">
                                   <input
                                     type="checkbox"
                                     checked={item.checked}
                                     onChange={() => handleToggleCheckItem(task.id, item.id)}
                                     className="mt-1 w-5 h-5 border-2 border-purple-light/50 accent-purple cursor-pointer shrink-0"
                                   />
-                                  <span className={`text-base leading-relaxed flex-1 ${item.checked ? 'line-through text-muted' : ''}`}>
-                                    {item.text}
-                                  </span>
+                                  {editingCheckItem === item.id ? (
+                                    <input
+                                      type="text"
+                                      value={editCheckText}
+                                      onChange={(e) => setEditCheckText(e.target.value)}
+                                      onBlur={() => handleEditCheckItem(task.id, item.id)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleEditCheckItem(task.id, item.id)
+                                        if (e.key === 'Escape') setEditingCheckItem(null)
+                                      }}
+                                      autoFocus
+                                      className="flex-1 border-2 border-purple bg-white px-3 py-1 text-base text-black focus:outline-none"
+                                    />
+                                  ) : (
+                                    <span
+                                      onClick={() => { setEditingCheckItem(item.id); setEditCheckText(item.text) }}
+                                      className={`text-base leading-relaxed flex-1 cursor-pointer hover:text-purple transition-colors ${item.checked ? 'line-through text-muted' : ''}`}
+                                      title="Click to edit"
+                                    >
+                                      {item.text}
+                                    </span>
+                                  )}
                                   <button
                                     onClick={() => handleDeleteCheckItem(task.id, item.id)}
-                                    className="text-muted/30 hover:text-red transition-colors text-lg font-bold shrink-0 opacity-0 group-hover:opacity-100"
+                                    className="text-muted/40 hover:text-red transition-colors text-xl font-bold shrink-0 w-8 h-8 flex items-center justify-center"
+                                    title="Delete"
                                   >
                                     &times;
                                   </button>
