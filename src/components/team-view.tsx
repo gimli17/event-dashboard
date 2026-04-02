@@ -238,8 +238,28 @@ export function TeamView() {
 
   // Shared task detail renderer
   function renderTaskDetail(task: MasterTaskFull, isDanView: boolean) {
+    const taskIsFromDan = task.created_by === 'Dan' || task.created_by === 'dan'
+
     return (
       <div className="px-8 pb-8 bg-white border-t border-black/5">
+        {/* Assigned by Dan banner */}
+        {!isDanView && taskIsFromDan && (
+          <div className="bg-purple text-white px-5 py-4 -mx-8 mb-6">
+            <p className="text-sm font-bold uppercase tracking-widest">Assigned by Dan</p>
+            {task.dan_comments && (
+              <p className="text-base mt-2 leading-relaxed">{task.dan_comments}</p>
+            )}
+            {task.links && (
+              <div className="mt-2 space-y-1">
+                {task.links.split('\n').filter(Boolean).map((link, li) => (
+                  <a key={li} href={link.trim().startsWith('http') ? link.trim() : `https://${link.trim()}`} target="_blank" rel="noopener noreferrer"
+                    className="text-sm text-white/80 hover:text-white underline block">{link.trim()}</a>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Update to Dan */}
         <div className="pt-6 mb-6">
           <p className="text-sm font-bold uppercase tracking-widest text-purple mb-3">
