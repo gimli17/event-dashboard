@@ -162,7 +162,20 @@ export function TeamView() {
   // Derived data
   const reviewTasks = allMasterTasks.filter((t) => t.status === 'review')
   const totalReview = reviewTasks.length + reviewEventTasks.length
-  const personTasks = selectedPerson ? allMasterTasks.filter((t) => t.assignee?.includes(selectedPerson)) : []
+  const personTasks = selectedPerson
+    ? allMasterTasks
+        .filter((t) => t.assignee?.includes(selectedPerson))
+        .sort((a, b) => {
+          // Tasks with Dan's feedback come first
+          const aFeedback = a.dan_feedback && a.status === 'in-progress' ? 1 : 0
+          const bFeedback = b.dan_feedback && b.status === 'in-progress' ? 1 : 0
+          if (aFeedback !== bFeedback) return bFeedback - aFeedback
+          // Then tasks in review
+          if (a.status === 'review' && b.status !== 'review') return -1
+          if (a.status !== 'review' && b.status === 'review') return 1
+          return 0
+        })
+    : []
 
   if (loading) {
     return <div className="max-w-7xl mx-auto px-6 py-16 text-center"><p className="text-muted uppercase tracking-widest text-sm font-bold">Loading...</p></div>
