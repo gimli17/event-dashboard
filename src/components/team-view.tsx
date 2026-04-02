@@ -5,6 +5,12 @@ import { supabase } from '@/lib/supabase'
 import { useUser } from './user-provider'
 import type { EventTask } from '@/lib/types'
 
+interface ChecklistItem {
+  id: string
+  text: string
+  checked: boolean
+}
+
 interface MasterTaskReview {
   id: string
   title: string
@@ -18,6 +24,7 @@ interface MasterTaskReview {
   dan_comments: string | null
   update_to_dan: string | null
   dan_feedback: string | null
+  dan_checklist: ChecklistItem[]
   deadline: string | null
 }
 
@@ -40,11 +47,12 @@ export function TeamView() {
   const [expandedMember, setExpandedMember] = useState<string | null>(null)
   const [updateText, setUpdateText] = useState('')
   const [feedbackText, setFeedbackText] = useState('')
+  const [newCheckItem, setNewCheckItem] = useState('')
 
   useEffect(() => {
     async function fetch() {
       const { data: mt } = await supabase.from('master_tasks')
-        .select('id, title, status, assignee, priority, links, current_status, overview, action_items, dan_comments, update_to_dan, dan_feedback, deadline')
+        .select('id, title, status, assignee, priority, links, current_status, overview, action_items, dan_comments, update_to_dan, dan_feedback, dan_checklist, deadline')
         .eq('status', 'review')
       if (mt) setReviewTasks(mt as MasterTaskReview[])
 
@@ -94,6 +102,34 @@ export function TeamView() {
     }
     fetch()
   }, [])
+
+  const handleAddCheckItem = async (taskId: string) => {
+    if (!newCheckItem.trim()) return
+    const task = reviewTasks.find((t) => t.id === taskId)
+    if (!task) return
+    const checklist = [...(task.dan_checklist || []), { id: `ci-${Date.now()}`, text: newCheckItem.trim(), checked: false }]
+    setReviewTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, dan_checklist: checklist } : t)))
+    setNewCheckItem('')
+    await supabase.from('master_tasks').update({ dan_checklist: checklist } as never).eq('id', taskId)
+  }
+
+  const handleToggleCheckItem = async (taskId: string, itemId: string) => {
+    const task = reviewTasks.find((t) => t.id === taskId)
+    if (!task) return
+    const checklist = (task.dan_checklist || []).map((item) =>
+      item.id === itemId ? { ...item, checked: !item.checked } : item
+    )
+    setReviewTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, dan_checklist: checklist } : t)))
+    await supabase.from('master_tasks').update({ dan_checklist: checklist } as never).eq('id', taskId)
+  }
+
+  const handleDeleteCheckItem = async (taskId: string, itemId: string) => {
+    const task = reviewTasks.find((t) => t.id === taskId)
+    if (!task) return
+    const checklist = (task.dan_checklist || []).filter((item) => item.id !== itemId)
+    setReviewTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, dan_checklist: checklist } : t)))
+    await supabase.from('master_tasks').update({ dan_checklist: checklist } as never).eq('id', taskId)
+  }
 
   const handleSaveUpdate = async (taskId: string) => {
     await supabase.from('master_tasks').update({ update_to_dan: updateText, updated_at: new Date().toISOString() } as never).eq('id', taskId)
@@ -236,6 +272,51 @@ export function TeamView() {
                             rows={12}
                             className="w-full border-2 border-black/20 bg-white px-6 py-5 text-base text-black leading-relaxed focus:outline-none focus:border-purple placeholder:text-muted/30"
                           />
+                        </div>
+
+                        {/* Dan Advise — Checklist */}
+                        <div className="mb-6">
+                          <p className="text-sm font-bold uppercase tracking-widest text-purple mb-3">Dan Advise</p>
+                          {(task.dan_checklist || []).length > 0 && (
+                            <div className="space-y-2 mb-3">
+                              {(task.dan_checklist || []).map((item) => (
+                                <div key={item.id} className="flex items-start gap-3 group">
+                                  <input
+                                    type="checkbox"
+                                    checked={item.checked}
+                                    onChange={() => handleToggleCheckItem(task.id, item.id)}
+                                    className="mt-1 w-5 h-5 border-2 border-purple/40 accent-purple cursor-pointer shrink-0"
+                                  />
+                                  <span className={`text-base leading-relaxed flex-1 ${item.checked ? 'line-through text-muted' : ''}`}>
+                                    {item.text}
+                                  </span>
+                                  <button
+                                    onClick={() => handleDeleteCheckItem(task.id, item.id)}
+                                    className="text-muted/30 hover:text-red transition-colors text-lg font-bold shrink-0 opacity-0 group-hover:opacity-100"
+                                  >
+                                    &times;
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={newCheckItem}
+                              onChange={(e) => setNewCheckItem(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === 'Enter') handleAddCheckItem(task.id) }}
+                              placeholder="Add a checkbox item for Dan..."
+                              className="flex-1 border-2 border-purple/20 bg-white px-4 py-2.5 text-sm text-black focus:outline-none focus:border-purple placeholder:text-muted/30"
+                            />
+                            <button
+                              onClick={() => handleAddCheckItem(task.id)}
+                              disabled={!newCheckItem.trim()}
+                              className="bg-purple text-white px-4 py-2.5 text-xs font-bold uppercase tracking-widest hover:bg-purple/80 transition-colors disabled:opacity-40"
+                            >
+                              Add
+                            </button>
+                          </div>
                         </div>
 
                         {/* Links */}
