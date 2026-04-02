@@ -27,11 +27,11 @@ export function Navbar() {
           Boulder Roots 2026
         </Link>
         <div className="flex items-center gap-6">
-          <Link href="/schedule" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
-            Schedule
-          </Link>
           <Link href="/tasks" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
             Tasks
+          </Link>
+          <Link href="/schedule" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
+            Schedule
           </Link>
           <Link href="/bold-conversations" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
             Bold Conversations
@@ -39,10 +39,10 @@ export function Navbar() {
           <Link href="/private-parties" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
             Private Parties
           </Link>
-          <Link href="/team" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors relative">
+          <Link href="/team" className="text-xs font-bold tracking-widest uppercase bg-purple-light/30 hover:bg-purple-light/50 px-3 py-1.5 transition-colors relative">
             Team Workspace
             {reviewCount > 0 && (
-              <span className="absolute -top-2 -right-4 bg-red text-white text-[9px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
+              <span className="absolute -top-2 -right-3 bg-red text-white text-[9px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
                 {reviewCount}
               </span>
             )}
