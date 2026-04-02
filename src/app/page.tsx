@@ -84,6 +84,13 @@ export default async function HubPage() {
             </p>
             <p className="text-xs text-muted uppercase tracking-widest font-bold mt-1">Tickets Sold</p>
           </div>
+          <div className="w-px h-12 bg-black/10" />
+          <div className="text-center">
+            <p className="text-3xl font-bold text-blue">
+              {ticketStats.totalRevenue > 0 ? `$${ticketStats.totalRevenue.toLocaleString()}` : '\u2014'}
+            </p>
+            <p className="text-xs text-muted uppercase tracking-widest font-bold mt-1">Ticket Revenue</p>
+          </div>
         </div>
       </section>
 

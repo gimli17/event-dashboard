@@ -1,5 +1,3 @@
-// Fetches live ticket data from the ticket tracker API
-
 export interface TicketStats {
   totalSold: number
   totalCapacity: number
@@ -9,7 +7,7 @@ export interface TicketStats {
 export async function getTicketStats(): Promise<TicketStats> {
   try {
     const res = await fetch('https://boulderrootstickettracker.vercel.app/api/tickets', {
-      next: { revalidate: 60 }, // Cache for 60 seconds
+      next: { revalidate: 60 },
     })
     if (!res.ok) throw new Error('Ticket API failed')
 
@@ -21,8 +19,8 @@ export async function getTicketStats(): Promise<TicketStats> {
     let totalRevenue = 0
 
     for (const tc of classes) {
-      const sold = tc.quantitySold || 0
-      const capacity = tc.quantityTotal || 0
+      const sold = tc.quantity_sold || 0
+      const capacity = tc.quantity_total || 0
       const price = tc.cost?.major_value ? parseFloat(tc.cost.major_value) : 0
 
       totalSold += sold
