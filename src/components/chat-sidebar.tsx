@@ -262,7 +262,7 @@ export function ChatSidebar() {
   return (
     <>
       {/* Toggle buttons */}
-      <div className="fixed right-6 top-1/2 -translate-y-1/2 z-[9990] flex flex-col gap-3">
+      <div className="fixed right-6 top-1/3 -translate-y-1/2 z-[9990] flex flex-col gap-3">
         <button
           onClick={() => {
             if (isOpen && tab === 'chat') { sidebar.closeSidebar() }
