@@ -4,6 +4,7 @@ import { getEvent, getEventTasks } from '@/lib/data'
 import { getSponsors, getSponsorsByEvent } from '@/lib/sponsor-data'
 import { Navbar } from '@/components/navbar'
 import { TaskList } from '@/components/task-list'
+import { SidebarButtons } from '@/components/sidebar-buttons'
 
 export const dynamic = 'force-dynamic'
 
@@ -52,9 +53,7 @@ export default async function EventPage({
               {event.title}
             </h1>
           </div>
-          <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/50">
-            {event.day_label} &middot; {event.start_time} &ndash; {event.end_time}
-          </p>
+          <SidebarButtons />
         </div>
       </section>
 

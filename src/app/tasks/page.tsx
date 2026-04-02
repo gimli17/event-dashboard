@@ -1,6 +1,7 @@
 import { Navbar } from '@/components/navbar'
 import { MasterTaskList } from '@/components/master-task-list'
 import { BackLink } from '@/components/back-link'
+import { SidebarButtons } from '@/components/sidebar-buttons'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,9 +18,7 @@ export default function TasksPage() {
               BRMF Priorities
             </h1>
           </div>
-          <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/50">
-            W/C March 30th
-          </p>
+          <SidebarButtons />
         </div>
       </section>
 

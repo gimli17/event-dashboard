@@ -1,6 +1,7 @@
 import { Navbar } from '@/components/navbar'
 import { BoldConversationsList } from '@/components/bold-conversations-list'
 import { BackLink } from '@/components/back-link'
+import { SidebarButtons } from '@/components/sidebar-buttons'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,9 +18,7 @@ export default function BoldConversationsPage() {
               Bold Conversations
             </h1>
           </div>
-          <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/50">
-            3 Tracks &middot; Indicate Interest
-          </p>
+          <SidebarButtons />
         </div>
       </section>
 

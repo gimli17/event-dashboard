@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import type { Event, EventTask, EventStatus } from '@/lib/types'
 import { getProgress } from '@/lib/data'
+import { SidebarButtons } from './sidebar-buttons'
 
 function parseTime(timeStr: string): number {
   const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i)
@@ -106,9 +107,7 @@ export function Dashboard({
               Event Schedule
             </h1>
           </div>
-          <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/50">
-            {events.length} Events &middot; {sponsorshipOpen} Open Sponsorships
-          </p>
+          <SidebarButtons />
         </div>
       </section>
 

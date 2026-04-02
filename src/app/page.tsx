@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Navbar } from '@/components/navbar'
+import { SidebarButtons } from '@/components/sidebar-buttons'
 import { getSponsors, getSponsorStats } from '@/lib/sponsor-data'
 import { getTicketStats } from '@/lib/ticket-data'
 
@@ -23,9 +24,7 @@ export default async function HubPage() {
               The Founders Experience — August 26–30, 2026
             </p>
           </div>
-          <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/30">
-            Operations Portal
-          </p>
+          <SidebarButtons />
         </div>
       </section>
 

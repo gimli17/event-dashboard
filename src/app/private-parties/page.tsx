@@ -1,5 +1,6 @@
 import { Navbar } from '@/components/navbar'
 import { BackLink } from '@/components/back-link'
+import { SidebarButtons } from '@/components/sidebar-buttons'
 import { getEvents, getEventTasks } from '@/lib/data'
 import { getSponsors, getSponsorsByEvent } from '@/lib/sponsor-data'
 import type { Event, EventTask } from '@/lib/types'
@@ -49,9 +50,7 @@ export default async function PrivatePartiesPage() {
               Private Parties
             </h1>
           </div>
-          <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/50">
-            Sponsor Event Slots
-          </p>
+          <SidebarButtons />
         </div>
       </section>
 
