@@ -358,11 +358,29 @@ export function TeamView() {
             <div className="flex items-center gap-6 mb-6 flex-wrap">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold uppercase tracking-widest text-muted">Assign:</span>
-                <select value={task.assignee || ''} onChange={(e) => handleDanReassign(task.id, e.target.value || null)}
-                  className="border-2 border-black/20 bg-white px-3 py-2 text-sm font-bold focus:outline-none focus:border-purple cursor-pointer">
-                  <option value="">Unassigned</option>
-                  {allTeamMembers.map((n) => <option key={n} value={n}>{n}</option>)}
+                <span className="text-sm font-bold text-purple">{task.assignee || 'Unassigned'}</span>
+                <select value="" onChange={(e) => {
+                    if (!e.target.value) return
+                    const current = task.assignee || ''
+                    const names = current.split(', ').filter(Boolean)
+                    if (names.includes(e.target.value)) return
+                    handleDanReassign(task.id, names.length > 0 ? current + ', ' + e.target.value : e.target.value)
+                  }}
+                  className="border-2 border-black/20 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-purple cursor-pointer">
+                  <option value="">+ Add</option>
+                  {allTeamMembers.filter(n => !(task.assignee || '').includes(n)).map((n) => <option key={n} value={n}>{n}</option>)}
                 </select>
+                {task.assignee && (
+                  <select value="" onChange={(e) => {
+                      if (!e.target.value) return
+                      const names = (task.assignee || '').split(', ').filter(n => n !== e.target.value)
+                      handleDanReassign(task.id, names.length > 0 ? names.join(', ') : null)
+                    }}
+                    className="border-2 border-black/20 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-red cursor-pointer">
+                    <option value="">- Remove</option>
+                    {(task.assignee || '').split(', ').filter(Boolean).map((n) => <option key={n} value={n}>{n}</option>)}
+                  </select>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold uppercase tracking-widest text-muted">Priority:</span>
@@ -411,14 +429,36 @@ export function TeamView() {
             <div className="flex items-center gap-6 mb-6 flex-wrap">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold uppercase tracking-widest text-muted">Owner:</span>
+                <span className="text-sm font-bold text-blue">{task.assignee || 'Unassigned'}</span>
                 <select
-                  value={task.assignee || ''}
-                  onChange={(e) => handleDanReassign(task.id, e.target.value || null)}
-                  className="border-2 border-black/20 bg-white px-3 py-2 text-sm font-bold focus:outline-none focus:border-purple cursor-pointer"
+                  value=""
+                  onChange={(e) => {
+                    if (!e.target.value) return
+                    const current = task.assignee || ''
+                    const names = current.split(', ').filter(Boolean)
+                    if (names.includes(e.target.value)) return
+                    const newAssignee = names.length > 0 ? current + ', ' + e.target.value : e.target.value
+                    handleDanReassign(task.id, newAssignee)
+                  }}
+                  className="border-2 border-black/20 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-purple cursor-pointer"
                 >
-                  <option value="">Unassigned</option>
-                  {allTeamMembers.map((n) => <option key={n} value={n}>{n}</option>)}
+                  <option value="">+ Add</option>
+                  {allTeamMembers.filter(n => !(task.assignee || '').includes(n)).map((n) => <option key={n} value={n}>{n}</option>)}
                 </select>
+                {task.assignee && (
+                  <select
+                    value=""
+                    onChange={(e) => {
+                      if (!e.target.value) return
+                      const names = (task.assignee || '').split(', ').filter(n => n !== e.target.value)
+                      handleDanReassign(task.id, names.length > 0 ? names.join(', ') : null)
+                    }}
+                    className="border-2 border-black/20 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-red cursor-pointer"
+                  >
+                    <option value="">- Remove</option>
+                    {(task.assignee || '').split(', ').filter(Boolean).map((n) => <option key={n} value={n}>{n}</option>)}
+                  </select>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold uppercase tracking-widest text-muted">Deadline:</span>
