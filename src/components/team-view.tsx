@@ -136,34 +136,35 @@ export function TeamView() {
             <h2 className="text-xs font-bold tracking-widest uppercase">Team</h2>
           </div>
           <div className="border-l-2 border-r-2 border-b-2 border-black/10">
-            {teamData.map((member) => {
-              const isExpanded = expandedMember === member.name
+            {teamMembers.map((name) => {
+              const member = teamData.find((m) => m.name === name)
+              const isExpanded = expandedMember === name
+              const count = member?.totalActive || 0
+
               return (
-                <div key={member.name} className="border-b border-black/5 last:border-0">
-                  <button
-                    onClick={() => setExpandedMember(isExpanded ? null : member.name)}
-                    className="w-full text-left px-4 py-3 hover:bg-cream-dark transition-colors"
+                <div key={name}>
+                  <div
+                    onClick={() => setExpandedMember(isExpanded ? null : name)}
+                    className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-cream-dark transition-colors border-b border-black/5"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold">{member.name}</span>
-                      <span className="text-[10px] font-bold text-muted">{member.totalActive}</span>
-                    </div>
-                  </button>
-                  {isExpanded && (
-                    <div className="px-4 pb-3 space-y-2">
+                    <span className={`text-xs font-bold ${count > 0 ? '' : 'text-muted/40'}`}>{name}</span>
+                    {count > 0 && <span className="text-[10px] font-bold text-muted bg-black/5 px-1.5 py-0.5 rounded">{count}</span>}
+                  </div>
+                  {isExpanded && member && (
+                    <div className="px-4 py-3 bg-cream-dark border-b border-black/5">
                       {member.ultraHighTasks.length > 0 && (
-                        <div>
+                        <div className="mb-2">
                           <p className="text-[9px] font-bold uppercase tracking-widest text-red mb-1">Ultra-High</p>
                           {member.ultraHighTasks.map((t, i) => (
-                            <p key={i} className="text-[10px] font-bold text-red pl-2 truncate">&mdash; {t}</p>
+                            <p key={i} className="text-[10px] font-bold text-red pl-2">&mdash; {t}</p>
                           ))}
                         </div>
                       )}
                       {member.highTasks.length > 0 && (
-                        <div>
+                        <div className="mb-2">
                           <p className="text-[9px] font-bold uppercase tracking-widest text-orange mb-1">High</p>
                           {member.highTasks.map((t, i) => (
-                            <p key={i} className="text-[10px] font-bold text-orange pl-2 truncate">&mdash; {t}</p>
+                            <p key={i} className="text-[10px] font-bold text-orange pl-2">&mdash; {t}</p>
                           ))}
                         </div>
                       )}
@@ -172,12 +173,14 @@ export function TeamView() {
                       )}
                     </div>
                   )}
+                  {isExpanded && !member && (
+                    <div className="px-4 py-3 bg-cream-dark border-b border-black/5">
+                      <p className="text-[10px] text-muted italic">No tasks assigned</p>
+                    </div>
+                  )}
                 </div>
               )
             })}
-            {teamData.length === 0 && (
-              <p className="px-4 py-3 text-xs text-muted">No active assignments</p>
-            )}
           </div>
         </div>
 
