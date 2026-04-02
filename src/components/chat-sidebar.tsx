@@ -61,7 +61,14 @@ export function ChatSidebar() {
   const [messages, setMessages] = useState<Comment[]>([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
+  const [showLogs, setShowLogs] = useState(false)
+  const [assignMode, setAssignMode] = useState(false)
+  const [assignTo, setAssignTo] = useState('')
+  const [assignEvent, setAssignEvent] = useState('')
+  const [assignCategory, setAssignCategory] = useState<EventTask['category']>('logistics')
   const bottomRef = useRef<HTMLDivElement>(null)
+
+  const teamMembers = ['Cody', 'Sabrina', 'Joe', 'Danny', 'Connor', 'Gib', 'Emily', 'Kendall', 'Alex', 'Liam', 'Dave', 'Tom', 'Kevin']
 
   // Shared events list
   const [events, setEvents] = useState<EventOption[]>([])
@@ -144,9 +151,52 @@ export function ChatSidebar() {
     scrollToBottom()
   }, [messages, scrollToBottom, eventFilter])
 
-  const filteredMessages = eventFilter
-    ? messages.filter((m) => m.event_id === eventFilter || m.event_id === null)
-    : messages
+  // Filter: hide task-update logs unless toggled, apply event filter
+  const filteredMessages = messages.filter((m) => {
+    if (!showLogs && m.type === 'task-update') return false
+    if (eventFilter && m.event_id !== eventFilter && m.event_id !== null) return false
+    return true
+  })
+
+  const logCount = messages.filter((m) => m.type === 'task-update').length
+
+  const handleAssignTask = async () => {
+    if (!input.trim() || !displayName || !assignTo || sending) return
+    setSending(true)
+
+    const taskId = `t-${Date.now()}`
+    const eventId = assignEvent || null
+
+    if (eventId) {
+      await supabase.from('event_tasks').insert({
+        id: taskId,
+        event_id: eventId,
+        title: input.trim(),
+        category: assignCategory,
+        status: 'not-started',
+        assignee: assignTo,
+        notes: null,
+      } as never)
+    }
+
+    const eventName = events.find((e) => e.id === assignEvent)?.title
+    const msg = eventName
+      ? `@${assignTo} — ${input.trim()} [${eventName} / ${assignCategory}]`
+      : `@${assignTo} — ${input.trim()}`
+
+    await supabase.from('comments').insert({
+      author: displayName,
+      message: msg,
+      event_id: eventId,
+      task_id: eventId ? taskId : null,
+      type: 'chat',
+    } as never)
+
+    setInput('')
+    setAssignMode(false)
+    setAssignTo('')
+    setSending(false)
+  }
 
   const handleDeleteMessage = async (id: string) => {
     setMessages((prev) => prev.filter((m) => m.id !== id))
@@ -303,51 +353,62 @@ export function ChatSidebar() {
         {/* ── CHAT TAB ── */}
         {tab === 'chat' && (
           <>
-            <div className="px-4 py-2 border-b border-black/10 bg-cream-dark flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted shrink-0">Filter:</span>
-              {eventFilter ? (
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue truncate">{filterEventName || 'Event'}</span>
-                  <button onClick={() => sidebar.setEventFilter(null)} className="text-[10px] font-bold text-red hover:text-black">&times; CLEAR</button>
-                </div>
-              ) : (
-                <select
-                  value=""
-                  onChange={(e) => { if (e.target.value) sidebar.setEventFilter(e.target.value) }}
-                  className="flex-1 bg-transparent text-[10px] font-bold uppercase tracking-wider text-black border-0 focus:outline-none cursor-pointer"
-                >
-                  <option value="">All Events</option>
-                  {events.map((ev) => (
-                    <option key={ev.id} value={ev.id}>{ev.day_label} — {ev.title}</option>
-                  ))}
-                </select>
-              )}
+            {/* Toolbar */}
+            <div className="px-4 py-2 border-b border-black/10 bg-cream-dark flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                {eventFilter ? (
+                  <>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-blue truncate">{filterEventName || 'Event'}</span>
+                    <button onClick={() => sidebar.setEventFilter(null)} className="text-[10px] font-bold text-red hover:text-black">&times;</button>
+                  </>
+                ) : (
+                  <select
+                    value=""
+                    onChange={(e) => { if (e.target.value) sidebar.setEventFilter(e.target.value) }}
+                    className="bg-transparent text-[10px] font-bold uppercase tracking-wider text-black border-0 focus:outline-none cursor-pointer"
+                  >
+                    <option value="">All Events</option>
+                    {events.map((ev) => (
+                      <option key={ev.id} value={ev.id}>{ev.day_label} — {ev.title}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+              <button
+                onClick={() => setShowLogs(!showLogs)}
+                className={`text-[9px] font-bold uppercase tracking-widest px-2 py-1 transition-colors ${showLogs ? 'bg-gold/20 text-gold' : 'bg-black/5 text-muted'}`}
+              >
+                Logs {logCount > 0 ? `(${logCount})` : ''}
+              </button>
             </div>
 
+            {/* Messages */}
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
               {filteredMessages.length === 0 && (
-                <p className="text-xs uppercase tracking-wider text-muted text-center mt-8 font-medium">No messages yet.</p>
+                <p className="text-xs uppercase tracking-wider text-muted text-center mt-8 font-medium">
+                  {showLogs ? 'No messages yet.' : 'No messages yet. Start the conversation!'}
+                </p>
               )}
               {filteredMessages.map((msg) => (
-                <div key={msg.id} className={`pb-3 group/msg ${msg.type === 'task-update' ? 'border-l-4 border-gold pl-3 opacity-80' : 'border-b-2 border-cream-dark'}`}>
+                <div key={msg.id} className={`pb-3 group/msg ${msg.type === 'task-update' ? 'border-l-4 border-gold pl-3 opacity-60 text-xs' : 'border-b border-cream-dark'}`}>
                   <div className="flex items-baseline justify-between gap-2 mb-0.5">
                     <span className={`text-xs font-bold uppercase tracking-wider ${msg.type === 'task-update' ? 'text-gold' : 'text-blue'}`}>
-                      {msg.type === 'task-update' ? `${msg.author} \u00b7 update` : msg.author}
+                      {msg.author}
                     </span>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] uppercase tracking-wider text-muted font-medium whitespace-nowrap">
-                        {formatDate(msg.created_at)} {formatTime(msg.created_at)}
+                        {formatTime(msg.created_at)}
                       </span>
                       <button
                         onClick={() => handleDeleteMessage(msg.id)}
-                        className="text-muted/0 group-hover/msg:text-muted/40 hover:!text-red transition-colors text-xs font-bold"
+                        className="text-muted/20 hover:text-red transition-colors text-xs font-bold"
                         title="Delete"
                       >
                         &times;
                       </button>
                     </div>
                   </div>
-                  <p className={`text-sm leading-relaxed ${msg.type === 'task-update' ? 'text-muted italic' : 'text-black'}`}>
+                  <p className={`leading-relaxed ${msg.type === 'task-update' ? 'text-muted italic text-xs' : 'text-black text-sm'}`}>
                     {renderMessage(msg.message)}
                   </p>
                 </div>
@@ -355,23 +416,79 @@ export function ChatSidebar() {
               <div ref={bottomRef} />
             </div>
 
-            <form onSubmit={handleSend} className="border-t-4 border-black px-4 py-3 bg-cream-dark flex gap-2">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={displayName ? 'TYPE A MESSAGE...' : 'SET NAME FIRST'}
-                disabled={!displayName}
-                className="flex-1 border-2 border-black bg-white px-3 py-2 text-xs font-bold uppercase tracking-wider text-black placeholder:text-muted/50 focus:outline-none focus:border-blue disabled:opacity-40"
-              />
-              <button
-                type="submit"
-                disabled={!input.trim() || !displayName || sending}
-                className="bg-black text-cream px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-blue transition-colors disabled:opacity-40"
-              >
-                Send
-              </button>
-            </form>
+            {/* Assign mode panel */}
+            {assignMode && (
+              <div className="border-t-2 border-black/10 px-4 py-3 bg-cream-dark space-y-2">
+                <div className="flex gap-2">
+                  <select
+                    value={assignTo}
+                    onChange={(e) => setAssignTo(e.target.value)}
+                    className="flex-1 border-2 border-black bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider focus:outline-none focus:border-blue"
+                  >
+                    <option value="">Assign to...</option>
+                    {teamMembers.map((n) => <option key={n} value={n}>{n}</option>)}
+                  </select>
+                  <select
+                    value={assignCategory}
+                    onChange={(e) => setAssignCategory(e.target.value as EventTask['category'])}
+                    className="border-2 border-black bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider focus:outline-none focus:border-blue"
+                  >
+                    {taskCategories.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                  </select>
+                </div>
+                <select
+                  value={assignEvent}
+                  onChange={(e) => setAssignEvent(e.target.value)}
+                  className="w-full border-2 border-black bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider focus:outline-none focus:border-blue"
+                >
+                  <option value="">No event (general task)</option>
+                  {events.map((ev) => <option key={ev.id} value={ev.id}>{ev.day_label} — {ev.title}</option>)}
+                </select>
+              </div>
+            )}
+
+            {/* Input */}
+            <div className="border-t-4 border-black px-4 py-3 bg-cream-dark">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !assignMode) handleSend(e)
+                    if (e.key === 'Enter' && assignMode && assignTo) handleAssignTask()
+                  }}
+                  placeholder={displayName ? (assignMode ? 'DESCRIBE THE TASK...' : 'TYPE A MESSAGE...') : 'SET NAME FIRST'}
+                  disabled={!displayName}
+                  className="flex-1 border-2 border-black bg-white px-3 py-2 text-xs font-bold uppercase tracking-wider text-black placeholder:text-muted/50 focus:outline-none focus:border-blue disabled:opacity-40"
+                />
+                {assignMode ? (
+                  <button
+                    onClick={handleAssignTask}
+                    disabled={!input.trim() || !assignTo || !displayName || sending}
+                    className="bg-red text-white px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-orange transition-colors disabled:opacity-40"
+                  >
+                    Assign
+                  </button>
+                ) : (
+                  <button
+                    onClick={(e) => handleSend(e)}
+                    disabled={!input.trim() || !displayName || sending}
+                    className="bg-black text-cream px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-blue transition-colors disabled:opacity-40"
+                  >
+                    Send
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <button
+                  onClick={() => setAssignMode(!assignMode)}
+                  className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 transition-colors ${assignMode ? 'bg-red text-white' : 'bg-black/5 text-muted hover:text-black'}`}
+                >
+                  {assignMode ? 'Cancel Assign' : '+ Assign Task'}
+                </button>
+              </div>
+            </div>
           </>
         )}
 
