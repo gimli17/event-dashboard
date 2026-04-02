@@ -417,6 +417,60 @@ export function MasterTaskList() {
     }
   }
 
+  const handleDeadlineChange = async (task: MasterTask, newDeadline: string | null) => {
+    // Auto-calculate priority based on deadline
+    let autoPriority: string | null = null
+    if (newDeadline) {
+      const deadline = new Date(newDeadline + 'T23:59:59')
+      const now = new Date()
+
+      // Get start of current week (Monday)
+      const dayOfWeek = now.getDay()
+      const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+      const thisMonday = new Date(now)
+      thisMonday.setDate(now.getDate() + mondayOffset)
+      thisMonday.setHours(0, 0, 0, 0)
+
+      const thisSunday = new Date(thisMonday)
+      thisSunday.setDate(thisMonday.getDate() + 6)
+      thisSunday.setHours(23, 59, 59)
+
+      const nextWednesday = new Date(thisMonday)
+      nextWednesday.setDate(thisMonday.getDate() + 9) // Wednesday of next week
+      nextWednesday.setHours(23, 59, 59)
+
+      const nextSunday = new Date(thisMonday)
+      nextSunday.setDate(thisMonday.getDate() + 13)
+      nextSunday.setHours(23, 59, 59)
+
+      if (deadline <= thisSunday) {
+        autoPriority = 'ultra-high' // This week
+      } else if (deadline <= nextWednesday) {
+        autoPriority = 'high' // Early next week
+      } else if (deadline <= nextSunday) {
+        autoPriority = 'medium' // Late next week
+      } else {
+        autoPriority = 'backlog' // Beyond next week
+      }
+    }
+
+    const updates: Record<string, unknown> = { deadline: newDeadline, updated_at: new Date().toISOString() }
+    if (autoPriority && autoPriority !== task.priority) {
+      updates.priority = autoPriority
+      setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, deadline: newDeadline, priority: autoPriority! } : t)))
+
+      if (displayName) {
+        const c: TaskComment = { id: `temp-${Date.now()}`, task_id: task.id, author: 'System', message: `Deadline set to ${newDeadline} → auto-prioritized to ${priorityLabels[autoPriority]}`, created_at: new Date().toISOString() }
+        setComments((prev) => [...prev, c])
+        await supabase.from('master_task_comments').insert({ task_id: task.id, author: 'System', message: c.message } as never)
+      }
+    } else {
+      setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, deadline: newDeadline } : t)))
+    }
+
+    await supabase.from('master_tasks').update(updates as never).eq('id', task.id)
+  }
+
   const startEditing = (taskId: string, field: string, currentValue: string | null) => {
     setEditingField({ taskId, field })
     setEditValue(currentValue || '')
@@ -462,11 +516,20 @@ export function MasterTaskList() {
     filtered = filtered.filter((t) => t.assignee?.includes(filterAssignee))
   }
 
-  // Group by priority
+  // Group by priority, sort by deadline within each group
   const grouped: Record<string, MasterTask[]> = {}
   for (const task of filtered) {
     if (!grouped[task.priority]) grouped[task.priority] = []
     grouped[task.priority].push(task)
+  }
+  for (const p of Object.keys(grouped)) {
+    grouped[p].sort((a, b) => {
+      // Tasks with deadlines come first, sorted by deadline
+      if (a.deadline && b.deadline) return a.deadline.localeCompare(b.deadline)
+      if (a.deadline && !b.deadline) return -1
+      if (!a.deadline && b.deadline) return 1
+      return a.sort_order - b.sort_order
+    })
   }
 
   const assignees = ['all', ...new Set(
@@ -610,7 +673,11 @@ export function MasterTaskList() {
                               <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                                 {task.assignee && <span className="text-[10px] font-bold text-blue uppercase tracking-wider">{task.assignee}</span>}
                                 {!task.assignee && <span className="text-[10px] text-muted/40 uppercase tracking-wider">Unassigned</span>}
-                                {task.deadline && <span className="text-[10px] text-muted uppercase tracking-wider">Due {task.deadline}</span>}
+                                {task.deadline && (
+                                  <span className="text-[10px] font-bold text-red uppercase tracking-wider">
+                                    Due {new Date(task.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                  </span>
+                                )}
                                 {taskComments.length > 0 && (
                                   <span className="text-[10px] font-bold text-gold uppercase tracking-wider">{taskComments.length} comment{taskComments.length !== 1 ? 's' : ''}</span>
                                 )}
@@ -657,17 +724,28 @@ export function MasterTaskList() {
                               )}
                             </div>
 
-                            {/* Assignee */}
-                            <div className="flex items-center gap-2 mb-4">
-                              <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Owner:</span>
-                              <select
-                                value={task.assignee || ''}
-                                onChange={(e) => handleAssigneeChange(task, e.target.value || null)}
-                                className={`border-2 border-black/20 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black cursor-pointer ${task.assignee ? 'text-blue' : 'text-muted/40'}`}
-                              >
-                                <option value="">Unassigned</option>
-                                {teamMembers.map((n) => <option key={n} value={n}>{n}</option>)}
-                              </select>
+                            {/* Assignee + Deadline */}
+                            <div className="flex items-center gap-4 mb-4 flex-wrap">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Owner:</span>
+                                <select
+                                  value={task.assignee || ''}
+                                  onChange={(e) => handleAssigneeChange(task, e.target.value || null)}
+                                  className={`border-2 border-black/20 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black cursor-pointer ${task.assignee ? 'text-blue' : 'text-muted/40'}`}
+                                >
+                                  <option value="">Unassigned</option>
+                                  {teamMembers.map((n) => <option key={n} value={n}>{n}</option>)}
+                                </select>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Deadline:</span>
+                                <input
+                                  type="date"
+                                  value={task.deadline || ''}
+                                  onChange={(e) => handleDeadlineChange(task, e.target.value || null)}
+                                  className="border-2 border-black/20 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black cursor-pointer"
+                                />
+                              </div>
                             </div>
 
                             <div className="grid gap-4 sm:grid-cols-2">
