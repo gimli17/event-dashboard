@@ -58,6 +58,11 @@ export function TeamView() {
   const [newDeadline, setNewDeadline] = useState('')
   const [newNotes, setNewNotes] = useState('')
   const [newLinks, setNewLinks] = useState('')
+  const [showPersonNewTask, setShowPersonNewTask] = useState(false)
+  const [personNewTitle, setPersonNewTitle] = useState('')
+  const [personNewPriority, setPersonNewPriority] = useState('medium')
+  const [personNewDeadline, setPersonNewDeadline] = useState('')
+  const [personNewNotes, setPersonNewNotes] = useState('')
   const [editingCheckItem, setEditingCheckItem] = useState<string | null>(null)
   const [editCheckText, setEditCheckText] = useState('')
 
@@ -131,6 +136,41 @@ export function TeamView() {
     setNewDeadline('')
     setNewNotes('')
     setNewLinks('')
+
+    await supabase.from('master_tasks').insert({
+      ...task,
+      sort_order: 0,
+      event_id: null,
+      week_of: null,
+    } as never)
+  }
+
+  const handlePersonCreateTask = async () => {
+    if (!personNewTitle.trim() || !selectedPerson) return
+    const taskId = `mt-${Date.now()}`
+    const task: MasterTaskFull = {
+      id: taskId,
+      title: personNewTitle.trim(),
+      assignee: selectedPerson,
+      priority: personNewPriority,
+      status: 'not-started',
+      deadline: personNewDeadline || null,
+      links: null,
+      current_status: null,
+      overview: personNewNotes.trim() || null,
+      action_items: null,
+      dan_comments: null,
+      update_to_dan: null,
+      dan_feedback: null,
+      dan_checklist: [],
+      created_by: displayName || selectedPerson,
+    }
+    setAllMasterTasks((prev) => [task, ...prev])
+    setShowPersonNewTask(false)
+    setPersonNewTitle('')
+    setPersonNewPriority('medium')
+    setPersonNewDeadline('')
+    setPersonNewNotes('')
 
     await supabase.from('master_tasks').insert({
       ...task,
@@ -651,10 +691,46 @@ export function TeamView() {
               {/* Person's view */}
               <div className="bg-blue text-white px-6 py-5 flex items-center justify-between">
                 <h2 className="text-lg font-bold tracking-widest uppercase">{selectedPerson}&apos;s Tasks</h2>
-                <span className="text-sm font-bold tracking-wider opacity-70">{personTasks.length} task{personTasks.length !== 1 ? 's' : ''}</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-bold tracking-wider opacity-70">{personTasks.length} tasks</span>
+                  <button onClick={() => setShowPersonNewTask(!showPersonNewTask)}
+                    className={`px-4 py-2 text-xs font-bold uppercase tracking-widest transition-colors ${showPersonNewTask ? 'bg-white text-blue' : 'bg-white/20 text-white hover:bg-white/30'}`}>
+                    {showPersonNewTask ? 'Cancel' : '+ New Task'}
+                  </button>
+                </div>
               </div>
 
-              {personTasks.length === 0 ? (
+              {showPersonNewTask && (
+                <div className="border-l-2 border-r-2 border-b-2 border-blue/20 bg-white px-6 py-5 space-y-3">
+                  <input type="text" value={personNewTitle} onChange={(e) => setPersonNewTitle(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && personNewTitle.trim()) handlePersonCreateTask() }}
+                    placeholder="WHAT NEEDS TO BE DONE..."
+                    autoFocus
+                    className="w-full border-2 border-black bg-white px-4 py-3 text-sm font-bold text-black placeholder:text-muted/40 focus:outline-none focus:border-blue" />
+                  <div className="flex gap-3 flex-wrap">
+                    <select value={personNewPriority} onChange={(e) => setPersonNewPriority(e.target.value)}
+                      className="border-2 border-black/20 bg-white px-3 py-2 text-xs font-bold uppercase tracking-widest focus:outline-none focus:border-black">
+                      <option value="ultra-high">Very High</option>
+                      <option value="high">High</option>
+                      <option value="medium">Medium</option>
+                      <option value="low">Low</option>
+                      <option value="backlog">Backlog</option>
+                    </select>
+                    <input type="date" value={personNewDeadline} onChange={(e) => setPersonNewDeadline(e.target.value)}
+                      className="border-2 border-black/20 bg-white px-3 py-2 text-xs font-bold uppercase tracking-widest focus:outline-none focus:border-black cursor-pointer" />
+                  </div>
+                  <textarea value={personNewNotes} onChange={(e) => setPersonNewNotes(e.target.value)}
+                    placeholder="Notes or context (optional)..."
+                    rows={3}
+                    className="w-full border-2 border-black/20 bg-white px-4 py-3 text-sm text-black leading-relaxed focus:outline-none focus:border-blue placeholder:text-muted/30" />
+                  <button onClick={handlePersonCreateTask} disabled={!personNewTitle.trim()}
+                    className="bg-blue text-white px-8 py-3 text-sm font-bold uppercase tracking-widest hover:bg-blue-light transition-colors disabled:opacity-40">
+                    Create Task
+                  </button>
+                </div>
+              )}
+
+              {personTasks.length === 0 && !showPersonNewTask ? (
                 <div className="border-l-2 border-r-2 border-b-2 border-black/10 px-8 py-20 text-center">
                   <p className="text-lg font-bold text-muted mb-2">No tasks</p>
                   <p className="text-sm text-muted">No active tasks assigned to {selectedPerson}.</p>
