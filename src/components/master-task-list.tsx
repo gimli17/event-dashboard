@@ -965,45 +965,6 @@ export function MasterTaskList() {
                 </SortableContext>
               </div>
             ))}
-          {/* Event tasks inline */}
-          {eventTaskRows.length > 0 && (
-            <div>
-              <div className="bg-teal text-white px-6 py-4 flex items-center justify-between mt-6">
-                <h2 className="text-sm font-bold tracking-widest uppercase">Event Activities</h2>
-                <span className="text-xs font-bold tracking-wider opacity-70">{eventTaskRows.length} TASKS</span>
-              </div>
-              <div className="border-l-2 border-r-2 border-b-2 border-black/10">
-                {eventTaskRows.map((row, i) => (
-                  <div key={row.id} className={`px-5 py-3 flex items-start justify-between gap-4 hover:bg-cream-dark transition-colors ${i > 0 ? 'border-t border-black/5' : ''}`}>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-bold leading-tight ${row.status === 'complete' ? 'line-through text-muted' : ''}`}>
-                        <span className="text-teal">{row.event_title}</span> — {row.title}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[10px] text-muted uppercase tracking-wider">{row.category}</span>
-                        {row.assignee && <span className="text-[10px] font-bold text-blue uppercase tracking-wider">{row.assignee}</span>}
-                        <a href={`/events/${row.event_id}`} className="text-[10px] font-bold text-teal uppercase tracking-widest hover:text-red transition-colors">
-                          View Event &rarr;
-                        </a>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <button onClick={() => handleEventTaskPriority(row.id)}
-                        className={`px-2 py-1 text-[9px] font-bold tracking-widest uppercase cursor-pointer ${
-                          row.priority === 'high' ? 'text-red bg-red/10' : row.priority === 'medium' ? 'text-gold bg-gold/10' : 'text-muted bg-black/5'
-                        }`}>
-                        {row.priority === 'high' ? 'HIGH' : row.priority === 'medium' ? 'MED' : 'LOW'}
-                      </button>
-                      <button onClick={() => handleEventTaskStatus(row.id)}
-                        className={`px-2 py-1 text-[9px] font-bold tracking-widest uppercase cursor-pointer ${statusColors[row.status]}`}>
-                        {statusLabels[row.status]}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
         <DragOverlay>
           {activeId ? (
