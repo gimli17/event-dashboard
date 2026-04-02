@@ -34,6 +34,14 @@ interface EventProgress {
   done: number
 }
 
+interface EventWithTasks {
+  id: string
+  title: string
+  day: string
+  day_label: string
+  tasks: { id: string; title: string; status: string; category: string; assignee: string | null }[]
+}
+
 const priorityOrder = ['ultra-high', 'high', 'medium', 'backlog']
 
 const priorityColors: Record<string, string> = {
@@ -78,8 +86,10 @@ export function MasterTaskList() {
   const [tasks, setTasks] = useState<MasterTask[]>([])
   const [comments, setComments] = useState<TaskComment[]>([])
   const [eventProgress, setEventProgress] = useState<EventProgress[]>([])
+  const [eventsWithTasks, setEventsWithTasks] = useState<EventWithTasks[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedTask, setExpandedTask] = useState<string | null>(null)
+  const [expandedEvent, setExpandedEvent] = useState<string | null>(null)
   const [commentInput, setCommentInput] = useState('')
   const [sending, setSending] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('all')
@@ -96,10 +106,10 @@ export function MasterTaskList() {
       if (commentsRes.data) setComments(commentsRes.data as TaskComment[])
 
       // Fetch event task progress for linked tasks
-      const { data: eventTasks } = await supabase.from('event_tasks').select('event_id, status')
+      const { data: eventTasks } = await supabase.from('event_tasks').select('id, event_id, title, status, category, assignee')
       if (eventTasks) {
         const progressMap: Record<string, { total: number; done: number }> = {}
-        for (const et of eventTasks as { event_id: string; status: string }[]) {
+        for (const et of eventTasks as { id: string; event_id: string; title: string; status: string; category: string; assignee: string | null }[]) {
           if (!progressMap[et.event_id]) progressMap[et.event_id] = { total: 0, done: 0 }
           progressMap[et.event_id].total++
           if (et.status === 'complete') progressMap[et.event_id].done++
@@ -107,6 +117,19 @@ export function MasterTaskList() {
         setEventProgress(
           Object.entries(progressMap).map(([event_id, p]) => ({ event_id, ...p }))
         )
+
+        // Build events with tasks for the summary section
+        const { data: events } = await supabase.from('events').select('id, title, day, day_label').order('date')
+        if (events) {
+          const ewt: EventWithTasks[] = (events as { id: string; title: string; day: string; day_label: string }[])
+            .map((e) => ({
+              ...e,
+              tasks: (eventTasks as { id: string; event_id: string; title: string; status: string; category: string; assignee: string | null }[])
+                .filter((t) => t.event_id === e.id),
+            }))
+            .filter((e) => e.tasks.length > 0)
+          setEventsWithTasks(ewt)
+        }
       }
 
       setLoading(false)
@@ -401,6 +424,80 @@ export function MasterTaskList() {
                 </div>
               </div>
             ))}
+        </div>
+      )}
+
+      {/* Founders Experience Events — event tasks as summary rows */}
+      {viewMode === 'all' && eventsWithTasks.length > 0 && (
+        <div className="mt-6">
+          <div className="bg-blue text-white px-6 py-4 flex items-center justify-between">
+            <div className="flex items-baseline gap-4">
+              <h2 className="text-sm font-bold tracking-widest uppercase">
+                Founders Experience Events
+              </h2>
+            </div>
+            <span className="text-xs font-bold tracking-wider opacity-70">
+              {eventsWithTasks.reduce((s, e) => s + e.tasks.length, 0)} TASKS ACROSS {eventsWithTasks.length} EVENTS
+            </span>
+          </div>
+
+          <div className="border-l-2 border-r-2 border-b-2 border-black/10">
+            {eventsWithTasks.map((event, i) => {
+              const done = event.tasks.filter((t) => t.status === 'complete').length
+              const total = event.tasks.length
+              const pct = total > 0 ? Math.round((done / total) * 100) : 0
+              const isExpanded = expandedEvent === event.id
+
+              return (
+                <div key={event.id} className={i > 0 ? 'border-t border-black/5' : ''}>
+                  <button
+                    onClick={() => setExpandedEvent(isExpanded ? null : event.id)}
+                    className="w-full text-left px-5 py-3 hover:bg-cream-dark transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-bold leading-tight">{event.title}</h3>
+                        <span className="text-[10px] text-muted uppercase tracking-wider">{event.day_label}</span>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className={`text-[10px] font-bold uppercase tracking-widest ${pct === 100 ? 'text-green' : pct > 0 ? 'text-blue' : 'text-muted'}`}>
+                          {done}/{total} ({pct}%)
+                        </span>
+                        <a
+                          href={`/events/${event.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-[10px] font-bold text-blue uppercase tracking-widest hover:text-red transition-colors"
+                        >
+                          View &rarr;
+                        </a>
+                      </div>
+                    </div>
+                  </button>
+
+                  {isExpanded && (
+                    <div className="bg-white border-t border-black/5">
+                      {event.tasks.map((task, j) => (
+                        <div key={task.id} className={`px-5 py-2.5 flex items-center justify-between gap-4 ${j > 0 ? 'border-t border-black/3' : ''}`}>
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className="text-[10px] text-muted uppercase tracking-wider w-20 shrink-0">{task.category}</span>
+                            <span className={`text-xs ${task.status === 'complete' ? 'line-through text-muted' : ''}`}>{task.title}</span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {task.assignee && <span className="text-[10px] font-bold text-blue uppercase tracking-wider">{task.assignee}</span>}
+                            <span className={`text-[10px] font-bold uppercase tracking-widest ${
+                              task.status === 'complete' ? 'text-green' : task.status === 'in-progress' ? 'text-orange' : 'text-muted'
+                            }`}>
+                              {task.status === 'complete' ? 'DONE' : task.status === 'in-progress' ? 'IN PROGRESS' : 'NOT STARTED'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
     </div>
