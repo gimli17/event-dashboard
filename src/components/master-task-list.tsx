@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useUser } from './user-provider'
+import { WeeklyReviewButton } from './weekly-review'
 import {
   DndContext,
   closestCenter,
@@ -573,6 +574,7 @@ export function MasterTaskList() {
             className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest border-2 transition-all ${viewMode === 'completed' ? 'bg-green text-white border-green' : 'bg-white text-black border-black/20 hover:border-black'}`}>
             Weekly Report
           </button>
+          <WeeklyReviewButton />
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Owner:</span>
