@@ -63,6 +63,7 @@ export function TeamView() {
   const [personNewPriority, setPersonNewPriority] = useState('medium')
   const [personNewDeadline, setPersonNewDeadline] = useState('')
   const [personNewNotes, setPersonNewNotes] = useState('')
+  const [personNewLinks, setPersonNewLinks] = useState('')
   const [editingCheckItem, setEditingCheckItem] = useState<string | null>(null)
   const [editCheckText, setEditCheckText] = useState('')
 
@@ -155,7 +156,7 @@ export function TeamView() {
       priority: personNewPriority,
       status: 'not-started',
       deadline: personNewDeadline || null,
-      links: null,
+      links: personNewLinks.trim() || null,
       current_status: null,
       overview: personNewNotes.trim() || null,
       action_items: null,
@@ -171,6 +172,7 @@ export function TeamView() {
     setPersonNewPriority('medium')
     setPersonNewDeadline('')
     setPersonNewNotes('')
+    setPersonNewLinks('')
 
     await supabase.from('master_tasks').insert({
       ...task,
@@ -739,6 +741,9 @@ export function TeamView() {
                     placeholder="Notes or context (optional)..."
                     rows={3}
                     className="w-full border-2 border-black/20 bg-white px-4 py-3 text-sm text-black leading-relaxed focus:outline-none focus:border-blue placeholder:text-muted/30" />
+                  <input type="text" value={personNewLinks} onChange={(e) => setPersonNewLinks(e.target.value)}
+                    placeholder="Links (paste URLs, one per line)"
+                    className="w-full border-2 border-black/20 bg-white px-4 py-2.5 text-sm text-black focus:outline-none focus:border-blue placeholder:text-muted/30" />
                   <button onClick={handlePersonCreateTask} disabled={!personNewTitle.trim()}
                     className="bg-blue text-white px-8 py-3 text-sm font-bold uppercase tracking-widest hover:bg-blue-light transition-colors disabled:opacity-40">
                     Create Task
