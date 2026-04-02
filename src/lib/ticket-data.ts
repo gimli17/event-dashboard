@@ -7,7 +7,7 @@ export interface TicketStats {
 export async function getTicketStats(): Promise<TicketStats> {
   try {
     const res = await fetch('https://boulderrootstickettracker.vercel.app/api/tickets', {
-      next: { revalidate: 60 },
+      cache: 'no-store',
     })
     if (!res.ok) throw new Error('Ticket API failed')
 
