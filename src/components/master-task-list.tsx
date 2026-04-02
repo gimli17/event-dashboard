@@ -149,6 +149,8 @@ export function MasterTaskList() {
   const [viewMode, setViewMode] = useState<ViewMode>('all')
   const [filterAssignee, setFilterAssignee] = useState('all')
   const [showAddTask, setShowAddTask] = useState(false)
+  const [editingField, setEditingField] = useState<{ taskId: string; field: string } | null>(null)
+  const [editValue, setEditValue] = useState('')
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [newTaskAssignee, setNewTaskAssignee] = useState('')
   const [newTaskPriority, setNewTaskPriority] = useState('medium')
@@ -369,6 +371,20 @@ export function MasterTaskList() {
     }
   }
 
+  const startEditing = (taskId: string, field: string, currentValue: string | null) => {
+    setEditingField({ taskId, field })
+    setEditValue(currentValue || '')
+  }
+
+  const saveField = async () => {
+    if (!editingField) return
+    const { taskId, field } = editingField
+    const newValue = editValue.trim() || null
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, [field]: newValue } : t)))
+    setEditingField(null)
+    await supabase.from('master_tasks').update({ [field]: newValue, updated_at: new Date().toISOString() } as never).eq('id', taskId)
+  }
+
   const handleDeleteComment = async (commentId: string) => {
     setComments((prev) => prev.filter((c) => c.id !== commentId))
     await supabase.from('master_task_comments').delete().eq('id', commentId)
@@ -569,40 +585,17 @@ export function MasterTaskList() {
                         {isExpanded && (
                           <div className="px-5 pb-5 border-t border-black/5 bg-white">
                             <div className="grid gap-4 sm:grid-cols-2 pt-4">
-                              {task.current_status && (
-                                <div>
-                                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Current Status</p>
-                                  <p className="text-xs">{task.current_status}</p>
-                                </div>
-                              )}
-                              {task.overview && (
-                                <div>
-                                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Overview</p>
-                                  <p className="text-xs">{task.overview}</p>
-                                </div>
-                              )}
+                              <EditableField taskId={task.id} field="current_status" label="Current Status" value={task.current_status} editingField={editingField} editValue={editValue} setEditValue={setEditValue} startEditing={startEditing} saveField={saveField} setEditingField={setEditingField} />
+                              <EditableField taskId={task.id} field="overview" label="Overview" value={task.overview} editingField={editingField} editValue={editValue} setEditValue={setEditValue} startEditing={startEditing} saveField={saveField} setEditingField={setEditingField} />
                             </div>
 
-                            {task.action_items && (
-                              <div className="mt-4">
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Action Items</p>
-                                <ul className="space-y-1">
-                                  {task.action_items.split('\n').map((item, idx) => (
-                                    <li key={idx} className="text-xs flex items-start gap-2">
-                                      <span className="text-muted mt-0.5">&mdash;</span>
-                                      <span>{item}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
+                            <div className="mt-4">
+                              <EditableField taskId={task.id} field="action_items" label="Action Items" value={task.action_items} multiline editingField={editingField} editValue={editValue} setEditValue={setEditValue} startEditing={startEditing} saveField={saveField} setEditingField={setEditingField} />
+                            </div>
 
-                            {task.dan_comments && (
-                              <div className="mt-4 border-l-4 border-red pl-3">
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-red mb-1">Dan&apos;s Comments</p>
-                                <p className="text-xs italic">{task.dan_comments}</p>
-                              </div>
-                            )}
+                            <div className="mt-4">
+                              <EditableField taskId={task.id} field="dan_comments" label="Dan's Comments" value={task.dan_comments} highlight editingField={editingField} editValue={editValue} setEditValue={setEditValue} startEditing={startEditing} saveField={saveField} setEditingField={setEditingField} />
+                            </div>
 
                             {/* Event link */}
                             {task.event_id && (
@@ -822,6 +815,85 @@ export function MasterTaskList() {
             )
           })()}
         </div>
+      )}
+    </div>
+  )
+}
+
+function EditableField({
+  taskId, field, label, value, multiline, highlight, editingField, editValue, setEditValue, startEditing, saveField, setEditingField,
+}: {
+  taskId: string
+  field: string
+  label: string
+  value: string | null
+  multiline?: boolean
+  highlight?: boolean
+  editingField: { taskId: string; field: string } | null
+  editValue: string
+  setEditValue: (v: string) => void
+  startEditing: (taskId: string, field: string, value: string | null) => void
+  saveField: () => void
+  setEditingField: (v: null) => void
+}) {
+  const isEditing = editingField?.taskId === taskId && editingField?.field === field
+
+  if (isEditing) {
+    return (
+      <div className={highlight ? 'border-l-4 border-red pl-3' : ''}>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">{label}</p>
+        {multiline ? (
+          <textarea
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onBlur={saveField}
+            onKeyDown={(e) => { if (e.key === 'Escape') setEditingField(null) }}
+            autoFocus
+            rows={4}
+            className="w-full border-2 border-black bg-white px-2 py-1 text-xs text-black focus:outline-none focus:border-blue"
+            placeholder={`Add ${label.toLowerCase()}...`}
+          />
+        ) : (
+          <input
+            type="text"
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onBlur={saveField}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') saveField()
+              if (e.key === 'Escape') setEditingField(null)
+            }}
+            autoFocus
+            className="w-full border-2 border-black bg-white px-2 py-1 text-xs text-black focus:outline-none focus:border-blue"
+            placeholder={`Add ${label.toLowerCase()}...`}
+          />
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className={`cursor-pointer hover:bg-cream-dark transition-colors rounded px-1 py-0.5 -mx-1 ${highlight ? 'border-l-4 border-red pl-3' : ''}`}
+      onClick={() => startEditing(taskId, field, value)}
+      title={`Click to edit ${label.toLowerCase()}`}
+    >
+      <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${highlight ? 'text-red' : 'text-muted'}`}>{label}</p>
+      {value ? (
+        multiline ? (
+          <ul className="space-y-1">
+            {value.split('\n').map((item, idx) => (
+              <li key={idx} className={`text-xs flex items-start gap-2 ${highlight ? 'italic' : ''}`}>
+                <span className="text-muted mt-0.5">&mdash;</span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className={`text-xs ${highlight ? 'italic' : ''}`}>{value}</p>
+        )
+      ) : (
+        <p className="text-xs text-muted/40 italic">Click to add...</p>
       )}
     </div>
   )
