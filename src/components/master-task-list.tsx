@@ -98,6 +98,12 @@ export function MasterTaskList() {
   const [sending, setSending] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('all')
   const [filterAssignee, setFilterAssignee] = useState('all')
+  const [showAddTask, setShowAddTask] = useState(false)
+  const [newTaskTitle, setNewTaskTitle] = useState('')
+  const [newTaskAssignee, setNewTaskAssignee] = useState('')
+  const [newTaskPriority, setNewTaskPriority] = useState('medium')
+  const [newTaskDeadline, setNewTaskDeadline] = useState('')
+  const teamMembers = ['Cody', 'Sabrina', 'Joe', 'Danny', 'Connor', 'Gib', 'Emily', 'Kendall', 'Alex', 'Liam', 'Dave', 'Tom', 'Kevin']
   const commentEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -176,6 +182,97 @@ export function MasterTaskList() {
     }
   }
 
+  const handlePriorityChange = async (task: MasterTask, newPriority: string) => {
+    const oldPriority = task.priority
+    setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, priority: newPriority } : t)))
+    await supabase.from('master_tasks').update({ priority: newPriority, updated_at: new Date().toISOString() } as never).eq('id', task.id)
+
+    if (displayName && oldPriority !== newPriority) {
+      await supabase.from('master_task_comments').insert({
+        task_id: task.id,
+        author: displayName,
+        message: `Changed priority from ${priorityLabels[oldPriority]} to ${priorityLabels[newPriority]}`,
+      } as never)
+    }
+  }
+
+  const handleAddMasterTask = async () => {
+    if (!newTaskTitle.trim() || !displayName) return
+    const taskId = `mt-${Date.now()}`
+    const newTask: MasterTask = {
+      id: taskId,
+      title: newTaskTitle.trim(),
+      assignee: newTaskAssignee || null,
+      priority: newTaskPriority,
+      status: 'not-started',
+      deadline: newTaskDeadline || null,
+      current_status: null,
+      overview: null,
+      action_items: null,
+      dan_comments: null,
+      sort_order: tasks.length + 1,
+      event_id: null,
+      week_of: '2026-03-30',
+    }
+    setTasks((prev) => [...prev, newTask])
+    setShowAddTask(false)
+    setNewTaskTitle('')
+    setNewTaskAssignee('')
+    setNewTaskPriority('medium')
+    setNewTaskDeadline('')
+
+    await supabase.from('master_tasks').insert(newTask as never)
+    await supabase.from('master_task_comments').insert({
+      task_id: taskId,
+      author: displayName,
+      message: `Created task`,
+    } as never)
+  }
+
+  // Parse comments for priority keywords and auto-reprioritize
+  const handleAddComment = async (taskId: string) => {
+    if (!commentInput.trim() || !displayName || sending) return
+    setSending(true)
+
+    const msg = commentInput.trim()
+
+    // Check for priority keywords
+    const lower = msg.toLowerCase()
+    let newPriority: string | null = null
+    if (lower.includes('move to ultra-high') || lower.includes('move to ultra high') || lower.includes('very high priority')) {
+      newPriority = 'ultra-high'
+    } else if (lower.includes('move to high') || lower.includes('high priority next week') || lower.includes('high next week')) {
+      newPriority = 'high'
+    } else if (lower.includes('move to medium') || lower.includes('medium priority')) {
+      newPriority = 'medium'
+    } else if (lower.includes('not a priority') || lower.includes('deprioritize') || lower.includes('move to backlog')) {
+      newPriority = 'backlog'
+    }
+
+    await supabase.from('master_task_comments').insert({
+      task_id: taskId,
+      author: displayName,
+      message: msg,
+    } as never)
+
+    if (newPriority) {
+      const task = tasks.find((t) => t.id === taskId)
+      if (task && task.priority !== newPriority) {
+        setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, priority: newPriority! } : t)))
+        await supabase.from('master_tasks').update({ priority: newPriority, updated_at: new Date().toISOString() } as never).eq('id', taskId)
+        await supabase.from('master_task_comments').insert({
+          task_id: taskId,
+          author: 'System',
+          message: `Auto-reprioritized to ${priorityLabels[newPriority]} based on comment`,
+        } as never)
+      }
+    }
+
+    setCommentInput('')
+    setSending(false)
+    setTimeout(() => commentEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
+  }
+
   const handleDeleteComment = async (commentId: string) => {
     setComments((prev) => prev.filter((c) => c.id !== commentId))
     await supabase.from('master_task_comments').delete().eq('id', commentId)
@@ -196,19 +293,6 @@ export function MasterTaskList() {
     const newS = nextS[row.status]
     setEventTaskRows((prev) => prev.map((t) => t.id === taskId ? { ...t, status: newS } : t))
     await supabase.from('event_tasks').update({ status: newS } as never).eq('id', taskId)
-  }
-
-  const handleAddComment = async (taskId: string) => {
-    if (!commentInput.trim() || !displayName || sending) return
-    setSending(true)
-    await supabase.from('master_task_comments').insert({
-      task_id: taskId,
-      author: displayName,
-      message: commentInput.trim(),
-    } as never)
-    setCommentInput('')
-    setSending(false)
-    setTimeout(() => commentEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
   }
 
   // Filter
@@ -276,7 +360,48 @@ export function MasterTaskList() {
             {assignees.map((a) => <option key={a} value={a}>{a}</option>)}
           </select>
         </div>
+        <button
+          onClick={() => setShowAddTask(!showAddTask)}
+          className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest border-2 transition-all ${showAddTask ? 'bg-red text-white border-red' : 'bg-white text-black border-black/20 hover:border-black'}`}
+        >
+          {showAddTask ? 'Cancel' : '+ Add Task'}
+        </button>
       </div>
+
+      {/* Add task form */}
+      {showAddTask && (
+        <div className="mb-6 border-2 border-black/10 bg-white px-5 py-4 space-y-3">
+          <input
+            type="text"
+            value={newTaskTitle}
+            onChange={(e) => setNewTaskTitle(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleAddMasterTask() }}
+            placeholder="TASK TITLE..."
+            className="w-full border-2 border-black bg-white px-3 py-2 text-sm font-bold text-black placeholder:text-muted/40 focus:outline-none focus:border-blue"
+          />
+          <div className="flex gap-2 flex-wrap">
+            <select value={newTaskAssignee} onChange={(e) => setNewTaskAssignee(e.target.value)}
+              className="border-2 border-black/20 bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black">
+              <option value="">Unassigned</option>
+              {teamMembers.map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+            <select value={newTaskPriority} onChange={(e) => setNewTaskPriority(e.target.value)}
+              className="border-2 border-black/20 bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black">
+              {priorityOrder.map((p) => <option key={p} value={p}>{p === 'ultra-high' ? 'Ultra-High' : p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
+            </select>
+            <input type="text" value={newTaskDeadline} onChange={(e) => setNewTaskDeadline(e.target.value)}
+              placeholder="Deadline e.g. 4/5"
+              className="w-28 border-2 border-black/20 bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black placeholder:text-muted/40" />
+            <button
+              onClick={handleAddMasterTask}
+              disabled={!newTaskTitle.trim() || !displayName}
+              className="bg-black text-white px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-blue transition-colors disabled:opacity-40"
+            >
+              Add
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Tasks grouped by priority */}
       {viewMode === 'completed' ? null : Object.keys(grouped).length === 0 ? (
@@ -393,8 +518,19 @@ export function MasterTaskList() {
                               </div>
                             )}
 
-                            {/* Status change */}
+                            {/* Priority change */}
                             <div className="mt-4 flex items-center gap-2">
+                              <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Priority:</span>
+                              {priorityOrder.map((p) => (
+                                <button key={p} onClick={() => handlePriorityChange(task, p)}
+                                  className={`px-2 py-1 text-[9px] font-bold tracking-widest uppercase transition-all ${task.priority === p ? priorityColors[p] : 'bg-black/5 text-muted/40 hover:text-muted'}`}>
+                                  {p === 'ultra-high' ? 'ULTRA' : p.toUpperCase()}
+                                </button>
+                              ))}
+                            </div>
+
+                            {/* Status change */}
+                            <div className="mt-2 flex items-center gap-2">
                               <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Status:</span>
                               {['not-started', 'in-progress', 'blocked', 'complete'].map((s) => (
                                 <button key={s} onClick={() => handleStatusChange(task, s)}
@@ -439,7 +575,7 @@ export function MasterTaskList() {
                                   value={commentInput}
                                   onChange={(e) => setCommentInput(e.target.value)}
                                   onKeyDown={(e) => { if (e.key === 'Enter') handleAddComment(task.id) }}
-                                  placeholder={displayName ? 'ADD A COMMENT...' : 'SET NAME FIRST'}
+                                  placeholder={displayName ? 'COMMENT... (say "move to high" to reprioritize)' : 'SET NAME FIRST'}
                                   disabled={!displayName}
                                   className="flex-1 border-2 border-black bg-white px-3 py-2 text-xs font-bold text-black placeholder:text-muted/50 focus:outline-none focus:border-blue disabled:opacity-40"
                                 />
