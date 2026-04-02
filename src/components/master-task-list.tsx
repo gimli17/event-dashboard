@@ -905,6 +905,22 @@ export function MasterTaskList() {
                               ))}
                             </div>
 
+                            {/* Delete */}
+                            <div className="mt-4 flex justify-end">
+                              <button
+                                onClick={async () => {
+                                  if (!confirm(`Delete "${task.title}"?`)) return
+                                  setTasks((prev) => prev.filter((t) => t.id !== task.id))
+                                  setExpandedTask(null)
+                                  await supabase.from('master_task_comments').delete().eq('task_id', task.id)
+                                  await supabase.from('master_tasks').delete().eq('id', task.id)
+                                }}
+                                className="text-xs font-bold uppercase tracking-widest text-muted/40 hover:text-red transition-colors"
+                              >
+                                Delete Task
+                              </button>
+                            </div>
+
                             {/* Comments */}
                             <div className="mt-4 border-t-2 border-black/5 pt-4">
                               <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-3">
