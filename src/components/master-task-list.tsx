@@ -34,6 +34,8 @@ interface MasterTask {
   action_items: string | null
   dan_comments: string | null
   links: string | null
+  update_to_dan: string | null
+  dan_feedback: string | null
   sort_order: number
   event_id: string | null
   week_of: string | null
@@ -254,6 +256,8 @@ export function MasterTaskList() {
       action_items: null,
       dan_comments: null,
       links: null,
+      update_to_dan: null,
+      dan_feedback: null,
       sort_order: tasks.length + 1,
       event_id: null,
       week_of: '2026-03-30',

@@ -40,11 +40,10 @@ export function TeamView() {
   const [selectedPerson, setSelectedPerson] = useState<string>('all')
   const [showComplete, setShowComplete] = useState(false)
   const [viewMode, setViewMode] = useState<'team' | 'review'>('team')
-  const [masterTasks, setMasterTasks] = useState<{ id: string; title: string; status: string; assignee: string | null; priority: string; links: string | null; current_status: string | null; overview: string | null; action_items: string | null; dan_comments: string | null }[]>([])
-  const [masterComments, setMasterComments] = useState<{ id: string; task_id: string; author: string; message: string; created_at: string }[]>([])
+  const [masterTasks, setMasterTasks] = useState<{ id: string; title: string; status: string; assignee: string | null; priority: string; links: string | null; current_status: string | null; overview: string | null; action_items: string | null; dan_comments: string | null; update_to_dan: string | null; dan_feedback: string | null }[]>([])
   const [expandedReview, setExpandedReview] = useState<string | null>(null)
-  const [reviewComment, setReviewComment] = useState('')
-  const [sendingReview, setSendingReview] = useState(false)
+  const [updateText, setUpdateText] = useState('')
+  const [feedbackText, setFeedbackText] = useState('')
 
   useEffect(() => {
     async function fetch() {
@@ -77,41 +76,31 @@ export function TeamView() {
 
       setTasks(rows)
 
-      // Fetch master tasks in review + their comments
-      const { data: mt } = await supabase.from('master_tasks').select('id, title, status, assignee, priority, links, current_status, overview, action_items, dan_comments').eq('status', 'review')
+      // Fetch master tasks in review
+      const { data: mt } = await supabase.from('master_tasks').select('id, title, status, assignee, priority, links, current_status, overview, action_items, dan_comments, update_to_dan, dan_feedback').eq('status', 'review')
       if (mt) setMasterTasks(mt as typeof masterTasks)
-
-      // Fetch comments for master tasks in review
-      const mtTyped = (mt || []) as { id: string; title: string; status: string; assignee: string | null; priority: string; links: string | null }[]
-      if (mtTyped.length > 0) {
-        const { data: mc } = await supabase.from('master_task_comments').select('*').in('task_id', mtTyped.map(t => t.id)).order('created_at')
-        if (mc) setMasterComments(mc as typeof masterComments)
-      }
 
       setLoading(false)
     }
     fetch()
   }, [])
 
-  const handleReviewComment = async (taskId: string) => {
-    if (!reviewComment.trim() || !displayName || sendingReview) return
-    setSendingReview(true)
-    const c = { id: `temp-${Date.now()}`, task_id: taskId, author: displayName, message: reviewComment.trim(), created_at: new Date().toISOString() }
-    setMasterComments((prev) => [...prev, c])
-    await supabase.from('master_task_comments').insert({ task_id: taskId, author: displayName, message: reviewComment.trim() } as never)
-    setReviewComment('')
-    setSendingReview(false)
+  const handleSaveUpdate = async (taskId: string) => {
+    setMasterTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, update_to_dan: updateText } : t)))
+    await supabase.from('master_tasks').update({ update_to_dan: updateText, updated_at: new Date().toISOString() } as never).eq('id', taskId)
   }
 
-  const handleReviewAction = async (taskId: string, action: 'approve' | 'revise') => {
+  const handleDanRespond = async (taskId: string, action: 'approve' | 'revise') => {
     const newStatus = action === 'approve' ? 'complete' : 'in-progress'
-    // Update master task
-    setMasterTasks((prev) => prev.filter((t) => t.id !== taskId))
-    await supabase.from('master_tasks').update({ status: newStatus, updated_at: new Date().toISOString() } as never).eq('id', taskId)
-    if (displayName) {
-      const msg = action === 'approve' ? 'Approved and marked complete' : 'Sent back for revisions'
-      await supabase.from('master_task_comments').insert({ task_id: taskId, author: displayName, message: msg } as never)
+    const updates: Record<string, unknown> = {
+      status: newStatus,
+      dan_feedback: feedbackText.trim() || null,
+      updated_at: new Date().toISOString(),
     }
+    setMasterTasks((prev) => prev.filter((t) => t.id !== taskId))
+    await supabase.from('master_tasks').update(updates as never).eq('id', taskId)
+    setFeedbackText('')
+    setExpandedReview(null)
   }
 
   const handleEventTaskReview = async (taskId: string, action: 'approve' | 'revise') => {
@@ -217,13 +206,12 @@ export function TeamView() {
               <div className="border-l-2 border-r-2 border-b-2 border-black/10">
                 {/* Master tasks */}
                 {masterTasks.map((mt, i) => {
-                  const mtComments = masterComments.filter(c => c.task_id === mt.id)
                   const isExpanded = expandedReview === mt.id
 
                   return (
                     <div key={mt.id} className={i > 0 ? 'border-t border-black/5' : ''}>
                       <button
-                        onClick={() => { setExpandedReview(isExpanded ? null : mt.id); setReviewComment('') }}
+                        onClick={() => { setExpandedReview(isExpanded ? null : mt.id); setUpdateText(mt.update_to_dan || ''); setFeedbackText('') }}
                         className="w-full text-left px-5 py-4 hover:bg-cream-dark transition-colors"
                       >
                         <div className="flex items-start justify-between gap-4">
@@ -232,7 +220,6 @@ export function TeamView() {
                             <div className="flex items-center gap-2 mt-1">
                               {mt.assignee && <span className="text-[10px] font-bold text-blue uppercase tracking-wider">{mt.assignee}</span>}
                               <span className={`text-[10px] font-bold uppercase tracking-wider ${mt.priority === 'ultra-high' ? 'text-red' : mt.priority === 'high' ? 'text-orange' : 'text-muted'}`}>{mt.priority}</span>
-                              {mtComments.length > 0 && <span className="text-[10px] font-bold text-gold uppercase tracking-wider">{mtComments.length} comments</span>}
                             </div>
                           </div>
                           <span className="text-[10px] font-bold uppercase tracking-widest text-blue bg-blue/10 px-3 py-1 shrink-0">FOR REVIEW</span>
@@ -241,96 +228,84 @@ export function TeamView() {
 
                       {isExpanded && (
                         <div className="px-5 pb-5 border-t border-black/5 bg-white">
-                          {/* Full detail */}
-                          <div className="grid gap-4 sm:grid-cols-2 pt-4">
-                            {mt.current_status && (
-                              <div>
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Current Status</p>
-                                <p className="text-xs">{mt.current_status}</p>
-                              </div>
-                            )}
-                            {mt.overview && (
-                              <div>
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Overview</p>
-                                <p className="text-xs">{mt.overview}</p>
-                              </div>
-                            )}
+                          {/* Team member's update to Dan */}
+                          <div className="pt-4 mb-4">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Update for Dan</p>
+                            <textarea
+                              value={updateText || mt.update_to_dan || ''}
+                              onChange={(e) => setUpdateText(e.target.value)}
+                              onBlur={() => handleSaveUpdate(mt.id)}
+                              placeholder={"Dan,\n\nHere's the update on this task...\n\nNext Steps:\n- ...\n- ...\n\n— " + (mt.assignee || 'Team')}
+                              rows={8}
+                              className="w-full border-2 border-black bg-white px-4 py-3 text-sm text-black leading-relaxed focus:outline-none focus:border-blue placeholder:text-muted/30"
+                            />
                           </div>
 
-                          {mt.action_items && (
-                            <div className="mt-4">
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Action Items</p>
-                              <ul className="space-y-1">
-                                {mt.action_items.split('\n').map((item, idx) => (
-                                  <li key={idx} className="text-xs flex items-start gap-2">
-                                    <span className="text-muted mt-0.5">&mdash;</span>
-                                    <span>{item}</span>
-                                  </li>
+                          {/* Links */}
+                          {mt.links && (
+                            <div className="mb-4">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Attachments</p>
+                              <div className="space-y-1">
+                                {mt.links.split('\n').filter(Boolean).map((link, li) => (
+                                  <a key={li} href={link.trim().startsWith('http') ? link.trim() : `https://${link.trim()}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue hover:text-red underline block">{link.trim()}</a>
                                 ))}
-                              </ul>
+                              </div>
                             </div>
                           )}
 
+                          {/* Context — collapsed by default */}
+                          {(mt.current_status || mt.overview || mt.action_items) && (
+                            <details className="mb-4">
+                              <summary className="text-[10px] font-bold uppercase tracking-widest text-muted cursor-pointer hover:text-black">Task Context</summary>
+                              <div className="mt-2 pl-3 border-l-2 border-black/10 space-y-3">
+                                {mt.current_status && <div><p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-0.5">Status</p><p className="text-xs">{mt.current_status}</p></div>}
+                                {mt.overview && <div><p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-0.5">Overview</p><p className="text-xs">{mt.overview}</p></div>}
+                                {mt.action_items && (
+                                  <div>
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-0.5">Action Items</p>
+                                    <ul className="space-y-0.5">{mt.action_items.split('\n').map((item, idx) => <li key={idx} className="text-xs">&mdash; {item}</li>)}</ul>
+                                  </div>
+                                )}
+                              </div>
+                            </details>
+                          )}
+
+                          {/* Dan's previous comments */}
                           {mt.dan_comments && (
-                            <div className="mt-4 border-l-4 border-red pl-3">
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-red mb-1">Dan&apos;s Previous Comments</p>
+                            <div className="mb-4 border-l-4 border-muted pl-3">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Dan&apos;s Previous Comments</p>
                               <p className="text-xs italic">{mt.dan_comments}</p>
                             </div>
                           )}
 
-                          {/* Links */}
-                          {mt.links && (
-                            <div className="mt-4">
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Links</p>
-                              <div className="space-y-1">
-                                {mt.links.split('\n').filter(Boolean).map((link, li) => (
-                                  <a key={li} href={link.trim().startsWith('http') ? link.trim() : `https://${link.trim()}`} target="_blank" rel="noopener noreferrer" className="text-xs text-blue hover:text-red underline block truncate">{link.trim()}</a>
-                                ))}
-                              </div>
+                          {/* Dan's previous feedback */}
+                          {mt.dan_feedback && (
+                            <div className="mb-4 border-l-4 border-red pl-3">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-red mb-1">Dan&apos;s Last Feedback</p>
+                              <p className="text-xs">{mt.dan_feedback}</p>
                             </div>
                           )}
 
-                          {/* Comments thread */}
-                          <div className="mt-4 border-t-2 border-black/5 pt-4">
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Discussion</p>
-                            {mtComments.length > 0 && (
-                              <div className="space-y-2 mb-3 max-h-48 overflow-y-auto border border-black/5">
-                                {mtComments.map((c, ci) => (
-                                  <div key={c.id} className={`text-xs px-3 py-2 ${ci > 0 ? 'border-t border-black/5' : ''}`}>
-                                    <span className="font-bold text-blue">{c.author}</span>
-                                    <span className="text-muted mx-1">&middot;</span>
-                                    <span className="text-muted">{new Date(c.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })} {new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                    <p className="mt-0.5">{c.message}</p>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
+                          {/* Dan's feedback box */}
+                          <div className="border-t-2 border-black/10 pt-4 mt-4">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-red mb-2">Dan&apos;s Feedback</p>
+                            <textarea
+                              value={feedbackText}
+                              onChange={(e) => setFeedbackText(e.target.value)}
+                              placeholder="Leave feedback, notes, or next steps..."
+                              rows={4}
+                              className="w-full border-2 border-red/30 bg-white px-4 py-3 text-sm text-black leading-relaxed focus:outline-none focus:border-red placeholder:text-muted/30 mb-3"
+                            />
                             <div className="flex gap-2">
-                              <input
-                                type="text"
-                                value={reviewComment}
-                                onChange={(e) => setReviewComment(e.target.value)}
-                                onKeyDown={(e) => { if (e.key === 'Enter') handleReviewComment(mt.id) }}
-                                placeholder="Leave feedback..."
-                                className="flex-1 border-2 border-black bg-white px-3 py-2 text-xs font-bold text-black placeholder:text-muted/50 focus:outline-none focus:border-blue"
-                              />
-                              <button onClick={() => handleReviewComment(mt.id)} disabled={!reviewComment.trim() || sendingReview}
-                                className="bg-black text-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-blue transition-colors disabled:opacity-40">
-                                Post
+                              <button onClick={() => handleDanRespond(mt.id, 'approve')}
+                                className="bg-green text-white px-5 py-2.5 text-xs font-bold uppercase tracking-widest hover:bg-green-light transition-colors">
+                                Approve &amp; Complete
+                              </button>
+                              <button onClick={() => handleDanRespond(mt.id, 'revise')}
+                                className="bg-orange text-white px-5 py-2.5 text-xs font-bold uppercase tracking-widest hover:bg-red transition-colors">
+                                Send Back with Feedback
                               </button>
                             </div>
-                          </div>
-
-                          {/* Actions */}
-                          <div className="mt-4 flex gap-2">
-                            <button onClick={() => handleReviewAction(mt.id, 'approve')}
-                              className="bg-green text-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-green-light transition-colors">
-                              Approve &amp; Complete
-                            </button>
-                            <button onClick={() => handleReviewAction(mt.id, 'revise')}
-                              className="bg-orange text-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-red transition-colors">
-                              Send Back for Revisions
-                            </button>
                           </div>
                         </div>
                       )}
