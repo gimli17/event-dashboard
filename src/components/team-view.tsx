@@ -24,6 +24,7 @@ interface MasterTaskReview {
 interface TeamMember {
   name: string
   ultraHighTasks: string[]
+  highTasks: string[]
   totalActive: number
 }
 
@@ -36,6 +37,7 @@ export function TeamView() {
   const [teamData, setTeamData] = useState<TeamMember[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedTask, setExpandedTask] = useState<string | null>(null)
+  const [expandedMember, setExpandedMember] = useState<string | null>(null)
   const [updateText, setUpdateText] = useState('')
   const [feedbackText, setFeedbackText] = useState('')
 
@@ -68,7 +70,7 @@ export function TeamView() {
 
       const memberMap: Record<string, TeamMember> = {}
       for (const name of teamMembers) {
-        memberMap[name] = { name, ultraHighTasks: [], totalActive: 0 }
+        memberMap[name] = { name, ultraHighTasks: [], highTasks: [], totalActive: 0 }
       }
 
       if (allMaster) {
@@ -78,6 +80,7 @@ export function TeamView() {
             if (memberMap[name]) {
               memberMap[name].totalActive++
               if (t.priority === 'ultra-high') memberMap[name].ultraHighTasks.push(t.title)
+              if (t.priority === 'high') memberMap[name].highTasks.push(t.title)
             }
           }
         }
@@ -132,25 +135,46 @@ export function TeamView() {
           <div className="bg-blue text-white px-4 py-3">
             <h2 className="text-xs font-bold tracking-widest uppercase">Team</h2>
           </div>
-          <div className="border-l-2 border-r-2 border-b-2 border-black/10 divide-y divide-black/5">
-            {teamData.map((member) => (
-              <div key={member.name} className="px-4 py-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold">{member.name}</span>
-                  <span className="text-[10px] font-bold text-muted">{member.totalActive}</span>
+          <div className="border-l-2 border-r-2 border-b-2 border-black/10">
+            {teamData.map((member) => {
+              const isExpanded = expandedMember === member.name
+              return (
+                <div key={member.name} className="border-b border-black/5 last:border-0">
+                  <button
+                    onClick={() => setExpandedMember(isExpanded ? null : member.name)}
+                    className="w-full text-left px-4 py-3 hover:bg-cream-dark transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold">{member.name}</span>
+                      <span className="text-[10px] font-bold text-muted">{member.totalActive}</span>
+                    </div>
+                  </button>
+                  {isExpanded && (
+                    <div className="px-4 pb-3 space-y-2">
+                      {member.ultraHighTasks.length > 0 && (
+                        <div>
+                          <p className="text-[9px] font-bold uppercase tracking-widest text-red mb-1">Ultra-High</p>
+                          {member.ultraHighTasks.map((t, i) => (
+                            <p key={i} className="text-[10px] font-bold text-red pl-2 truncate">&mdash; {t}</p>
+                          ))}
+                        </div>
+                      )}
+                      {member.highTasks.length > 0 && (
+                        <div>
+                          <p className="text-[9px] font-bold uppercase tracking-widest text-orange mb-1">High</p>
+                          {member.highTasks.map((t, i) => (
+                            <p key={i} className="text-[10px] font-bold text-orange pl-2 truncate">&mdash; {t}</p>
+                          ))}
+                        </div>
+                      )}
+                      {member.ultraHighTasks.length === 0 && member.highTasks.length === 0 && (
+                        <p className="text-[10px] text-muted italic">No ultra-high or high priority tasks</p>
+                      )}
+                    </div>
+                  )}
                 </div>
-                {member.ultraHighTasks.length > 0 && (
-                  <div className="mt-1.5 space-y-0.5">
-                    {member.ultraHighTasks.slice(0, 2).map((t, i) => (
-                      <p key={i} className="text-[10px] text-red font-bold truncate">{t}</p>
-                    ))}
-                    {member.ultraHighTasks.length > 2 && (
-                      <p className="text-[10px] text-muted">+{member.ultraHighTasks.length - 2} more</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
+              )
+            })}
             {teamData.length === 0 && (
               <p className="px-4 py-3 text-xs text-muted">No active assignments</p>
             )}
