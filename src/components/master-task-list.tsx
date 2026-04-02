@@ -83,7 +83,7 @@ const statusColors: Record<string, string> = {
   complete: 'text-green bg-green/10',
 }
 
-type ViewMode = 'all' | 'this-week'
+type ViewMode = 'all' | 'this-week' | 'completed'
 
 export function MasterTaskList() {
   const { displayName } = useUser()
@@ -91,6 +91,7 @@ export function MasterTaskList() {
   const [comments, setComments] = useState<TaskComment[]>([])
   const [eventProgress, setEventProgress] = useState<EventProgress[]>([])
   const [eventTaskRows, setEventTaskRows] = useState<EventTaskRow[]>([])
+  const [completedTasks, setCompletedTasks] = useState<EventTaskRow[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedTask, setExpandedTask] = useState<string | null>(null)
   const [commentInput, setCommentInput] = useState('')
@@ -141,7 +142,8 @@ export function MasterTaskList() {
               assignee: t.assignee,
               priority: t.priority ?? 'medium',
             }))
-          setEventTaskRows(rows)
+          setEventTaskRows(rows.filter((r) => r.status !== 'complete'))
+          setCompletedTasks(rows.filter((r) => r.status === 'complete'))
         }
       }
 
@@ -261,6 +263,10 @@ export function MasterTaskList() {
           <button onClick={() => setViewMode('all')}
             className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest border-2 transition-all ${viewMode === 'all' ? 'bg-black text-white border-black' : 'bg-white text-black border-black/20 hover:border-black'}`}>
             All Priorities
+          </button>
+          <button onClick={() => setViewMode('completed')}
+            className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest border-2 transition-all ${viewMode === 'completed' ? 'bg-green text-white border-green' : 'bg-white text-black border-black/20 hover:border-black'}`}>
+            Weekly Report
           </button>
         </div>
         <div className="flex items-center gap-2">
@@ -506,6 +512,70 @@ export function MasterTaskList() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Weekly Report — completed tasks */}
+      {viewMode === 'completed' && (
+        <div>
+          {/* Completed master tasks */}
+          {(() => {
+            const completedMaster = tasks.filter((t) => t.status === 'complete')
+            const allCompleted = [...completedTasks]
+
+            // Group by week (using updated_at or created_at)
+            // For now, show all completed items
+            return (
+              <>
+                {completedMaster.length > 0 && (
+                  <div className="mb-6">
+                    <div className="bg-green text-white px-6 py-4 flex items-center justify-between">
+                      <h2 className="text-sm font-bold tracking-widest uppercase">Completed Master Tasks</h2>
+                      <span className="text-xs font-bold tracking-wider opacity-70">{completedMaster.length} ITEMS</span>
+                    </div>
+                    <div className="border-l-2 border-r-2 border-b-2 border-black/10">
+                      {completedMaster.map((task, i) => (
+                        <div key={task.id} className={`px-5 py-3 ${i > 0 ? 'border-t border-black/5' : ''}`}>
+                          <p className="text-sm font-bold line-through text-muted">{task.title}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            {task.assignee && <span className="text-[10px] font-bold text-blue uppercase tracking-wider">{task.assignee}</span>}
+                            <span className="text-[10px] font-bold text-green uppercase tracking-widest">DONE</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {allCompleted.length > 0 && (
+                  <div>
+                    <div className="bg-green text-white px-6 py-4 flex items-center justify-between">
+                      <h2 className="text-sm font-bold tracking-widest uppercase">Completed Event Tasks</h2>
+                      <span className="text-xs font-bold tracking-wider opacity-70">{allCompleted.length} ITEMS</span>
+                    </div>
+                    <div className="border-l-2 border-r-2 border-b-2 border-black/10">
+                      {allCompleted.map((row, i) => (
+                        <div key={row.id} className={`px-5 py-3 ${i > 0 ? 'border-t border-black/5' : ''}`}>
+                          <p className="text-sm font-bold line-through text-muted">
+                            {row.event_title} — {row.title}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] text-muted uppercase tracking-wider">{row.category}</span>
+                            {row.assignee && <span className="text-[10px] font-bold text-blue uppercase tracking-wider">{row.assignee}</span>}
+                            <span className="text-[10px] font-bold text-green uppercase tracking-widest">DONE</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {completedMaster.length === 0 && allCompleted.length === 0 && (
+                  <p className="text-muted text-center py-12 uppercase tracking-widest text-xs font-bold">No completed tasks yet.</p>
+                )}
+              </>
+            )
+          })()}
         </div>
       )}
     </div>
