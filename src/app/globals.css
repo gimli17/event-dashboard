@@ -12,6 +12,7 @@
   --black: #1a1a1a;
   --gold: #b8860b;
   --orange: #ea580c;
+  --teal: #0d9488;
   --white: #faf7f0;
   --muted: #8b7e6a;
 }
@@ -28,6 +29,7 @@
   --color-black: var(--black);
   --color-gold: var(--gold);
   --color-orange: var(--orange);
+  --color-teal: var(--teal);
   --color-white: var(--white);
   --color-muted: var(--muted);
   --font-body: var(--font-body);

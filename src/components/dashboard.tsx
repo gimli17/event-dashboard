@@ -16,6 +16,26 @@ function parseTime(timeStr: string): number {
   return hours * 60 + minutes
 }
 
+function renderEventTitle(title: string) {
+  const tealPhrases = ['Open Slot', 'Endeavor Colorado']
+  let parts: (string | React.ReactElement)[] = [title]
+
+  for (const phrase of tealPhrases) {
+    const newParts: (string | React.ReactElement)[] = []
+    for (const part of parts) {
+      if (typeof part !== 'string') { newParts.push(part); continue }
+      const idx = part.indexOf(phrase)
+      if (idx === -1) { newParts.push(part); continue }
+      if (idx > 0) newParts.push(part.slice(0, idx))
+      newParts.push(<span key={phrase + idx} className="text-teal">{phrase}</span>)
+      if (idx + phrase.length < part.length) newParts.push(part.slice(idx + phrase.length))
+    }
+    parts = newParts
+  }
+
+  return <>{parts}</>
+}
+
 const dayOrder = ['wednesday', 'thursday', 'all-weekend', 'friday', 'saturday', 'sunday']
 
 const dayMeta: Record<string, { title: string; subtitle: string; color: string }> = {
@@ -205,7 +225,7 @@ export function Dashboard({
                               {/* Content */}
                               <div className="flex-1 min-w-0">
                                 <h3 className="text-lg font-bold uppercase tracking-tight group-hover:text-red transition-colors leading-tight">
-                                  {event.title}
+                                  {renderEventTitle(event.title)}
                                 </h3>
                                 <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                                   <span className="text-xs text-muted">{event.location}</span>
