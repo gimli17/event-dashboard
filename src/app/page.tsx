@@ -100,7 +100,7 @@ function Tile({ title, description, href, color, external }: {
     <div className="group h-full flex flex-col">
       <div className={`${color} text-white px-6 h-36 flex items-center justify-between`}>
         <h2 className="text-base font-bold tracking-widest uppercase">{title}</h2>
-        {external && <span className="text-xs font-bold tracking-widest uppercase opacity-50">&nearr;</span>}
+        {external && <span className="text-xs font-bold tracking-widest uppercase opacity-50">{'\u2197'}</span>}
       </div>
       <div className="border-l-2 border-r-2 border-b-2 border-black/10 px-6 h-24 flex items-center bg-white group-hover:bg-cream-dark transition-colors">
         <p className="text-sm text-muted leading-relaxed">{description}</p>
