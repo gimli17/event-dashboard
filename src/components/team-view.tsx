@@ -744,28 +744,13 @@ export function TeamView() {
                       className="border-2 border-black/20 bg-white px-3 py-2 text-xs font-bold uppercase tracking-widest focus:outline-none focus:border-black cursor-pointer" />
                   </div>
 
-                  {/* Rich text area with toolbar */}
+                  {/* Notes textarea — resizable */}
                   <div>
-                    <div className="flex items-center gap-1 border-2 border-b-0 border-black/20 bg-cream-dark px-2 py-1.5">
-                      <button type="button" onClick={() => document.execCommand('bold')}
-                        className="px-2 py-1 text-xs font-bold hover:bg-black/10 transition-colors" title="Bold"><strong>B</strong></button>
-                      <button type="button" onClick={() => document.execCommand('italic')}
-                        className="px-2 py-1 text-xs italic hover:bg-black/10 transition-colors" title="Italic"><em>I</em></button>
-                      <button type="button" onClick={() => document.execCommand('underline')}
-                        className="px-2 py-1 text-xs underline hover:bg-black/10 transition-colors" title="Underline">U</button>
-                      <div className="w-px h-4 bg-black/10 mx-1" />
-                      <button type="button" onClick={() => document.execCommand('insertUnorderedList')}
-                        className="px-2 py-1 text-xs hover:bg-black/10 transition-colors" title="Bullet list">&bull; List</button>
-                    </div>
-                    <div
-                      contentEditable
-                      suppressContentEditableWarning
-                      onBlur={(e) => setPersonNewNotes(e.currentTarget.innerHTML)}
-                      className="w-full border-2 border-black/20 bg-white px-4 py-4 text-sm text-black leading-relaxed focus:outline-none focus:border-blue min-h-[150px] resize-y overflow-auto"
-                      style={{ resize: 'vertical' }}
-                      data-placeholder="Notes, context, instructions..."
-                    />
-                    <style>{`[contenteditable]:empty:before { content: attr(data-placeholder); color: #c4b89a; }`}</style>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Notes &amp; Context</p>
+                    <textarea value={personNewNotes} onChange={(e) => setPersonNewNotes(e.target.value)}
+                      placeholder="Notes, context, instructions...&#10;&#10;Use - for bullet points&#10;Use ** for bold (e.g., **important**)"
+                      className="w-full border-2 border-black/20 bg-white px-4 py-4 text-sm text-black leading-relaxed focus:outline-none focus:border-blue placeholder:text-muted/30"
+                      style={{ resize: 'vertical', minHeight: '150px' }} />
                   </div>
 
                   {/* Links */}
