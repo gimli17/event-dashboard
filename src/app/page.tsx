@@ -54,8 +54,8 @@ export default async function HubPage() {
       </section>
 
       <section className="bg-cream flex-1">
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="flex gap-3 items-stretch">
+        <div className="max-w-7xl mx-auto px-6 py-12">
+          <div className="flex gap-3 items-stretch min-h-[200px]">
             {/* Task Management */}
             <div className="flex gap-3 flex-1 border-r-2 border-black/10 pr-3">
               <div className="flex-1"><Tile title="Master Tasks" href="/tasks" color="bg-red" label="Tasks" /></div>
@@ -92,11 +92,11 @@ function Tile({ title, href, color, external, label }: {
   label?: string
 }) {
   const inner = (
-    <div className="group h-full">
-      <div className={`${color} text-white px-4 py-3`}>
-        <h2 className="text-xs font-bold tracking-widest uppercase leading-tight">{title}</h2>
+    <div className="group h-full flex flex-col">
+      <div className={`${color} text-white px-5 py-6 flex-1 flex flex-col justify-center`}>
+        <h2 className="text-sm font-bold tracking-widest uppercase leading-snug">{title}</h2>
       </div>
-      <div className="border-l-2 border-r-2 border-b-2 border-black/10 px-4 py-2.5 bg-white group-hover:bg-cream-dark transition-colors">
+      <div className="border-l-2 border-r-2 border-b-2 border-black/10 px-5 py-3 bg-white group-hover:bg-cream-dark transition-colors">
         <p className="text-[10px] font-bold uppercase tracking-widest text-muted">
           {external ? 'External \u2197' : label || 'View'}
         </p>
