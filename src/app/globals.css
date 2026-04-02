@@ -13,6 +13,7 @@
   --gold: #b8860b;
   --orange: #ea580c;
   --teal: #0d9488;
+  --purple: #6d28d9;
   --white: #faf7f0;
   --muted: #8b7e6a;
 }
@@ -30,6 +31,7 @@
   --color-gold: var(--gold);
   --color-orange: var(--orange);
   --color-teal: var(--teal);
+  --color-purple: var(--purple);
   --color-white: var(--white);
   --color-muted: var(--muted);
   --font-body: var(--font-body);
@@ -44,6 +46,8 @@ body {
 
 /* Force Tailwind to generate teal utility */
 .text-teal { color: var(--teal); }
+.text-purple { color: var(--purple); }
+.bg-purple { background-color: var(--purple); }
 
 ::selection {
   background: var(--red);

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useUser } from './user-provider'
-import type { EventTask, TaskStatus } from '@/lib/types'
+import type { EventTask } from '@/lib/types'
 
 interface MasterTaskReview {
   id: string
@@ -23,8 +23,8 @@ interface MasterTaskReview {
 
 interface TeamMember {
   name: string
-  ultraHighTasks: string[]
-  highTasks: string[]
+  ultraHighTasks: { title: string; id: string }[]
+  highTasks: { title: string; id: string }[]
   totalActive: number
 }
 
@@ -43,13 +43,11 @@ export function TeamView() {
 
   useEffect(() => {
     async function fetch() {
-      // Fetch master tasks in review
       const { data: mt } = await supabase.from('master_tasks')
         .select('id, title, status, assignee, priority, links, current_status, overview, action_items, dan_comments, update_to_dan, dan_feedback, deadline')
         .eq('status', 'review')
       if (mt) setReviewTasks(mt as MasterTaskReview[])
 
-      // Fetch event tasks in review
       const { data: et } = await supabase.from('event_tasks').select('*').eq('status', 'review')
       if (et && (et as EventTask[]).length > 0) {
         const eventIds = [...new Set((et as EventTask[]).map(t => t.event_id).filter(Boolean))]
@@ -59,12 +57,11 @@ export function TeamView() {
         setReviewEventTasks((et as EventTask[]).map(t => ({ ...t, event_title: eventMap[t.event_id] || 'General' })))
       }
 
-      // Build team data — who's working on what
       const { data: allMaster } = await supabase.from('master_tasks')
-        .select('title, assignee, priority, status')
+        .select('id, title, assignee, priority, status')
         .neq('status', 'complete')
       const { data: allEvent } = await supabase.from('event_tasks')
-        .select('title, assignee, priority, status')
+        .select('id, title, assignee, priority, status')
         .neq('status', 'complete')
         .not('assignee', 'is', null)
 
@@ -74,25 +71,25 @@ export function TeamView() {
       }
 
       if (allMaster) {
-        for (const t of allMaster as { title: string; assignee: string | null; priority: string; status: string }[]) {
+        for (const t of allMaster as { id: string; title: string; assignee: string | null; priority: string; status: string }[]) {
           if (!t.assignee) continue
           for (const name of t.assignee.split(', ')) {
             if (memberMap[name]) {
               memberMap[name].totalActive++
-              if (t.priority === 'ultra-high') memberMap[name].ultraHighTasks.push(t.title)
-              if (t.priority === 'high') memberMap[name].highTasks.push(t.title)
+              if (t.priority === 'ultra-high') memberMap[name].ultraHighTasks.push({ title: t.title, id: t.id })
+              if (t.priority === 'high') memberMap[name].highTasks.push({ title: t.title, id: t.id })
             }
           }
         }
       }
       if (allEvent) {
-        for (const t of allEvent as { title: string; assignee: string | null; priority?: string; status: string }[]) {
+        for (const t of allEvent as { id: string; title: string; assignee: string | null; priority?: string; status: string }[]) {
           if (!t.assignee || !memberMap[t.assignee]) continue
           memberMap[t.assignee].totalActive++
         }
       }
 
-      setTeamData(Object.values(memberMap).filter(m => m.totalActive > 0).sort((a, b) => b.totalActive - a.totalActive))
+      setTeamData(Object.values(memberMap))
       setLoading(false)
     }
     fetch()
@@ -124,16 +121,16 @@ export function TeamView() {
   const totalReview = reviewTasks.length + reviewEventTasks.length
 
   if (loading) {
-    return <div className="max-w-7xl mx-auto px-6 py-16 text-center"><p className="text-muted uppercase tracking-widest text-xs font-bold">Loading...</p></div>
+    return <div className="max-w-7xl mx-auto px-6 py-16 text-center"><p className="text-muted uppercase tracking-widest text-sm font-bold">Loading...</p></div>
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-6">
-      <div className="flex gap-6 items-start">
+    <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="flex gap-8 items-start">
         {/* Left panel — Team */}
-        <div className="w-64 shrink-0">
-          <div className="bg-blue text-white px-4 py-3">
-            <h2 className="text-xs font-bold tracking-widest uppercase">Team</h2>
+        <div className="w-72 shrink-0">
+          <div className="bg-purple text-white px-5 py-4">
+            <h2 className="text-sm font-bold tracking-widest uppercase">Team</h2>
           </div>
           <div className="border-l-2 border-r-2 border-b-2 border-black/10">
             {teamMembers.map((name) => {
@@ -145,37 +142,37 @@ export function TeamView() {
                 <div key={name}>
                   <div
                     onClick={() => setExpandedMember(isExpanded ? null : name)}
-                    className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-cream-dark transition-colors border-b border-black/5"
+                    className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-cream-dark transition-colors border-b border-black/5"
                   >
-                    <span className={`text-xs font-bold ${count > 0 ? '' : 'text-muted/40'}`}>{name}</span>
-                    {count > 0 && <span className="text-[10px] font-bold text-muted bg-black/5 px-1.5 py-0.5 rounded">{count}</span>}
+                    <span className={`text-sm font-bold ${count > 0 ? '' : 'text-muted/40'}`}>{name}</span>
+                    {count > 0 && <span className="text-xs font-bold text-purple bg-purple/10 px-2 py-0.5">{count}</span>}
                   </div>
                   {isExpanded && member && (
-                    <div className="px-4 py-3 bg-cream-dark border-b border-black/5">
+                    <div className="px-5 py-4 bg-cream-dark border-b border-black/5 space-y-3">
                       {member.ultraHighTasks.length > 0 && (
-                        <div className="mb-2">
-                          <p className="text-[9px] font-bold uppercase tracking-widest text-red mb-1">Ultra-High</p>
-                          {member.ultraHighTasks.map((t, i) => (
-                            <p key={i} className="text-[10px] font-bold text-red pl-2">&mdash; {t}</p>
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-red mb-2">Ultra-High</p>
+                          {member.ultraHighTasks.map((t) => (
+                            <a key={t.id} href="/tasks" className="text-xs font-bold text-red hover:underline block py-0.5 pl-2">&mdash; {t.title}</a>
                           ))}
                         </div>
                       )}
                       {member.highTasks.length > 0 && (
-                        <div className="mb-2">
-                          <p className="text-[9px] font-bold uppercase tracking-widest text-orange mb-1">High</p>
-                          {member.highTasks.map((t, i) => (
-                            <p key={i} className="text-[10px] font-bold text-orange pl-2">&mdash; {t}</p>
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-orange mb-2">High</p>
+                          {member.highTasks.map((t) => (
+                            <a key={t.id} href="/tasks" className="text-xs font-bold text-orange hover:underline block py-0.5 pl-2">&mdash; {t.title}</a>
                           ))}
                         </div>
                       )}
                       {member.ultraHighTasks.length === 0 && member.highTasks.length === 0 && (
-                        <p className="text-[10px] text-muted italic">No ultra-high or high priority tasks</p>
+                        <p className="text-xs text-muted italic">No ultra-high or high priority tasks</p>
                       )}
                     </div>
                   )}
                   {isExpanded && !member && (
-                    <div className="px-4 py-3 bg-cream-dark border-b border-black/5">
-                      <p className="text-[10px] text-muted italic">No tasks assigned</p>
+                    <div className="px-5 py-4 bg-cream-dark border-b border-black/5">
+                      <p className="text-xs text-muted italic">No tasks assigned</p>
                     </div>
                   )}
                 </div>
@@ -186,21 +183,20 @@ export function TeamView() {
 
         {/* Main panel — Dan's Dashboard */}
         <div className="flex-1 min-w-0">
-          <div className="bg-red text-white px-6 py-4 flex items-center justify-between">
-            <h2 className="text-sm font-bold tracking-widest uppercase">Dan&apos;s Dashboard</h2>
-            <span className="text-xs font-bold tracking-wider opacity-70">
-              {totalReview} ITEM{totalReview !== 1 ? 'S' : ''} FOR REVIEW
+          <div className="bg-purple text-white px-6 py-5 flex items-center justify-between">
+            <h2 className="text-lg font-bold tracking-widest uppercase">Dan&apos;s Dashboard</h2>
+            <span className="text-sm font-bold tracking-wider opacity-70">
+              {totalReview} item{totalReview !== 1 ? 's' : ''} for review
             </span>
           </div>
 
           {totalReview === 0 ? (
-            <div className="border-l-2 border-r-2 border-b-2 border-black/10 px-6 py-16 text-center">
-              <p className="text-sm font-bold text-muted mb-1">All clear</p>
-              <p className="text-xs text-muted">No items awaiting review right now.</p>
+            <div className="border-l-2 border-r-2 border-b-2 border-black/10 px-8 py-20 text-center">
+              <p className="text-lg font-bold text-muted mb-2">All clear</p>
+              <p className="text-sm text-muted">No items awaiting review right now.</p>
             </div>
           ) : (
             <div className="border-l-2 border-r-2 border-b-2 border-black/10">
-              {/* Master tasks in review */}
               {reviewTasks.map((task, i) => {
                 const isExpanded = expandedTask === task.id
 
@@ -208,28 +204,28 @@ export function TeamView() {
                   <div key={task.id} className={i > 0 ? 'border-t-2 border-black/10' : ''}>
                     <button
                       onClick={() => { setExpandedTask(isExpanded ? null : task.id); setUpdateText(task.update_to_dan || ''); setFeedbackText('') }}
-                      className="w-full text-left px-6 py-5 hover:bg-cream-dark transition-colors"
+                      className="w-full text-left px-8 py-6 hover:bg-cream-dark transition-colors"
                     >
-                      <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start justify-between gap-6">
                         <div>
-                          <h3 className="text-base font-bold">{task.title}</h3>
-                          <div className="flex items-center gap-3 mt-1.5">
-                            {task.assignee && <span className="text-xs font-bold text-blue uppercase tracking-wider">{task.assignee}</span>}
-                            <span className={`text-xs font-bold uppercase tracking-wider ${task.priority === 'ultra-high' ? 'text-red' : task.priority === 'high' ? 'text-orange' : 'text-muted'}`}>{task.priority}</span>
-                            {task.deadline && <span className="text-xs font-bold text-red">Due {new Date(task.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
+                          <h3 className="text-lg font-bold">{task.title}</h3>
+                          <div className="flex items-center gap-4 mt-2">
+                            {task.assignee && <span className="text-sm font-bold text-purple">{task.assignee}</span>}
+                            <span className={`text-sm font-bold ${task.priority === 'ultra-high' ? 'text-red' : task.priority === 'high' ? 'text-orange' : 'text-muted'}`}>{task.priority}</span>
+                            {task.deadline && <span className="text-sm font-bold text-red">Due {new Date(task.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
                           </div>
                         </div>
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-blue bg-blue/10 px-3 py-1.5 shrink-0">
-                          {isExpanded ? 'COLLAPSE' : 'REVIEW'}
+                        <span className={`text-xs font-bold uppercase tracking-widest shrink-0 px-4 py-2 ${isExpanded ? 'bg-purple text-white' : 'text-purple bg-purple/10'}`}>
+                          {isExpanded ? 'VIEWING' : 'REVIEW'}
                         </span>
                       </div>
                     </button>
 
                     {isExpanded && (
-                      <div className="px-6 pb-6 bg-white border-t border-black/5">
+                      <div className="px-8 pb-8 bg-white border-t border-black/5">
                         {/* Team member's update */}
-                        <div className="pt-5 mb-5">
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">
+                        <div className="pt-6 mb-6">
+                          <p className="text-sm font-bold uppercase tracking-widest text-purple mb-3">
                             Update from {task.assignee || 'Team'}
                           </p>
                           <textarea
@@ -237,19 +233,19 @@ export function TeamView() {
                             onChange={(e) => setUpdateText(e.target.value)}
                             onBlur={() => handleSaveUpdate(task.id)}
                             placeholder={"Dan,\n\nHere's the update on this task...\n\nNext Steps:\n- ...\n- ...\n\n— " + (task.assignee || 'Team')}
-                            rows={10}
-                            className="w-full border-2 border-black/20 bg-white px-5 py-4 text-sm text-black leading-relaxed focus:outline-none focus:border-blue placeholder:text-muted/30"
+                            rows={12}
+                            className="w-full border-2 border-black/20 bg-white px-6 py-5 text-base text-black leading-relaxed focus:outline-none focus:border-purple placeholder:text-muted/30"
                           />
                         </div>
 
                         {/* Links */}
                         {task.links && (
-                          <div className="mb-5">
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Attachments</p>
-                            <div className="space-y-1.5">
+                          <div className="mb-6">
+                            <p className="text-sm font-bold uppercase tracking-widest text-muted mb-2">Attachments</p>
+                            <div className="space-y-2">
                               {task.links.split('\n').filter(Boolean).map((link, li) => (
                                 <a key={li} href={link.trim().startsWith('http') ? link.trim() : `https://${link.trim()}`} target="_blank" rel="noopener noreferrer"
-                                  className="text-sm text-blue hover:text-red underline block">
+                                  className="text-base text-blue hover:text-red underline block">
                                   {link.trim()}
                                 </a>
                               ))}
@@ -259,53 +255,53 @@ export function TeamView() {
 
                         {/* Context */}
                         {(task.current_status || task.overview || task.action_items) && (
-                          <details className="mb-5">
-                            <summary className="text-[10px] font-bold uppercase tracking-widest text-muted cursor-pointer hover:text-black">Show Task Context</summary>
-                            <div className="mt-3 pl-4 border-l-2 border-black/10 space-y-3">
-                              {task.current_status && <div><p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-0.5">Current Status</p><p className="text-sm">{task.current_status}</p></div>}
-                              {task.overview && <div><p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-0.5">Overview</p><p className="text-sm">{task.overview}</p></div>}
+                          <details className="mb-6">
+                            <summary className="text-sm font-bold uppercase tracking-widest text-muted cursor-pointer hover:text-black">Show Task Context</summary>
+                            <div className="mt-4 pl-5 border-l-2 border-black/10 space-y-4">
+                              {task.current_status && <div><p className="text-xs font-bold uppercase tracking-widest text-muted mb-1">Current Status</p><p className="text-base">{task.current_status}</p></div>}
+                              {task.overview && <div><p className="text-xs font-bold uppercase tracking-widest text-muted mb-1">Overview</p><p className="text-base">{task.overview}</p></div>}
                               {task.action_items && (
                                 <div>
-                                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-0.5">Action Items</p>
-                                  <ul className="space-y-1">{task.action_items.split('\n').map((item, idx) => <li key={idx} className="text-sm">&mdash; {item}</li>)}</ul>
+                                  <p className="text-xs font-bold uppercase tracking-widest text-muted mb-1">Action Items</p>
+                                  <ul className="space-y-1">{task.action_items.split('\n').map((item, idx) => <li key={idx} className="text-base">&mdash; {item}</li>)}</ul>
                                 </div>
                               )}
                             </div>
                           </details>
                         )}
 
-                        {/* Dan's previous feedback */}
+                        {/* Previous feedback */}
                         {task.dan_feedback && (
-                          <div className="mb-5 border-l-4 border-red pl-4">
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-red mb-1">Previous Feedback</p>
-                            <p className="text-sm">{task.dan_feedback}</p>
+                          <div className="mb-6 border-l-4 border-purple pl-5">
+                            <p className="text-sm font-bold uppercase tracking-widest text-purple mb-1">Previous Feedback</p>
+                            <p className="text-base">{task.dan_feedback}</p>
                           </div>
                         )}
 
                         {task.dan_comments && (
-                          <div className="mb-5 border-l-4 border-muted/30 pl-4">
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Original Comments</p>
-                            <p className="text-sm italic text-muted">{task.dan_comments}</p>
+                          <div className="mb-6 border-l-4 border-muted/30 pl-5">
+                            <p className="text-sm font-bold uppercase tracking-widest text-muted mb-1">Original Comments</p>
+                            <p className="text-base italic text-muted">{task.dan_comments}</p>
                           </div>
                         )}
 
                         {/* Dan's feedback input */}
-                        <div className="border-t-2 border-black/10 pt-5">
-                          <p className="text-xs font-bold uppercase tracking-widest text-red mb-2">Dan&apos;s Feedback</p>
+                        <div className="border-t-2 border-purple/20 pt-6">
+                          <p className="text-sm font-bold uppercase tracking-widest text-purple mb-3">Dan&apos;s Feedback</p>
                           <textarea
                             value={feedbackText}
                             onChange={(e) => setFeedbackText(e.target.value)}
                             placeholder="Leave feedback, direction, or next steps..."
-                            rows={5}
-                            className="w-full border-2 border-red/30 bg-white px-5 py-4 text-sm text-black leading-relaxed focus:outline-none focus:border-red placeholder:text-muted/30 mb-4"
+                            rows={6}
+                            className="w-full border-2 border-purple/30 bg-white px-6 py-5 text-base text-black leading-relaxed focus:outline-none focus:border-purple placeholder:text-muted/30 mb-4"
                           />
                           <div className="flex gap-3">
                             <button onClick={() => handleDanRespond(task.id, 'approve')}
-                              className="bg-green text-white px-6 py-3 text-xs font-bold uppercase tracking-widest hover:bg-green-light transition-colors">
+                              className="bg-green text-white px-8 py-3.5 text-sm font-bold uppercase tracking-widest hover:bg-green-light transition-colors">
                               Approve &amp; Complete
                             </button>
                             <button onClick={() => handleDanRespond(task.id, 'revise')}
-                              className="bg-orange text-white px-6 py-3 text-xs font-bold uppercase tracking-widest hover:bg-red transition-colors">
+                              className="bg-orange text-white px-8 py-3.5 text-sm font-bold uppercase tracking-widest hover:bg-red transition-colors">
                               Send Back with Feedback
                             </button>
                           </div>
@@ -318,22 +314,22 @@ export function TeamView() {
 
               {/* Event tasks in review */}
               {reviewEventTasks.map((task) => (
-                <div key={task.id} className="border-t-2 border-black/10 px-6 py-5 flex items-start justify-between gap-4">
+                <div key={task.id} className="border-t-2 border-black/10 px-8 py-6 flex items-start justify-between gap-6">
                   <div>
-                    <p className="text-base font-bold">{task.event_title} &mdash; {task.title}</p>
-                    <div className="flex items-center gap-3 mt-1.5">
-                      {task.assignee && <span className="text-xs font-bold text-blue uppercase tracking-wider">{task.assignee}</span>}
-                      <span className="text-xs text-muted uppercase tracking-wider">{task.category}</span>
-                      {task.event_id && <a href={`/events/${task.event_id}`} className="text-xs font-bold text-blue uppercase tracking-widest hover:text-red">View Event &rarr;</a>}
+                    <p className="text-lg font-bold">{task.event_title} &mdash; {task.title}</p>
+                    <div className="flex items-center gap-4 mt-2">
+                      {task.assignee && <span className="text-sm font-bold text-purple">{task.assignee}</span>}
+                      <span className="text-sm text-muted">{task.category}</span>
+                      {task.event_id && <a href={`/events/${task.event_id}`} className="text-sm font-bold text-blue hover:text-red">View Event &rarr;</a>}
                     </div>
                   </div>
                   <div className="flex gap-2 shrink-0">
                     <button onClick={() => handleEventTaskAction(task.id, 'approve')}
-                      className="text-xs font-bold uppercase tracking-widest text-green bg-green/10 px-3 py-2 hover:bg-green/20 transition-colors">
+                      className="text-sm font-bold uppercase tracking-widest text-green bg-green/10 px-4 py-2.5 hover:bg-green/20 transition-colors">
                       Done
                     </button>
                     <button onClick={() => handleEventTaskAction(task.id, 'revise')}
-                      className="text-xs font-bold uppercase tracking-widest text-orange bg-orange/10 px-3 py-2 hover:bg-orange/20 transition-colors">
+                      className="text-sm font-bold uppercase tracking-widest text-orange bg-orange/10 px-4 py-2.5 hover:bg-orange/20 transition-colors">
                       Revise
                     </button>
                   </div>
