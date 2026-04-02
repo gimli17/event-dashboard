@@ -22,15 +22,24 @@ export interface Sponsor {
   add_recog_detail: string | null
 }
 
-// Map vip_day codes to our event IDs
+// Map vip_day codes from sponsor portal to our event IDs
+// Actual private party slots:
+// Fri 5:00-6:30 (Endeavor) | Sat 2:00-4:00 (x2) | Sat 4:15-6:15 (x2) | Sun 2:00-4:00 (x2) | Sun 4:15-6:15 (x2)
 const vipDayToEventId: Record<string, string> = {
-  'fri_300_500': 'fri-endeavor',
-  'fri_415_615': 'sat-sponsor-late',
+  'fri_415_615': 'fri-endeavor',       // Endeavor's Friday slot (portal code doesn't match time but maps here)
+  'fri_500_630': 'fri-endeavor',
+  'sat_200_400': 'sat-sponsor-early',
   'sat_200_400_1': 'sat-sponsor-early',
   'sat_200_400_2': 'sat-sponsor-early',
+  'sat_415_615': 'sat-sponsor-late',
   'sat_415_615_1': 'sat-sponsor-late',
   'sat_415_615_2': 'sat-sponsor-late',
+  'sun_200_400': 'sun-sponsor-early',
+  'sun_200_400_1': 'sun-sponsor-early',
+  'sun_200_400_2': 'sun-sponsor-early',
   'sun_415_615': 'sun-sponsor',
+  'sun_415_615_1': 'sun-sponsor',
+  'sun_415_615_2': 'sun-sponsor',
 }
 
 // Map add_recog_detail (Founders Experience event sponsorship) to our event IDs
