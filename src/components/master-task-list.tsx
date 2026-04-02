@@ -607,9 +607,33 @@ export function MasterTaskList() {
               className="border-2 border-black/20 bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black">
               {priorityOrder.map((p) => <option key={p} value={p}>{p === 'ultra-high' ? 'Ultra-High' : p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
             </select>
-            <input type="text" value={newTaskDeadline} onChange={(e) => setNewTaskDeadline(e.target.value)}
-              placeholder="Deadline e.g. 4/5"
-              className="w-28 border-2 border-black/20 bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black placeholder:text-muted/40" />
+            <input type="date" value={newTaskDeadline} onChange={(e) => {
+              setNewTaskDeadline(e.target.value)
+              // Auto-set priority based on deadline
+              if (e.target.value) {
+                const deadline = new Date(e.target.value + 'T23:59:59')
+                const now = new Date()
+                const dayOfWeek = now.getDay()
+                const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+                const thisMonday = new Date(now)
+                thisMonday.setDate(now.getDate() + mondayOffset)
+                thisMonday.setHours(0, 0, 0, 0)
+                const thisSunday = new Date(thisMonday)
+                thisSunday.setDate(thisMonday.getDate() + 6)
+                thisSunday.setHours(23, 59, 59)
+                const nextWednesday = new Date(thisMonday)
+                nextWednesday.setDate(thisMonday.getDate() + 9)
+                nextWednesday.setHours(23, 59, 59)
+                const nextSunday = new Date(thisMonday)
+                nextSunday.setDate(thisMonday.getDate() + 13)
+                nextSunday.setHours(23, 59, 59)
+                if (deadline <= thisSunday) setNewTaskPriority('ultra-high')
+                else if (deadline <= nextWednesday) setNewTaskPriority('high')
+                else if (deadline <= nextSunday) setNewTaskPriority('medium')
+                else setNewTaskPriority('backlog')
+              }
+            }}
+              className="border-2 border-black/20 bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black cursor-pointer" />
             <button
               onClick={handleAddMasterTask}
               disabled={!newTaskTitle.trim() || !displayName}
