@@ -748,9 +748,10 @@ export function TeamView() {
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Notes &amp; Context</p>
                     <textarea value={personNewNotes} onChange={(e) => setPersonNewNotes(e.target.value)}
-                      placeholder="Notes, context, instructions...&#10;&#10;Use - for bullet points&#10;Use ** for bold (e.g., **important**)"
-                      className="w-full border-2 border-black/20 bg-white px-4 py-4 text-sm text-black leading-relaxed focus:outline-none focus:border-blue placeholder:text-muted/30"
-                      style={{ resize: 'vertical', minHeight: '150px' }} />
+                      placeholder={"Notes, context, instructions...\n\nDrag the bottom-right corner to expand"}
+                      rows={8}
+                      style={{ resize: 'vertical', minHeight: '200px' }}
+                      className="w-full border-2 border-black/20 bg-white px-4 py-4 text-sm text-black leading-relaxed focus:outline-none focus:border-blue placeholder:text-muted/30" />
                   </div>
 
                   {/* Links */}
