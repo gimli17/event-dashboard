@@ -203,7 +203,7 @@ export function TeamView() {
                         <div>
                           <p className="text-[10px] font-bold uppercase tracking-widest text-red mb-2">Ultra-High</p>
                           {member.ultraHighTasks.map((t) => (
-                            <a key={t.id} href="/tasks" className="text-xs font-bold text-red hover:underline block py-0.5 pl-2">&mdash; {t.title}</a>
+                            <a key={t.id} href={`/tasks#${t.id}`} className="text-xs font-bold text-red hover:underline block py-0.5 pl-2">&mdash; {t.title}</a>
                           ))}
                         </div>
                       )}
@@ -211,7 +211,7 @@ export function TeamView() {
                         <div>
                           <p className="text-[10px] font-bold uppercase tracking-widest text-orange mb-2">High</p>
                           {member.highTasks.map((t) => (
-                            <a key={t.id} href="/tasks" className="text-xs font-bold text-orange hover:underline block py-0.5 pl-2">&mdash; {t.title}</a>
+                            <a key={t.id} href={`/tasks#${t.id}`} className="text-xs font-bold text-orange hover:underline block py-0.5 pl-2">&mdash; {t.title}</a>
                           ))}
                         </div>
                       )}

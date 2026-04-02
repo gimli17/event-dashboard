@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useUser } from './user-provider'
 import { WeeklyReviewButton } from './weekly-review'
@@ -36,6 +36,7 @@ interface MasterTask {
   links: string | null
   update_to_dan: string | null
   dan_feedback: string | null
+  dan_checklist: { id: string; text: string; checked: boolean }[] | null
   sort_order: number
   event_id: string | null
   week_of: string | null
@@ -149,7 +150,12 @@ export function MasterTaskList() {
   const [eventTaskRows, setEventTaskRows] = useState<EventTaskRow[]>([])
   const [completedTasks, setCompletedTasks] = useState<EventTaskRow[]>([])
   const [loading, setLoading] = useState(true)
-  const [expandedTask, setExpandedTask] = useState<string | null>(null)
+  const [expandedTask, setExpandedTask] = useState<string | null>(() => {
+    if (typeof window !== 'undefined' && window.location.hash) {
+      return window.location.hash.slice(1)
+    }
+    return null
+  })
   const [commentInput, setCommentInput] = useState('')
   const [sending, setSending] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('all')
@@ -216,6 +222,14 @@ export function MasterTaskList() {
       }
 
       setLoading(false)
+
+      // Auto-scroll to task if linked via hash
+      if (typeof window !== 'undefined' && window.location.hash) {
+        setTimeout(() => {
+          const el = document.getElementById(window.location.hash.slice(1))
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }, 200)
+      }
     }
     fetch()
   }, [])
@@ -258,6 +272,7 @@ export function MasterTaskList() {
       links: null,
       update_to_dan: null,
       dan_feedback: null,
+      dan_checklist: [],
       sort_order: tasks.length + 1,
       event_id: null,
       week_of: '2026-03-30',
@@ -683,7 +698,7 @@ export function MasterTaskList() {
 
                     return (
                       <SortableRow key={task.id} id={task.id}>
-                      <div className={i > 0 ? 'border-t border-black/5' : ''}>
+                      <div id={task.id} className={i > 0 ? 'border-t border-black/5' : ''}>
                         <button
                           onClick={() => { setExpandedTask(isExpanded ? null : task.id); setCommentInput('') }}
                           className="w-full text-left px-5 py-4 hover:bg-cream-dark transition-colors"
@@ -823,6 +838,37 @@ export function MasterTaskList() {
                                 </div>
                               )}
                             </div>
+
+                            {/* Your update to Dan */}
+                            {task.update_to_dan && (
+                              <div className="mt-4 border-l-4 border-purple pl-3">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-purple mb-1">Your Update to Dan</p>
+                                <p className="text-xs whitespace-pre-wrap">{task.update_to_dan}</p>
+                              </div>
+                            )}
+
+                            {/* Dan's checklist responses */}
+                            {task.dan_checklist && task.dan_checklist.length > 0 && (
+                              <div className="mt-4">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-purple mb-2">Dan Advise Checklist</p>
+                                <div className="space-y-1.5">
+                                  {task.dan_checklist.map((item) => (
+                                    <div key={item.id} className="flex items-start gap-2">
+                                      <span className={`text-xs ${item.checked ? 'text-green font-bold' : 'text-muted'}`}>{item.checked ? '\u2611' : '\u2610'}</span>
+                                      <span className={`text-xs ${item.checked ? 'line-through text-muted' : ''}`}>{item.text}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Dan's feedback */}
+                            {task.dan_feedback && (
+                              <div className="mt-4 border-l-4 border-red pl-3">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-red mb-1">Dan&apos;s Feedback</p>
+                                <p className="text-xs whitespace-pre-wrap">{task.dan_feedback}</p>
+                              </div>
+                            )}
 
                             {/* Event link */}
                             {task.event_id && (
