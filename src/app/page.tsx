@@ -55,21 +55,36 @@ export default async function HubPage() {
 
       <section className="bg-cream flex-1">
         <div className="max-w-7xl mx-auto px-6 py-12">
-          <div className="flex gap-3 items-stretch min-h-[200px]">
+          <div className="flex gap-3 items-end min-h-[200px]">
             {/* Task Management */}
-            <div className="flex gap-3 flex-1 border-r-2 border-black/10 pr-3">
-              <div className="flex-1"><Tile title="Master Tasks" href="/tasks" color="bg-red" label="Tasks" /></div>
-              <div className="flex-1"><Tile title="Event Schedule" href="/schedule" color="bg-blue" label="Schedule" /></div>
+            <div className="flex-1 flex flex-col">
+              <div className="border-t-2 border-black/20 pt-2 mb-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted">Task Management</p>
+              </div>
+              <div className="flex gap-3 flex-1">
+                <div className="flex-1"><Tile title="Master Tasks" href="/tasks" color="bg-red" label="Tasks" /></div>
+                <div className="flex-1"><Tile title="Event Schedule" href="/schedule" color="bg-blue" label="Schedule" /></div>
+              </div>
             </div>
             {/* Program Details */}
-            <div className="flex gap-3 flex-1 border-r-2 border-black/10 pr-3">
-              <div className="flex-1"><Tile title="Bold Conversations" href="/bold-conversations" color="bg-green" label="Topics" /></div>
-              <div className="flex-1"><Tile title="Private Parties" href="/private-parties" color="bg-gold" label="Sponsors" /></div>
+            <div className="flex-1 flex flex-col">
+              <div className="border-t-2 border-black/20 pt-2 mb-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted">Program Details</p>
+              </div>
+              <div className="flex gap-3 flex-1">
+                <div className="flex-1"><Tile title="Bold Conversations" href="/bold-conversations" color="bg-green" label="Topics" /></div>
+                <div className="flex-1"><Tile title="Private Parties" href="/private-parties" color="bg-gold" label="Sponsors" /></div>
+              </div>
             </div>
             {/* External */}
-            <div className="flex gap-3 flex-1">
-              <div className="flex-1"><Tile title="Sponsor Portal" href="https://brmf-sponsor-portal.vercel.app/" color="bg-orange" external label="External" /></div>
-              <div className="flex-1"><Tile title="Ticket Tracker" href="https://boulderrootstickettracker.vercel.app/" color="bg-black" external label="External" /></div>
+            <div className="flex-1 flex flex-col">
+              <div className="border-t-2 border-black/20 pt-2 mb-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted">External Tools</p>
+              </div>
+              <div className="flex gap-3 flex-1">
+                <div className="flex-1"><Tile title="Sponsor Portal" href="https://brmf-sponsor-portal.vercel.app/" color="bg-orange" external label="External" /></div>
+                <div className="flex-1"><Tile title="Ticket Tracker" href="https://boulderrootstickettracker.vercel.app/" color="bg-black" external label="External" /></div>
+              </div>
             </div>
           </div>
         </div>
