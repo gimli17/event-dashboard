@@ -22,6 +22,7 @@ interface MasterTaskFull {
   dan_feedback: string | null
   dan_checklist: ChecklistItem[]
   deadline: string | null
+  created_by: string | null
 }
 
 interface TeamMember {
@@ -55,6 +56,8 @@ export function TeamView() {
   const [newAssignee, setNewAssignee] = useState('')
   const [newPriority, setNewPriority] = useState('high')
   const [newDeadline, setNewDeadline] = useState('')
+  const [newNotes, setNewNotes] = useState('')
+  const [newLinks, setNewLinks] = useState('')
   const [editingCheckItem, setEditingCheckItem] = useState<string | null>(null)
   const [editCheckText, setEditCheckText] = useState('')
 
@@ -62,7 +65,7 @@ export function TeamView() {
     async function fetch() {
       // Fetch ALL master tasks (not just review)
       const { data: mt } = await supabase.from('master_tasks')
-        .select('id, title, status, assignee, priority, links, current_status, overview, action_items, dan_comments, update_to_dan, dan_feedback, dan_checklist, deadline')
+        .select('id, title, status, assignee, priority, links, current_status, overview, action_items, dan_comments, update_to_dan, dan_feedback, dan_checklist, deadline, created_by')
         .neq('status', 'complete')
         .order('sort_order')
       if (mt) setAllMasterTasks(mt as MasterTaskFull[])
@@ -109,14 +112,15 @@ export function TeamView() {
       priority: newPriority,
       status: 'not-started',
       deadline: newDeadline || null,
-      links: null,
+      links: newLinks.trim() || null,
       current_status: null,
-      overview: null,
+      overview: newNotes.trim() || null,
       action_items: null,
-      dan_comments: null,
+      dan_comments: newNotes.trim() || null,
       update_to_dan: null,
       dan_feedback: null,
       dan_checklist: [],
+      created_by: displayName || 'Dan',
     }
     setAllMasterTasks((prev) => [task, ...prev])
     setShowNewTask(false)
@@ -124,6 +128,8 @@ export function TeamView() {
     setNewAssignee('')
     setNewPriority('high')
     setNewDeadline('')
+    setNewNotes('')
+    setNewLinks('')
 
     await supabase.from('master_tasks').insert({
       ...task,
@@ -131,6 +137,12 @@ export function TeamView() {
       event_id: null,
       week_of: null,
     } as never)
+  }
+
+  const handleWithdrawFromReview = async (taskId: string) => {
+    setAllMasterTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: 'in-progress' } : t)))
+    await supabase.from('master_tasks').update({ status: 'in-progress', updated_at: new Date().toISOString() } as never).eq('id', taskId)
+    setExpandedTask(null)
   }
 
   const handleSaveUpdate = async (taskId: string) => {
@@ -205,7 +217,11 @@ export function TeamView() {
     ? allMasterTasks
         .filter((t) => t.assignee?.includes(selectedPerson))
         .sort((a, b) => {
-          // Tasks with Dan's feedback come first
+          // New from Dan come first
+          const aNewDan = (a.created_by === 'Dan' || a.created_by === 'dan') && a.status === 'not-started' ? 1 : 0
+          const bNewDan = (b.created_by === 'Dan' || b.created_by === 'dan') && b.status === 'not-started' ? 1 : 0
+          if (aNewDan !== bNewDan) return bNewDan - aNewDan
+          // Then tasks with Dan's feedback
           const aFeedback = a.dan_feedback && a.status === 'in-progress' ? 1 : 0
           const bFeedback = b.dan_feedback && b.status === 'in-progress' ? 1 : 0
           if (aFeedback !== bFeedback) return bFeedback - aFeedback
@@ -349,22 +365,40 @@ export function TeamView() {
             </div>
           </>
         ) : (
-          <div className="border-t-2 border-purple-light/40 pt-6">
-            <div className="flex gap-3">
-              <button onClick={() => handleSubmitForReview(task.id)}
-                className="bg-purple text-white px-8 py-3.5 text-sm font-bold uppercase tracking-widest hover:bg-purple-light transition-colors">
-                Submit for Dan&apos;s Review
-              </button>
-              <button onClick={async () => {
-                await supabase.from('master_tasks').update({ status: 'complete', updated_at: new Date().toISOString() } as never).eq('id', task.id)
-                setAllMasterTasks((prev) => prev.filter((t) => t.id !== task.id))
-                setExpandedTask(null)
-              }}
-                className="bg-green text-white px-8 py-3.5 text-sm font-bold uppercase tracking-widest hover:bg-green-light transition-colors">
-                Mark as Done
-              </button>
+          <>
+            {/* Created by indicator */}
+            {task.created_by && (
+              <div className="mb-4">
+                <span className="text-xs font-bold uppercase tracking-widest text-purple bg-purple-light/20 px-3 py-1.5">
+                  Created by {task.created_by}
+                </span>
+              </div>
+            )}
+
+            <div className="border-t-2 border-purple-light/40 pt-6">
+              <div className="flex gap-3 flex-wrap">
+                {task.status === 'review' ? (
+                  <button onClick={() => handleWithdrawFromReview(task.id)}
+                    className="bg-muted text-white px-8 py-3.5 text-sm font-bold uppercase tracking-widest hover:bg-black transition-colors">
+                    Withdraw from Review
+                  </button>
+                ) : (
+                  <button onClick={() => handleSubmitForReview(task.id)}
+                    className="bg-purple text-white px-8 py-3.5 text-sm font-bold uppercase tracking-widest hover:bg-purple-light transition-colors">
+                    Submit for Dan&apos;s Review
+                  </button>
+                )}
+                <button onClick={async () => {
+                  await supabase.from('master_tasks').update({ status: 'complete', updated_at: new Date().toISOString() } as never).eq('id', task.id)
+                  setAllMasterTasks((prev) => prev.filter((t) => t.id !== task.id))
+                  setExpandedTask(null)
+                }}
+                  className="bg-green text-white px-8 py-3.5 text-sm font-bold uppercase tracking-widest hover:bg-green-light transition-colors">
+                  Mark as Done
+                </button>
+              </div>
             </div>
-          </div>
+          </>
         )}
       </div>
     )
@@ -433,10 +467,9 @@ export function TeamView() {
 
               {/* New task form */}
               {showNewTask && (
-                <div className="border-l-2 border-r-2 border-b-2 border-purple/20 bg-white px-6 py-5 space-y-3">
+                <div className="border-l-2 border-r-2 border-b-2 border-purple/20 bg-white px-6 py-5 space-y-4">
                   <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' && newTitle.trim()) handleCreateTask() }}
-                    placeholder="WHAT NEEDS TO BE DONE..."
+                    placeholder="TASK TITLE..."
                     autoFocus
                     className="w-full border-2 border-black bg-white px-4 py-3 text-sm font-bold text-black placeholder:text-muted/40 focus:outline-none focus:border-purple" />
                   <div className="flex gap-3 flex-wrap">
@@ -454,11 +487,18 @@ export function TeamView() {
                     </select>
                     <input type="date" value={newDeadline} onChange={(e) => setNewDeadline(e.target.value)}
                       className="border-2 border-black/20 bg-white px-3 py-2 text-xs font-bold uppercase tracking-widest focus:outline-none focus:border-black cursor-pointer" />
-                    <button onClick={handleCreateTask} disabled={!newTitle.trim()}
-                      className="bg-purple text-white px-6 py-2 text-xs font-bold uppercase tracking-widest hover:bg-purple-light transition-colors disabled:opacity-40">
-                      Create &amp; Assign
-                    </button>
                   </div>
+                  <textarea value={newNotes} onChange={(e) => setNewNotes(e.target.value)}
+                    placeholder="Notes, context, or instructions..."
+                    rows={4}
+                    className="w-full border-2 border-black/20 bg-white px-4 py-3 text-sm text-black leading-relaxed focus:outline-none focus:border-purple placeholder:text-muted/30" />
+                  <input type="text" value={newLinks} onChange={(e) => setNewLinks(e.target.value)}
+                    placeholder="Links (one per line — Google Docs, etc.)"
+                    className="w-full border-2 border-black/20 bg-white px-4 py-2.5 text-xs text-black focus:outline-none focus:border-purple placeholder:text-muted/30" />
+                  <button onClick={handleCreateTask} disabled={!newTitle.trim()}
+                    className="bg-purple text-white px-8 py-3 text-sm font-bold uppercase tracking-widest hover:bg-purple-light transition-colors disabled:opacity-40">
+                    Create &amp; Assign
+                  </button>
                 </div>
               )}
 
@@ -514,6 +554,8 @@ export function TeamView() {
                   {personTasks.map((task, i) => {
                     const isExpanded = expandedTask === task.id
                     const hasDanFeedback = task.dan_feedback && task.status === 'in-progress'
+                    const isFromDan = task.created_by === 'Dan' || task.created_by === 'dan'
+                    const isNewFromDan = isFromDan && task.status === 'not-started'
                     return (
                       <div key={task.id} className={i > 0 ? 'border-t-2 border-black/10' : ''}>
                         <button onClick={() => { setExpandedTask(isExpanded ? null : task.id); setUpdateText(task.update_to_dan || ''); setNewCheckItem('') }}
@@ -525,16 +567,19 @@ export function TeamView() {
                                 <span className={`text-sm font-bold uppercase tracking-wider ${task.priority === 'ultra-high' ? 'text-red' : task.priority === 'high' ? 'text-orange' : 'text-muted'}`}>{priorityLabels[task.priority] || task.priority}</span>
                                 {task.deadline && <span className="text-sm font-bold text-red">Due {new Date(task.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
                                 {task.status === 'review' && <span className="text-sm font-bold text-purple">Awaiting Dan&apos;s Review</span>}
+                                {isFromDan && <span className="text-sm font-bold text-purple">From Dan</span>}
                               </div>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
+                              {isNewFromDan && <span className="w-3 h-3 rounded-full bg-purple animate-pulse" title="New task from Dan" />}
                               {hasDanFeedback && <span className="w-3 h-3 rounded-full bg-red animate-pulse" title="Dan sent feedback" />}
                               <span className={`text-xs font-bold uppercase tracking-widest px-4 py-2 ${
+                                isNewFromDan ? 'bg-purple text-white' :
                                 task.status === 'review' ? 'bg-purple text-white' :
                                 hasDanFeedback ? 'bg-red/10 text-red' :
                                 'bg-black/5 text-muted'
                               }`}>
-                                {task.status === 'review' ? 'IN REVIEW' : hasDanFeedback ? 'FEEDBACK' : task.status.toUpperCase()}
+                                {isNewFromDan ? 'NEW FROM DAN' : task.status === 'review' ? 'IN REVIEW' : hasDanFeedback ? 'FEEDBACK' : task.status.toUpperCase()}
                               </span>
                             </div>
                           </div>
