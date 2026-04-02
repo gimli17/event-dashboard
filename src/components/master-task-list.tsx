@@ -500,8 +500,8 @@ export function MasterTaskList() {
     await supabase.from('event_tasks').update({ status: newS } as never).eq('id', taskId)
   }
 
-  // Filter
-  let filtered = tasks
+  // Filter — exclude completed and deleted from priority view
+  let filtered = tasks.filter((t) => t.status !== 'complete')
   if (viewMode === 'this-week') {
     filtered = filtered.filter((t) => t.week_of === '2026-03-30' && t.priority !== 'backlog')
   }
