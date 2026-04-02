@@ -13,18 +13,21 @@ interface TaskRow extends EventTask {
 const statusLabels: Record<TaskStatus, string> = {
   'not-started': 'NOT STARTED',
   'in-progress': 'IN PROGRESS',
+  review: 'FOR REVIEW',
   complete: 'DONE',
 }
 
 const statusColors: Record<TaskStatus, string> = {
   'not-started': 'text-muted bg-black/5 hover:bg-black/10',
   'in-progress': 'text-orange bg-orange/10 hover:bg-orange/20',
+  review: 'text-blue bg-blue/10 hover:bg-blue/20',
   complete: 'text-green bg-green/10 hover:bg-green/20',
 }
 
 const nextStatus: Record<TaskStatus, TaskStatus> = {
   'not-started': 'in-progress',
-  'in-progress': 'complete',
+  'in-progress': 'review',
+  review: 'complete',
   complete: 'not-started',
 }
 
@@ -36,6 +39,9 @@ export function TeamView() {
   const [loading, setLoading] = useState(true)
   const [selectedPerson, setSelectedPerson] = useState<string>('all')
   const [showComplete, setShowComplete] = useState(false)
+  const [viewMode, setViewMode] = useState<'team' | 'review'>('team')
+  const [masterTasks, setMasterTasks] = useState<{ id: string; title: string; status: string; assignee: string | null; priority: string; links: string | null }[]>([])
+  const [masterComments, setMasterComments] = useState<{ id: string; task_id: string; author: string; message: string; created_at: string }[]>([])
 
   useEffect(() => {
     async function fetch() {
@@ -67,6 +73,18 @@ export function TeamView() {
       }))
 
       setTasks(rows)
+
+      // Fetch master tasks in review + their comments
+      const { data: mt } = await supabase.from('master_tasks').select('id, title, status, assignee, priority, links').eq('status', 'review')
+      if (mt) setMasterTasks(mt as typeof masterTasks)
+
+      // Fetch comments for master tasks in review
+      const mtTyped = (mt || []) as { id: string; title: string; status: string; assignee: string | null; priority: string; links: string | null }[]
+      if (mtTyped.length > 0) {
+        const { data: mc } = await supabase.from('master_task_comments').select('*').in('task_id', mtTyped.map(t => t.id)).order('created_at')
+        if (mc) setMasterComments(mc as typeof masterComments)
+      }
+
       setLoading(false)
     }
     fetch()
@@ -103,7 +121,8 @@ export function TeamView() {
   // Stats
   const assignedPeople = [...new Set(tasks.map((t) => t.assignee).filter(Boolean))]
   const totalAssigned = tasks.filter((t) => t.status !== 'complete').length
-  const overdueCount = tasks.filter((t) => t.deadline && t.status !== 'complete').length // simplified
+  const overdueCount = tasks.filter((t) => t.deadline && t.status !== 'complete').length
+  const reviewCount = tasks.filter((t) => t.status === 'review').length + masterTasks.length
 
   if (loading) {
     return <div className="max-w-6xl mx-auto px-6 py-16 text-center"><p className="text-muted uppercase tracking-widest text-xs font-bold">Loading...</p></div>
@@ -111,14 +130,27 @@ export function TeamView() {
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
+      {/* View toggle */}
+      <div className="flex items-center gap-2 mb-6">
+        <button onClick={() => setViewMode('team')}
+          className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest border-2 transition-all ${viewMode === 'team' ? 'bg-black text-white border-black' : 'bg-white text-black border-black/20 hover:border-black'}`}>
+          Team Workload
+        </button>
+        <button onClick={() => setViewMode('review')}
+          className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest border-2 transition-all ${viewMode === 'review' ? 'bg-blue text-white border-blue' : 'bg-white text-black border-black/20 hover:border-black'} ${reviewCount > 0 ? 'animate-pulse' : ''}`}>
+          Dan&apos;s Review Queue {reviewCount > 0 ? `(${reviewCount})` : ''}
+        </button>
+      </div>
+
       {/* Stats */}
       <div className="flex items-center gap-8 mb-8 flex-wrap">
         <div><p className="text-3xl font-bold">{assignedPeople.length}</p><p className="text-xs font-bold uppercase tracking-widest text-muted">Team Members</p></div>
         <div><p className="text-3xl font-bold text-red">{totalAssigned}</p><p className="text-xs font-bold uppercase tracking-widest text-muted">Active Tasks</p></div>
-        <div><p className="text-3xl font-bold text-orange">{overdueCount}</p><p className="text-xs font-bold uppercase tracking-widest text-muted">With Deadlines</p></div>
+        <div><p className="text-3xl font-bold text-blue">{reviewCount}</p><p className="text-xs font-bold uppercase tracking-widest text-muted">Awaiting Review</p></div>
       </div>
 
-      {/* Filters */}
+      {/* Filters — only in team view */}
+      {viewMode === 'team' && (
       <div className="flex items-center gap-4 mb-6 flex-wrap">
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Person:</span>
@@ -138,9 +170,104 @@ export function TeamView() {
           {showComplete ? 'Hide Complete' : 'Show Complete'}
         </button>
       </div>
+      )}
+
+      {/* Dan's Review Queue */}
+      {viewMode === 'review' && (
+        <div>
+          {reviewCount === 0 ? (
+            <p className="text-muted text-center py-12 uppercase tracking-widest text-xs font-bold">No items awaiting review.</p>
+          ) : (
+            <div className="space-y-6">
+              {/* Master tasks in review */}
+              {masterTasks.length > 0 && (
+                <div>
+                  <div className="bg-blue text-white px-6 py-3 flex items-center justify-between">
+                    <h2 className="text-sm font-bold tracking-widest uppercase">Master Tasks for Review</h2>
+                    <span className="text-xs font-bold tracking-wider opacity-70">{masterTasks.length}</span>
+                  </div>
+                  <div className="border-l-2 border-r-2 border-b-2 border-black/10">
+                    {masterTasks.map((mt, i) => {
+                      const mtComments = masterComments.filter(c => c.task_id === mt.id)
+                      return (
+                        <div key={mt.id} className={`px-5 py-4 ${i > 0 ? 'border-t border-black/5' : ''}`}>
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <a href={`/tasks`} className="text-sm font-bold hover:text-blue transition-colors">{mt.title}</a>
+                              <div className="flex items-center gap-2 mt-1">
+                                {mt.assignee && <span className="text-[10px] font-bold text-blue uppercase tracking-wider">{mt.assignee}</span>}
+                                <span className={`text-[10px] font-bold uppercase tracking-wider ${mt.priority === 'ultra-high' ? 'text-red' : mt.priority === 'high' ? 'text-orange' : 'text-muted'}`}>{mt.priority}</span>
+                              </div>
+                              {mt.links && (
+                                <div className="mt-2 space-y-0.5">
+                                  {mt.links.split('\n').filter(Boolean).map((link, li) => (
+                                    <a key={li} href={link.trim().startsWith('http') ? link.trim() : `https://${link.trim()}`} target="_blank" rel="noopener noreferrer" className="text-xs text-blue hover:text-red underline block truncate">{link.trim()}</a>
+                                  ))}
+                                </div>
+                              )}
+                              {mtComments.length > 0 && (
+                                <div className="mt-2 border-l-2 border-black/10 pl-3 space-y-1">
+                                  {mtComments.slice(-3).map(c => (
+                                    <div key={c.id} className="text-xs">
+                                      <span className="font-bold text-blue">{c.author}</span>
+                                      <span className="text-muted mx-1">&middot;</span>
+                                      <span className="text-muted">{new Date(c.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
+                                      <p className="mt-0.5">{c.message}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-blue bg-blue/10 px-3 py-1">FOR REVIEW</span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Event tasks in review */}
+              {(() => {
+                const reviewTasks = tasks.filter(t => t.status === 'review')
+                if (reviewTasks.length === 0) return null
+                return (
+                  <div>
+                    <div className="bg-blue text-white px-6 py-3 flex items-center justify-between">
+                      <h2 className="text-sm font-bold tracking-widest uppercase">Event Tasks for Review</h2>
+                      <span className="text-xs font-bold tracking-wider opacity-70">{reviewTasks.length}</span>
+                    </div>
+                    <div className="border-l-2 border-r-2 border-b-2 border-black/10">
+                      {reviewTasks.map((task, i) => (
+                        <div key={task.id} className={`px-5 py-3 flex items-start justify-between gap-4 ${i > 0 ? 'border-t border-black/5' : ''}`}>
+                          <div className="flex-1">
+                            <p className="text-sm font-bold">{task.event_title} — {task.title}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              {task.assignee && <span className="text-[10px] font-bold text-blue uppercase tracking-wider">{task.assignee}</span>}
+                              <span className="text-[10px] text-muted uppercase tracking-wider">{task.category}</span>
+                              {task.event_id && <a href={`/events/${task.event_id}`} className="text-[10px] font-bold text-blue uppercase tracking-widest hover:text-red">View Event &rarr;</a>}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleStatusCycle(task.id)}
+                            className="text-[10px] font-bold uppercase tracking-widest text-blue bg-blue/10 px-3 py-1 hover:bg-green/10 hover:text-green transition-colors"
+                          >
+                            FOR REVIEW
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Task list by person */}
-      {sortedPeople.length === 0 ? (
+      {viewMode === 'team' && (
+      sortedPeople.length === 0 ? (
         <p className="text-muted text-center py-12 uppercase tracking-widest text-xs font-bold">No assigned tasks found.</p>
       ) : (
         <div className="space-y-6">
@@ -199,7 +326,7 @@ export function TeamView() {
             )
           })}
         </div>
-      )}
+      ))}
     </div>
   )
 }

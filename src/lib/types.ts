@@ -1,5 +1,5 @@
 export type EventStatus = 'planning' | 'in-progress' | 'confirmed' | 'complete'
-export type TaskStatus = 'not-started' | 'in-progress' | 'complete'
+export type TaskStatus = 'not-started' | 'in-progress' | 'review' | 'complete'
 export type AccessLevel = 'founders' | 'founders-premium' | 'all-access' | 'sponsor-private'
 export type CommentType = 'chat' | 'task-update'
 

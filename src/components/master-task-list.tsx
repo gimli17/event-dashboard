@@ -33,6 +33,7 @@ interface MasterTask {
   overview: string | null
   action_items: string | null
   dan_comments: string | null
+  links: string | null
   sort_order: number
   event_id: string | null
   week_of: string | null
@@ -90,6 +91,7 @@ const priorityDeadlines: Record<string, string> = {
 const statusLabels: Record<string, string> = {
   'not-started': 'NOT STARTED',
   'in-progress': 'IN PROGRESS',
+  review: 'READY FOR REVIEW',
   blocked: 'BLOCKED',
   complete: 'DONE',
 }
@@ -97,6 +99,7 @@ const statusLabels: Record<string, string> = {
 const statusColors: Record<string, string> = {
   'not-started': 'text-muted bg-black/5',
   'in-progress': 'text-orange bg-orange/10',
+  review: 'text-blue bg-blue/10',
   blocked: 'text-red bg-red/10',
   complete: 'text-green bg-green/10',
 }
@@ -263,6 +266,7 @@ export function MasterTaskList() {
       overview: null,
       action_items: null,
       dan_comments: null,
+      links: null,
       sort_order: tasks.length + 1,
       event_id: null,
       week_of: '2026-03-30',
@@ -500,7 +504,7 @@ export function MasterTaskList() {
   }
 
   const handleEventTaskStatus = async (taskId: string) => {
-    const nextS: Record<string, string> = { 'not-started': 'in-progress', 'in-progress': 'complete', complete: 'not-started' }
+    const nextS: Record<string, string> = { 'not-started': 'in-progress', 'in-progress': 'review', review: 'complete', complete: 'not-started' }
     const row = eventTaskRows.find((t) => t.id === taskId)
     if (!row) return
     const newS = nextS[row.status]
@@ -763,6 +767,48 @@ export function MasterTaskList() {
                               <EditableField taskId={task.id} field="dan_comments" label="Dan's Comments" value={task.dan_comments} highlight editingField={editingField} editValue={editValue} setEditValue={setEditValue} startEditing={startEditing} saveField={saveField} setEditingField={setEditingField} />
                             </div>
 
+                            {/* Links */}
+                            <div className="mt-4">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Links</p>
+                              {editingField?.taskId === task.id && editingField?.field === 'links' ? (
+                                <textarea
+                                  value={editValue}
+                                  onChange={(e) => setEditValue(e.target.value)}
+                                  onBlur={saveField}
+                                  onKeyDown={(e) => { if (e.key === 'Escape') setEditingField(null) }}
+                                  autoFocus
+                                  rows={3}
+                                  placeholder="Paste URLs, one per line..."
+                                  className="w-full border-2 border-black bg-white px-2 py-1 text-xs text-black focus:outline-none focus:border-blue"
+                                />
+                              ) : (
+                                <div
+                                  className="cursor-pointer hover:bg-cream-dark transition-colors rounded px-1 py-0.5 -mx-1"
+                                  onClick={() => startEditing(task.id, 'links', task.links)}
+                                  title="Click to edit links"
+                                >
+                                  {task.links ? (
+                                    <div className="space-y-1">
+                                      {task.links.split('\n').filter(Boolean).map((link, li) => (
+                                        <a
+                                          key={li}
+                                          href={link.trim().startsWith('http') ? link.trim() : `https://${link.trim()}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          onClick={(e) => e.stopPropagation()}
+                                          className="text-xs text-blue hover:text-red underline block truncate"
+                                        >
+                                          {link.trim()}
+                                        </a>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <p className="text-xs text-muted/40 italic">Click to add links...</p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+
                             {/* Event link */}
                             {task.event_id && (
                               <div className="mt-4">
@@ -790,7 +836,7 @@ export function MasterTaskList() {
                             {/* Status change */}
                             <div className="mt-2 flex items-center gap-2">
                               <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Status:</span>
-                              {['not-started', 'in-progress', 'blocked', 'complete'].map((s) => (
+                              {['not-started', 'in-progress', 'review', 'blocked', 'complete'].map((s) => (
                                 <button key={s} onClick={() => handleStatusChange(task, s)}
                                   className={`px-2 py-1 text-[9px] font-bold tracking-widest uppercase transition-all ${task.status === s ? statusColors[s] : 'bg-black/5 text-muted/40 hover:text-muted'}`}>
                                   {statusLabels[s]}

@@ -27,18 +27,21 @@ const categoryColors: Record<EventTask['category'], string> = {
 const statusLabels: Record<TaskStatus, string> = {
   'not-started': 'NOT STARTED',
   'in-progress': 'IN PROGRESS',
+  review: 'FOR REVIEW',
   complete: 'DONE',
 }
 
 const statusColors: Record<TaskStatus, string> = {
   'not-started': 'text-muted bg-black/5 hover:bg-black/10',
   'in-progress': 'text-orange bg-orange/10 hover:bg-orange/20',
+  review: 'text-blue bg-blue/10 hover:bg-blue/20',
   complete: 'text-green bg-green/10 hover:bg-green/20',
 }
 
 const nextStatus: Record<TaskStatus, TaskStatus> = {
   'not-started': 'in-progress',
-  'in-progress': 'complete',
+  'in-progress': 'review',
+  review: 'complete',
   complete: 'not-started',
 }
 

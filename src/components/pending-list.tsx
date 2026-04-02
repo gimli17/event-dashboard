@@ -32,18 +32,21 @@ const priorityOrder: Record<Priority, number> = {
 const statusLabels: Record<TaskStatus, string> = {
   'not-started': 'NOT STARTED',
   'in-progress': 'IN PROGRESS',
+  review: 'FOR REVIEW',
   complete: 'DONE',
 }
 
 const statusColors: Record<TaskStatus, string> = {
   'not-started': 'text-muted',
   'in-progress': 'text-orange',
+  review: 'text-blue',
   complete: 'text-green',
 }
 
 const nextStatus: Record<TaskStatus, TaskStatus> = {
   'not-started': 'in-progress',
-  'in-progress': 'complete',
+  'in-progress': 'review',
+  review: 'complete',
   complete: 'not-started',
 }
 
@@ -72,7 +75,7 @@ export function PendingList() {
     const { data: taskData } = await supabase
       .from('event_tasks')
       .select('*')
-      .in('status', ['not-started', 'in-progress'])
+      .in('status', ['not-started', 'in-progress', 'review'])
 
     if (!taskData) { setLoading(false); return }
 
