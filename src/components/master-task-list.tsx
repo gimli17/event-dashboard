@@ -3,6 +3,23 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useUser } from './user-provider'
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+  DragOverlay,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 interface MasterTask {
   id: string
@@ -85,6 +102,39 @@ const statusColors: Record<string, string> = {
 
 type ViewMode = 'all' | 'this-week' | 'completed'
 
+function DragHandle() {
+  return (
+    <span className="cursor-grab active:cursor-grabbing text-muted/30 hover:text-muted mr-2 select-none" title="Drag to reorder">
+      &#x2630;
+    </span>
+  )
+}
+
+function SortableRow({ id, children }: { id: string; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    position: 'relative' as const,
+    zIndex: isDragging ? 50 : 'auto' as const,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <div className="flex items-start">
+        <div {...attributes} {...listeners} className="pt-5 pl-3">
+          <DragHandle />
+        </div>
+        <div className="flex-1">
+          {children}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function MasterTaskList() {
   const { displayName } = useUser()
   const [tasks, setTasks] = useState<MasterTask[]>([])
@@ -103,8 +153,10 @@ export function MasterTaskList() {
   const [newTaskAssignee, setNewTaskAssignee] = useState('')
   const [newTaskPriority, setNewTaskPriority] = useState('medium')
   const [newTaskDeadline, setNewTaskDeadline] = useState('')
+  const [activeId, setActiveId] = useState<string | null>(null)
   const teamMembers = ['Cody', 'Sabrina', 'Joe', 'Danny', 'Connor', 'Gib', 'Emily', 'Kendall', 'Alex', 'Liam', 'Dave', 'Tom', 'Kevin']
   const commentEndRef = useRef<HTMLDivElement>(null)
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   useEffect(() => {
     async function fetch() {
@@ -273,6 +325,50 @@ export function MasterTaskList() {
     setTimeout(() => commentEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
   }
 
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string)
+  }
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    setActiveId(null)
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const activeTask = tasks.find((t) => t.id === active.id)
+    const overTask = tasks.find((t) => t.id === over.id)
+    if (!activeTask || !overTask) return
+
+    // If dragged to a task in a different priority group, change priority
+    if (activeTask.priority !== overTask.priority) {
+      const newPriority = overTask.priority
+      handlePriorityChange(activeTask, newPriority)
+    }
+
+    // Reorder within the same priority group
+    const samePriorityTasks = tasks.filter((t) => t.priority === overTask.priority)
+    const oldIndex = samePriorityTasks.findIndex((t) => t.id === active.id)
+    const newIndex = samePriorityTasks.findIndex((t) => t.id === over.id)
+
+    if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+      const reordered = arrayMove(samePriorityTasks, oldIndex, newIndex)
+      // Update sort_order for all items in this group
+      const updates = reordered.map((t, i) => ({ ...t, sort_order: i }))
+      setTasks((prev) => {
+        const others = prev.filter((t) => t.priority !== overTask.priority)
+        return [...others, ...updates].sort((a, b) => {
+          const pA = priorityOrder.indexOf(a.priority)
+          const pB = priorityOrder.indexOf(b.priority)
+          if (pA !== pB) return pA - pB
+          return a.sort_order - b.sort_order
+        })
+      })
+      // Persist sort order
+      for (const u of updates) {
+        await supabase.from('master_tasks').update({ sort_order: u.sort_order } as never).eq('id', u.id)
+      }
+    }
+  }
+
   const handleDeleteComment = async (commentId: string) => {
     setComments((prev) => prev.filter((c) => c.id !== commentId))
     await supabase.from('master_task_comments').delete().eq('id', commentId)
@@ -407,6 +503,7 @@ export function MasterTaskList() {
       {viewMode === 'completed' ? null : Object.keys(grouped).length === 0 ? (
         <p className="text-muted text-center py-12 uppercase tracking-widest text-xs font-bold">No tasks match this filter.</p>
       ) : (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="space-y-0">
           {priorityOrder
             .filter((p) => grouped[p])
@@ -430,6 +527,7 @@ export function MasterTaskList() {
                 </div>
 
                 {/* Tasks in this priority */}
+                <SortableContext items={grouped[priority].map((t) => t.id)} strategy={verticalListSortingStrategy}>
                 <div className="border-l-2 border-r-2 border-b-2 border-black/10">
                   {grouped[priority].map((task, i) => {
                     const taskComments = comments.filter((c) => c.task_id === task.id)
@@ -438,7 +536,8 @@ export function MasterTaskList() {
                     const epPercent = ep ? Math.round((ep.done / ep.total) * 100) : null
 
                     return (
-                      <div key={task.id} className={i > 0 ? 'border-t border-black/5' : ''}>
+                      <SortableRow key={task.id} id={task.id}>
+                      <div className={i > 0 ? 'border-t border-black/5' : ''}>
                         <button
                           onClick={() => { setExpandedTask(isExpanded ? null : task.id); setCommentInput('') }}
                           className="w-full text-left px-5 py-4 hover:bg-cream-dark transition-colors"
@@ -591,12 +690,22 @@ export function MasterTaskList() {
                           </div>
                         )}
                       </div>
+                      </SortableRow>
                     )
                   })}
                 </div>
+                </SortableContext>
               </div>
             ))}
         </div>
+        <DragOverlay>
+          {activeId ? (
+            <div className="bg-cream border-2 border-black px-5 py-3 shadow-lg text-sm font-bold">
+              {tasks.find((t) => t.id === activeId)?.title}
+            </div>
+          ) : null}
+        </DragOverlay>
+        </DndContext>
       )}
 
       {/* Founders Experience Events — every event task as a flat row */}
