@@ -606,28 +606,7 @@ export function MasterTaskList() {
                         >
                           <div className="flex items-start gap-4">
                             <div className="flex-1 min-w-0">
-                              {editingTitle === task.id ? (
-                                <input
-                                  type="text"
-                                  value={titleValue}
-                                  onChange={(e) => setTitleValue(e.target.value)}
-                                  onBlur={() => handleTitleSave(task.id)}
-                                  onClick={(e) => e.stopPropagation()}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleTitleSave(task.id)
-                                    if (e.key === 'Escape') setEditingTitle(null)
-                                  }}
-                                  autoFocus
-                                  className="w-full border-2 border-black bg-white px-2 py-1 text-sm font-bold text-black focus:outline-none focus:border-blue"
-                                />
-                              ) : (
-                                <h3
-                                  className="text-sm font-bold leading-tight"
-                                  onDoubleClick={(e) => { e.stopPropagation(); handleTitleEdit(task) }}
-                                >
-                                  {task.title}
-                                </h3>
-                              )}
+                              <h3 className="text-sm font-bold leading-tight">{task.title}</h3>
                               <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                                 {task.assignee && <span className="text-[10px] font-bold text-blue uppercase tracking-wider">{task.assignee}</span>}
                                 {!task.assignee && <span className="text-[10px] text-muted/40 uppercase tracking-wider">Unassigned</span>}
@@ -652,8 +631,34 @@ export function MasterTaskList() {
                         {/* Expanded detail */}
                         {isExpanded && (
                           <div className="px-5 pb-5 border-t border-black/5 bg-white">
+                            {/* Title edit */}
+                            <div className="pt-4 mb-3">
+                              {editingTitle === task.id ? (
+                                <input
+                                  type="text"
+                                  value={titleValue}
+                                  onChange={(e) => setTitleValue(e.target.value)}
+                                  onBlur={() => handleTitleSave(task.id)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleTitleSave(task.id)
+                                    if (e.key === 'Escape') setEditingTitle(null)
+                                  }}
+                                  autoFocus
+                                  className="w-full border-2 border-black bg-white px-2 py-1.5 text-sm font-bold text-black focus:outline-none focus:border-blue"
+                                />
+                              ) : (
+                                <button
+                                  onClick={() => handleTitleEdit(task)}
+                                  className="text-sm font-bold hover:text-blue transition-colors text-left"
+                                  title="Click to edit title"
+                                >
+                                  {task.title} <span className="text-muted/30 text-xs">&#9998;</span>
+                                </button>
+                              )}
+                            </div>
+
                             {/* Assignee */}
-                            <div className="flex items-center gap-2 pt-4 mb-4">
+                            <div className="flex items-center gap-2 mb-4">
                               <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Owner:</span>
                               <select
                                 value={task.assignee || ''}
