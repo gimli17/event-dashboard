@@ -16,7 +16,7 @@ export default async function HubPage() {
       <section className="bg-blue text-white py-8">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight leading-none uppercase">
+            <h1 className="text-4xl font-bold tracking-tight leading-none uppercase">
               Boulder Roots
             </h1>
             <p className="text-xs text-white/50 mt-1">
@@ -98,11 +98,11 @@ function Tile({ title, description, href, color, external }: {
 }) {
   const inner = (
     <div className="group h-full flex flex-col">
-      <div className={`${color} text-white px-5 py-8 flex items-center justify-between`}>
+      <div className={`${color} text-white px-5 h-24 flex items-center justify-between`}>
         <h2 className="text-xs font-bold tracking-widest uppercase">{title}</h2>
         {external && <span className="text-[9px] font-bold tracking-widest uppercase opacity-50">&nearr;</span>}
       </div>
-      <div className="border-l-2 border-r-2 border-b-2 border-black/10 px-5 py-6 bg-white group-hover:bg-cream-dark transition-colors flex-1">
+      <div className="border-l-2 border-r-2 border-b-2 border-black/10 px-5 h-20 flex items-center bg-white group-hover:bg-cream-dark transition-colors">
         <p className="text-[11px] text-muted leading-relaxed">{description}</p>
       </div>
     </div>
