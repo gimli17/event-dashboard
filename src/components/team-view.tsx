@@ -181,7 +181,7 @@ export function TeamView() {
                     className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-cream-dark transition-colors border-b border-black/5"
                   >
                     <span className={`text-sm font-bold ${count > 0 ? '' : 'text-muted/40'}`}>{name}</span>
-                    {count > 0 && <span className="text-xs font-bold text-purple bg-purple/10 px-2 py-0.5">{count}</span>}
+                    {count > 0 && <span className="text-xs font-bold text-purple bg-purple-light/20 px-2 py-0.5">{count}</span>}
                   </div>
                   {isExpanded && member && (
                     <div className="px-5 py-4 bg-cream-dark border-b border-black/5 space-y-3">
@@ -251,7 +251,7 @@ export function TeamView() {
                             {task.deadline && <span className="text-sm font-bold text-red">Due {new Date(task.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
                           </div>
                         </div>
-                        <span className={`text-xs font-bold uppercase tracking-widest shrink-0 px-4 py-2 ${isExpanded ? 'bg-purple text-white' : 'text-purple bg-purple/10'}`}>
+                        <span className={`text-xs font-bold uppercase tracking-widest shrink-0 px-4 py-2 ${isExpanded ? 'bg-purple text-white' : 'text-purple bg-purple-light/20'}`}>
                           {isExpanded ? 'VIEWING' : 'REVIEW'}
                         </span>
                       </div>
@@ -285,7 +285,7 @@ export function TeamView() {
                                     type="checkbox"
                                     checked={item.checked}
                                     onChange={() => handleToggleCheckItem(task.id, item.id)}
-                                    className="mt-1 w-5 h-5 border-2 border-purple/40 accent-purple cursor-pointer shrink-0"
+                                    className="mt-1 w-5 h-5 border-2 border-purple-light/50 accent-purple cursor-pointer shrink-0"
                                   />
                                   <span className={`text-base leading-relaxed flex-1 ${item.checked ? 'line-through text-muted' : ''}`}>
                                     {item.text}
@@ -307,12 +307,12 @@ export function TeamView() {
                               onChange={(e) => setNewCheckItem(e.target.value)}
                               onKeyDown={(e) => { if (e.key === 'Enter') handleAddCheckItem(task.id) }}
                               placeholder="Add a checkbox item for Dan..."
-                              className="flex-1 border-2 border-purple/20 bg-white px-4 py-2.5 text-sm text-black focus:outline-none focus:border-purple placeholder:text-muted/30"
+                              className="flex-1 border-2 border-purple-light/40 bg-white px-4 py-2.5 text-sm text-black focus:outline-none focus:border-purple placeholder:text-muted/30"
                             />
                             <button
                               onClick={() => handleAddCheckItem(task.id)}
                               disabled={!newCheckItem.trim()}
-                              className="bg-purple text-white px-4 py-2.5 text-xs font-bold uppercase tracking-widest hover:bg-purple/80 transition-colors disabled:opacity-40"
+                              className="bg-purple text-white px-4 py-2.5 text-xs font-bold uppercase tracking-widest hover:bg-purple-light transition-colors disabled:opacity-40"
                             >
                               Add
                             </button>
@@ -367,14 +367,14 @@ export function TeamView() {
                         )}
 
                         {/* Dan's feedback input */}
-                        <div className="border-t-2 border-purple/20 pt-6">
+                        <div className="border-t-2 border-purple-light/40 pt-6">
                           <p className="text-sm font-bold uppercase tracking-widest text-purple mb-3">Dan&apos;s Feedback</p>
                           <textarea
                             value={feedbackText}
                             onChange={(e) => setFeedbackText(e.target.value)}
                             placeholder="Leave feedback, direction, or next steps..."
                             rows={6}
-                            className="w-full border-2 border-purple/30 bg-white px-6 py-5 text-base text-black leading-relaxed focus:outline-none focus:border-purple placeholder:text-muted/30 mb-4"
+                            className="w-full border-2 border-purple-light/50 bg-white px-6 py-5 text-base text-black leading-relaxed focus:outline-none focus:border-purple placeholder:text-muted/30 mb-4"
                           />
                           <div className="flex gap-3">
                             <button onClick={() => handleDanRespond(task.id, 'approve')}

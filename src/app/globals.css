@@ -13,7 +13,8 @@
   --gold: #b8860b;
   --orange: #ea580c;
   --teal: #0d9488;
-  --purple: #6d28d9;
+  --purple: #7B2D8E;
+  --purple-light: #CF9FFF;
   --white: #faf7f0;
   --muted: #8b7e6a;
 }
@@ -32,6 +33,7 @@
   --color-orange: var(--orange);
   --color-teal: var(--teal);
   --color-purple: var(--purple);
+  --color-purple-light: var(--purple-light);
   --color-white: var(--white);
   --color-muted: var(--muted);
   --font-body: var(--font-body);
@@ -48,6 +50,8 @@ body {
 .text-teal { color: var(--teal); }
 .text-purple { color: var(--purple); }
 .bg-purple { background-color: var(--purple); }
+.text-purple-light { color: var(--purple-light); }
+.bg-purple-light { background-color: var(--purple-light); }
 
 ::selection {
   background: var(--red);
