@@ -47,7 +47,7 @@ export function TeamView() {
 
       if (!eventTasks) { setLoading(false); return }
 
-      const eventIds = [...new Set((eventTasks as EventTask[]).map((t) => t.event_id).filter(Boolean))]
+      const eventIds = [...new Set((eventTasks as EventTask[]).map((t) => t.event_id).filter((id): id is string => Boolean(id)))]
       const { data: events } = await supabase
         .from('events')
         .select('id, title, day_label')

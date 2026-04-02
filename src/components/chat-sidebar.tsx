@@ -67,6 +67,8 @@ export function ChatSidebar() {
   const [assignEvent, setAssignEvent] = useState('')
   const [assignCategory, setAssignCategory] = useState<EventTask['category']>('logistics')
   const [assignDeadline, setAssignDeadline] = useState('')
+  const [assignPriority, setAssignPriority] = useState('medium')
+  const [directiveMode, setDirectiveMode] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   const teamMembers = ['Cody', 'Sabrina', 'Joe', 'Danny', 'Connor', 'Gib', 'Emily', 'Kendall', 'Alex', 'Liam', 'Dave', 'Tom', 'Kevin']
@@ -168,33 +170,31 @@ export function ChatSidebar() {
     const taskId = `t-${Date.now()}`
     const eventId = assignEvent || null
 
-    const insertData: Record<string, unknown> = {
+    // Always create a trackable task
+    await supabase.from('event_tasks').insert({
       id: taskId,
       event_id: eventId,
       title: input.trim(),
       category: assignCategory,
       status: 'not-started',
+      priority: assignPriority,
       assignee: assignTo,
       notes: null,
       deadline: assignDeadline || null,
       assigned_at: new Date().toISOString(),
-    }
-
-    if (eventId) {
-      await supabase.from('event_tasks').insert(insertData as never)
-    }
+    } as never)
 
     const eventName = events.find((e) => e.id === assignEvent)?.title
     const deadlineStr = assignDeadline ? ` (due ${assignDeadline})` : ''
-    const msg = eventName
-      ? `@${assignTo} — ${input.trim()}${deadlineStr} [${eventName} / ${assignCategory}]`
-      : `@${assignTo} — ${input.trim()}${deadlineStr}`
+    const priorityStr = assignPriority !== 'medium' ? ` [${assignPriority.toUpperCase()}]` : ''
+    const eventStr = eventName ? ` [${eventName}]` : ''
+    const msg = `@${assignTo} — ${input.trim()}${deadlineStr}${priorityStr}${eventStr}`
 
     await supabase.from('comments').insert({
       author: displayName,
       message: msg,
       event_id: eventId,
-      task_id: eventId ? taskId : null,
+      task_id: taskId,
       type: 'chat',
     } as never)
 
@@ -202,6 +202,49 @@ export function ChatSidebar() {
     setAssignMode(false)
     setAssignTo('')
     setAssignDeadline('')
+    setAssignPriority('medium')
+    setSending(false)
+  }
+
+  // Dan's quick directive — logs a task that someone else can assign later
+  const handleDirective = async () => {
+    if (!input.trim() || !displayName || sending) return
+    setSending(true)
+
+    const taskId = `t-${Date.now()}`
+    const eventId = assignEvent || null
+
+    await supabase.from('event_tasks').insert({
+      id: taskId,
+      event_id: eventId,
+      title: input.trim(),
+      category: assignCategory,
+      status: 'not-started',
+      priority: assignPriority,
+      assignee: assignTo || null,
+      notes: `Directive from ${displayName}`,
+      deadline: assignDeadline || null,
+      assigned_at: assignTo ? new Date().toISOString() : null,
+    } as never)
+
+    const assignStr = assignTo ? ` → @${assignTo}` : ' → Unassigned'
+    const deadlineStr = assignDeadline ? ` (due ${assignDeadline})` : ''
+    const priorityStr = ` [${assignPriority.toUpperCase()}]`
+    const msg = `DIRECTIVE${assignStr}: ${input.trim()}${deadlineStr}${priorityStr}`
+
+    await supabase.from('comments').insert({
+      author: displayName,
+      message: msg,
+      event_id: eventId,
+      task_id: taskId,
+      type: 'chat',
+    } as never)
+
+    setInput('')
+    setDirectiveMode(false)
+    setAssignTo('')
+    setAssignDeadline('')
+    setAssignPriority('high')
     setSending(false)
   }
 
@@ -423,8 +466,8 @@ export function ChatSidebar() {
               <div ref={bottomRef} />
             </div>
 
-            {/* Assign mode panel */}
-            {assignMode && (
+            {/* Assign/Directive panel */}
+            {(assignMode || directiveMode) && (
               <div className="border-t-2 border-black/10 px-4 py-3 bg-cream-dark space-y-2">
                 <div className="flex gap-2">
                   <select
@@ -432,9 +475,20 @@ export function ChatSidebar() {
                     onChange={(e) => setAssignTo(e.target.value)}
                     className="flex-1 border-2 border-black bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider focus:outline-none focus:border-blue"
                   >
-                    <option value="">Assign to...</option>
+                    <option value="">{directiveMode ? 'Assign later...' : 'Assign to...'}</option>
                     {teamMembers.map((n) => <option key={n} value={n}>{n}</option>)}
                   </select>
+                  <select
+                    value={assignPriority}
+                    onChange={(e) => setAssignPriority(e.target.value)}
+                    className="border-2 border-black bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider focus:outline-none focus:border-blue"
+                  >
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                  </select>
+                </div>
+                <div className="flex gap-2">
                   <select
                     value={assignCategory}
                     onChange={(e) => setAssignCategory(e.target.value as EventTask['category'])}
@@ -442,22 +496,20 @@ export function ChatSidebar() {
                   >
                     {taskCategories.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
                   </select>
-                </div>
-                <div className="flex gap-2">
                   <select
                     value={assignEvent}
                     onChange={(e) => setAssignEvent(e.target.value)}
                     className="flex-1 border-2 border-black bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider focus:outline-none focus:border-blue"
                   >
-                    <option value="">No event (general)</option>
+                    <option value="">General</option>
                     {events.map((ev) => <option key={ev.id} value={ev.id}>{ev.day_label} — {ev.title}</option>)}
                   </select>
                   <input
                     type="text"
                     value={assignDeadline}
                     onChange={(e) => setAssignDeadline(e.target.value)}
-                    placeholder="Deadline e.g. 4/5"
-                    className="w-28 border-2 border-black bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider focus:outline-none focus:border-blue placeholder:text-muted/40"
+                    placeholder="Due e.g. 4/5"
+                    className="w-24 border-2 border-black bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider focus:outline-none focus:border-blue placeholder:text-muted/40"
                   />
                 </div>
               </div>
@@ -471,14 +523,27 @@ export function ChatSidebar() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !assignMode) handleSend(e)
+                    if (e.key === 'Enter' && !assignMode && !directiveMode) handleSend(e)
                     if (e.key === 'Enter' && assignMode && assignTo) handleAssignTask()
+                    if (e.key === 'Enter' && directiveMode) handleDirective()
                   }}
-                  placeholder={displayName ? (assignMode ? 'DESCRIBE THE TASK...' : 'TYPE A MESSAGE...') : 'SET NAME FIRST'}
+                  placeholder={displayName ? (
+                    directiveMode ? 'DESCRIBE WHAT NEEDS TO HAPPEN...' :
+                    assignMode ? 'DESCRIBE THE TASK...' :
+                    'TYPE A MESSAGE...'
+                  ) : 'SET NAME FIRST'}
                   disabled={!displayName}
                   className="flex-1 border-2 border-black bg-white px-3 py-2 text-xs font-bold uppercase tracking-wider text-black placeholder:text-muted/50 focus:outline-none focus:border-blue disabled:opacity-40"
                 />
-                {assignMode ? (
+                {directiveMode ? (
+                  <button
+                    onClick={handleDirective}
+                    disabled={!input.trim() || !displayName || sending}
+                    className="bg-orange text-white px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-red transition-colors disabled:opacity-40"
+                  >
+                    Log
+                  </button>
+                ) : assignMode ? (
                   <button
                     onClick={handleAssignTask}
                     disabled={!input.trim() || !assignTo || !displayName || sending}
@@ -498,10 +563,16 @@ export function ChatSidebar() {
               </div>
               <div className="flex items-center gap-2 mt-2">
                 <button
-                  onClick={() => setAssignMode(!assignMode)}
+                  onClick={() => { setAssignMode(!assignMode); setDirectiveMode(false) }}
                   className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 transition-colors ${assignMode ? 'bg-red text-white' : 'bg-black/5 text-muted hover:text-black'}`}
                 >
-                  {assignMode ? 'Cancel Assign' : '+ Assign Task'}
+                  {assignMode ? 'Cancel' : '+ Assign'}
+                </button>
+                <button
+                  onClick={() => { setDirectiveMode(!directiveMode); setAssignMode(false); setAssignPriority('high') }}
+                  className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 transition-colors ${directiveMode ? 'bg-orange text-white' : 'bg-black/5 text-muted hover:text-black'}`}
+                >
+                  {directiveMode ? 'Cancel' : 'Directive'}
                 </button>
               </div>
             </div>

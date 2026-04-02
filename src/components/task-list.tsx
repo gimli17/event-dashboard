@@ -264,11 +264,11 @@ export function TaskList({
     if (!displayName) return
     const oldAssignee = task.assignee
 
-    setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, assignee: newAssignee } : t)))
+    setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, assignee: newAssignee, assigned_at: newAssignee ? new Date().toISOString() : null } : t)))
 
     await supabase
       .from('event_tasks')
-      .update({ assignee: newAssignee } as never)
+      .update({ assignee: newAssignee, assigned_at: newAssignee ? new Date().toISOString() : null } as never)
       .eq('id', task.id)
 
     if (newAssignee !== oldAssignee) {
