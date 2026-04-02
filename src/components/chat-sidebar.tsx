@@ -261,16 +261,37 @@ export function ChatSidebar() {
 
   return (
     <>
-      {/* Toggle button */}
-      <button
-        onClick={() => (isOpen ? sidebar.closeSidebar() : sidebar.openSidebar())}
-        className="fixed right-4 bottom-4 z-[9990] bg-red text-white px-5 py-4 text-xs font-bold uppercase tracking-widest hover:bg-blue transition-colors shadow-lg shadow-red/30 flex items-center gap-2"
-      >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-        </svg>
-        {isOpen ? 'CLOSE' : 'CHAT & ACTIONS'}
-      </button>
+      {/* Toggle buttons */}
+      <div className="fixed right-4 bottom-4 z-[9990] flex flex-col gap-2">
+        <button
+          onClick={() => {
+            if (isOpen && tab === 'chat') { sidebar.closeSidebar() }
+            else { sidebar.setTab('chat'); sidebar.openSidebar() }
+          }}
+          className={`px-4 py-3 text-xs font-bold uppercase tracking-widest shadow-lg flex items-center gap-2 transition-colors ${
+            isOpen && tab === 'chat' ? 'bg-blue text-white' : 'bg-blue text-white hover:bg-black'
+          }`}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+          Chat
+        </button>
+        <button
+          onClick={() => {
+            if (isOpen && (tab === 'add-task' || tab === 'add-event')) { sidebar.closeSidebar() }
+            else { sidebar.setTab('add-task'); sidebar.openSidebar() }
+          }}
+          className={`px-4 py-3 text-xs font-bold uppercase tracking-widest shadow-lg flex items-center gap-2 transition-colors ${
+            isOpen && (tab === 'add-task' || tab === 'add-event') ? 'bg-red text-white' : 'bg-red text-white hover:bg-black'
+          }`}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Actions
+        </button>
+      </div>
 
       {/* Overlay */}
       {isOpen && (
@@ -289,20 +310,27 @@ export function ChatSidebar() {
           <button onClick={() => sidebar.closeSidebar()} className="text-cream hover:text-red text-lg font-bold">&times;</button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b-2 border-black">
-          {tabs.map((t, i) => (
+        {/* Tabs — only show action tabs when in action mode */}
+        {(tab === 'add-task' || tab === 'add-event') && (
+          <div className="flex border-b-2 border-black">
             <button
-              key={t.value}
-              onClick={() => sidebar.setTab(t.value)}
+              onClick={() => sidebar.setTab('add-task')}
               className={`flex-1 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-colors ${
-                i > 0 ? 'border-l border-black/20' : ''
-              } ${tab === t.value ? `${t.color} text-white` : 'bg-cream-dark text-muted hover:text-black'}`}
+                tab === 'add-task' ? 'bg-red text-white' : 'bg-cream-dark text-muted hover:text-black'
+              }`}
             >
-              {t.label}
+              + Task
             </button>
-          ))}
-        </div>
+            <button
+              onClick={() => sidebar.setTab('add-event')}
+              className={`flex-1 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-colors border-l border-black/20 ${
+                tab === 'add-event' ? 'bg-green text-white' : 'bg-cream-dark text-muted hover:text-black'
+              }`}
+            >
+              + Event
+            </button>
+          </div>
+        )}
 
         {/* ── CHAT TAB ── */}
         {tab === 'chat' && (
