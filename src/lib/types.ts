@@ -34,6 +34,8 @@ export interface EventTask {
   priority?: Priority
   assignee: string | null
   notes: string | null
+  deadline?: string | null
+  assigned_at?: string | null
   created_at: string
 }
 

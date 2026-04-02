@@ -66,6 +66,7 @@ export function ChatSidebar() {
   const [assignTo, setAssignTo] = useState('')
   const [assignEvent, setAssignEvent] = useState('')
   const [assignCategory, setAssignCategory] = useState<EventTask['category']>('logistics')
+  const [assignDeadline, setAssignDeadline] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
 
   const teamMembers = ['Cody', 'Sabrina', 'Joe', 'Danny', 'Connor', 'Gib', 'Emily', 'Kendall', 'Alex', 'Liam', 'Dave', 'Tom', 'Kevin']
@@ -167,22 +168,27 @@ export function ChatSidebar() {
     const taskId = `t-${Date.now()}`
     const eventId = assignEvent || null
 
+    const insertData: Record<string, unknown> = {
+      id: taskId,
+      event_id: eventId,
+      title: input.trim(),
+      category: assignCategory,
+      status: 'not-started',
+      assignee: assignTo,
+      notes: null,
+      deadline: assignDeadline || null,
+      assigned_at: new Date().toISOString(),
+    }
+
     if (eventId) {
-      await supabase.from('event_tasks').insert({
-        id: taskId,
-        event_id: eventId,
-        title: input.trim(),
-        category: assignCategory,
-        status: 'not-started',
-        assignee: assignTo,
-        notes: null,
-      } as never)
+      await supabase.from('event_tasks').insert(insertData as never)
     }
 
     const eventName = events.find((e) => e.id === assignEvent)?.title
+    const deadlineStr = assignDeadline ? ` (due ${assignDeadline})` : ''
     const msg = eventName
-      ? `@${assignTo} — ${input.trim()} [${eventName} / ${assignCategory}]`
-      : `@${assignTo} — ${input.trim()}`
+      ? `@${assignTo} — ${input.trim()}${deadlineStr} [${eventName} / ${assignCategory}]`
+      : `@${assignTo} — ${input.trim()}${deadlineStr}`
 
     await supabase.from('comments').insert({
       author: displayName,
@@ -195,6 +201,7 @@ export function ChatSidebar() {
     setInput('')
     setAssignMode(false)
     setAssignTo('')
+    setAssignDeadline('')
     setSending(false)
   }
 
@@ -436,14 +443,23 @@ export function ChatSidebar() {
                     {taskCategories.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
                   </select>
                 </div>
-                <select
-                  value={assignEvent}
-                  onChange={(e) => setAssignEvent(e.target.value)}
-                  className="w-full border-2 border-black bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider focus:outline-none focus:border-blue"
-                >
-                  <option value="">No event (general task)</option>
-                  {events.map((ev) => <option key={ev.id} value={ev.id}>{ev.day_label} — {ev.title}</option>)}
-                </select>
+                <div className="flex gap-2">
+                  <select
+                    value={assignEvent}
+                    onChange={(e) => setAssignEvent(e.target.value)}
+                    className="flex-1 border-2 border-black bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider focus:outline-none focus:border-blue"
+                  >
+                    <option value="">No event (general)</option>
+                    {events.map((ev) => <option key={ev.id} value={ev.id}>{ev.day_label} — {ev.title}</option>)}
+                  </select>
+                  <input
+                    type="text"
+                    value={assignDeadline}
+                    onChange={(e) => setAssignDeadline(e.target.value)}
+                    placeholder="Deadline e.g. 4/5"
+                    className="w-28 border-2 border-black bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider focus:outline-none focus:border-blue placeholder:text-muted/40"
+                  />
+                </div>
               </div>
             )}
 

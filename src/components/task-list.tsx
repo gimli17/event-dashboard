@@ -232,6 +232,8 @@ export function TaskList({
       priority: 'medium',
       assignee: null,
       notes: null,
+      deadline: null,
+      assigned_at: null,
       created_at: new Date().toISOString(),
     }
 
