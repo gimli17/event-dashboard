@@ -13,16 +13,18 @@ export default async function HubPage() {
     <>
       <Navbar />
 
-      <section className="bg-blue text-white py-20">
-        <div className="max-w-6xl mx-auto px-6">
-          <p className="text-xs font-bold tracking-[0.3em] uppercase text-white/50 mb-4">
+      <section className="bg-blue text-white py-8">
+        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight leading-none uppercase">
+              Boulder Roots
+            </h1>
+            <p className="text-xs text-white/50 mt-1">
+              The Founders Experience — August 26–30, 2026
+            </p>
+          </div>
+          <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-white/30">
             Operations Portal
-          </p>
-          <h1 className="text-6xl sm:text-8xl font-bold tracking-tight leading-none uppercase">
-            Boulder Roots
-          </h1>
-          <p className="text-sm text-white/50 mt-4 max-w-lg">
-            The Founders Experience — August 26–30, 2026
           </p>
         </div>
       </section>
