@@ -135,6 +135,14 @@ export function getSponsorsByEvent(sponsors: Sponsor[]): Record<string, { name: 
     }
   }
 
+  // Ensure Endeavor is always on the Friday slot (confirmed co-sponsorship with CV)
+  if (!collected['fri-endeavor']) {
+    collected['fri-endeavor'] = { names: [], partyName: 'Endeavor Colorado Private Party', tier: 'collaborator' }
+  }
+  if (!collected['fri-endeavor'].names.includes('Endeavor Colorado')) {
+    collected['fri-endeavor'].names.unshift('Endeavor Colorado')
+  }
+
   // Merge names into a single string
   const result: Record<string, { name: string; partyName: string | null; tier: string | null }> = {}
   for (const [eventId, info] of Object.entries(collected)) {

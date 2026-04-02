@@ -116,7 +116,7 @@ export default async function PrivatePartiesPage() {
                           <>
                             <h3 className="text-lg font-bold text-muted/50">No Sponsor Yet</h3>
                             <p className="text-xs text-muted mt-1">
-                              {event.access === 'sponsor-private' ? 'Champion Tier: 80 invites / Visionary Tier: 40 invites' : ''}
+                              {event.access === 'sponsor-private' ? 'Visionary Tier: 80 invites / Champion Tier: 40 invites' : ''}
                             </p>
                           </>
                         )}
