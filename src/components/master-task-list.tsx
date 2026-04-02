@@ -151,6 +151,8 @@ export function MasterTaskList() {
   const [showAddTask, setShowAddTask] = useState(false)
   const [editingField, setEditingField] = useState<{ taskId: string; field: string } | null>(null)
   const [editValue, setEditValue] = useState('')
+  const [editingTitle, setEditingTitle] = useState<string | null>(null)
+  const [titleValue, setTitleValue] = useState('')
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [newTaskAssignee, setNewTaskAssignee] = useState('')
   const [newTaskPriority, setNewTaskPriority] = useState('medium')
@@ -393,6 +395,28 @@ export function MasterTaskList() {
     }
   }
 
+  const handleTitleEdit = (task: MasterTask) => {
+    setEditingTitle(task.id)
+    setTitleValue(task.title)
+  }
+
+  const handleTitleSave = async (taskId: string) => {
+    if (!titleValue.trim()) { setEditingTitle(null); return }
+    setEditingTitle(null)
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, title: titleValue.trim() } : t)))
+    await supabase.from('master_tasks').update({ title: titleValue.trim(), updated_at: new Date().toISOString() } as never).eq('id', taskId)
+  }
+
+  const handleAssigneeChange = async (task: MasterTask, newAssignee: string | null) => {
+    setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, assignee: newAssignee } : t)))
+    await supabase.from('master_tasks').update({ assignee: newAssignee, updated_at: new Date().toISOString() } as never).eq('id', task.id)
+    if (displayName) {
+      const c: TaskComment = { id: `temp-${Date.now()}`, task_id: task.id, author: displayName, message: newAssignee ? `Assigned to ${newAssignee}` : 'Unassigned', created_at: new Date().toISOString() }
+      setComments((prev) => [...prev, c])
+      await supabase.from('master_task_comments').insert({ task_id: task.id, author: displayName, message: c.message } as never)
+    }
+  }
+
   const startEditing = (taskId: string, field: string, currentValue: string | null) => {
     setEditingField({ taskId, field })
     setEditValue(currentValue || '')
@@ -576,15 +600,41 @@ export function MasterTaskList() {
                     return (
                       <SortableRow key={task.id} id={task.id}>
                       <div className={i > 0 ? 'border-t border-black/5' : ''}>
-                        <button
-                          onClick={() => { setExpandedTask(isExpanded ? null : task.id); setCommentInput('') }}
-                          className="w-full text-left px-5 py-4 hover:bg-cream-dark transition-colors"
-                        >
+                        <div className="px-5 py-4 hover:bg-cream-dark transition-colors">
                           <div className="flex items-start gap-4">
                             <div className="flex-1 min-w-0">
-                              <h3 className="text-sm font-bold leading-tight">{task.title}</h3>
+                              {editingTitle === task.id ? (
+                                <input
+                                  type="text"
+                                  value={titleValue}
+                                  onChange={(e) => setTitleValue(e.target.value)}
+                                  onBlur={() => handleTitleSave(task.id)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleTitleSave(task.id)
+                                    if (e.key === 'Escape') setEditingTitle(null)
+                                  }}
+                                  autoFocus
+                                  className="w-full border-2 border-black bg-white px-2 py-1 text-sm font-bold text-black focus:outline-none focus:border-blue"
+                                />
+                              ) : (
+                                <h3
+                                  className="text-sm font-bold leading-tight cursor-pointer hover:text-blue transition-colors"
+                                  onClick={() => handleTitleEdit(task)}
+                                  title="Click to edit title"
+                                >
+                                  {task.title}
+                                </h3>
+                              )}
                               <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                                {task.assignee && <span className="text-[10px] font-bold text-blue uppercase tracking-wider">{task.assignee}</span>}
+                                <select
+                                  value={task.assignee || ''}
+                                  onChange={(e) => handleAssigneeChange(task, e.target.value || null)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className={`text-[10px] font-bold uppercase tracking-wider border-0 bg-transparent focus:outline-none cursor-pointer ${task.assignee ? 'text-blue' : 'text-muted/40'}`}
+                                >
+                                  <option value="">Unassigned</option>
+                                  {teamMembers.map((n) => <option key={n} value={n}>{n}</option>)}
+                                </select>
                                 {task.deadline && <span className="text-[10px] text-muted uppercase tracking-wider">Due {task.deadline}</span>}
                                 {taskComments.length > 0 && (
                                   <span className="text-[10px] font-bold text-gold uppercase tracking-wider">{taskComments.length} comment{taskComments.length !== 1 ? 's' : ''}</span>
@@ -597,11 +647,20 @@ export function MasterTaskList() {
                               </div>
                             </div>
 
-                            <span className={`shrink-0 px-3 py-1 text-[10px] font-bold tracking-widest uppercase ${statusColors[task.status]}`}>
-                              {statusLabels[task.status]}
-                            </span>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className={`px-3 py-1 text-[10px] font-bold tracking-widest uppercase ${statusColors[task.status]}`}>
+                                {statusLabels[task.status]}
+                              </span>
+                              <button
+                                onClick={() => { setExpandedTask(isExpanded ? null : task.id); setCommentInput('') }}
+                                className="text-muted/40 hover:text-black transition-colors text-xs font-bold px-1"
+                                title={isExpanded ? 'Collapse' : 'Expand'}
+                              >
+                                {isExpanded ? '\u25B2' : '\u25BC'}
+                              </button>
+                            </div>
                           </div>
-                        </button>
+                        </div>
 
                         {/* Expanded detail */}
                         {isExpanded && (
