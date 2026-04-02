@@ -66,6 +66,7 @@ export function TeamView() {
       // Fetch ALL master tasks (not just review)
       const { data: mt } = await supabase.from('master_tasks')
         .select('id, title, status, assignee, priority, links, current_status, overview, action_items, dan_comments, update_to_dan, dan_feedback, dan_checklist, deadline, created_by')
+        .is('deleted_at', null)
         .neq('status', 'complete')
         .order('sort_order')
       if (mt) setAllMasterTasks(mt as MasterTaskFull[])
@@ -415,6 +416,15 @@ export function TeamView() {
                 }}
                   className="bg-green text-white px-8 py-3.5 text-sm font-bold uppercase tracking-widest hover:bg-green-light transition-colors">
                   Mark as Done
+                </button>
+                <button onClick={async () => {
+                  if (!confirm(`Delete "${task.title}"? It will be moved to the deleted backlog.`)) return
+                  await supabase.from('master_tasks').update({ deleted_at: new Date().toISOString() } as never).eq('id', task.id)
+                  setAllMasterTasks((prev) => prev.filter((t) => t.id !== task.id))
+                  setExpandedTask(null)
+                }}
+                  className="text-red bg-red/10 hover:bg-red hover:text-white px-8 py-3.5 text-sm font-bold uppercase tracking-widest transition-colors">
+                  Delete
                 </button>
               </div>
             </div>
