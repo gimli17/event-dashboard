@@ -15,7 +15,7 @@ export default function TeamPage() {
           <div className="flex items-center gap-4">
             <BackLink />
             <h1 className="text-2xl font-bold tracking-tight leading-none uppercase">
-              Team Workload
+              Dan&apos;s Dashboard
             </h1>
           </div>
           <SidebarButtons />

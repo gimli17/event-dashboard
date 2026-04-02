@@ -5,407 +5,317 @@ import { supabase } from '@/lib/supabase'
 import { useUser } from './user-provider'
 import type { EventTask, TaskStatus } from '@/lib/types'
 
-interface TaskRow extends EventTask {
-  event_title: string
-  event_day_label: string
+interface MasterTaskReview {
+  id: string
+  title: string
+  status: string
+  assignee: string | null
+  priority: string
+  links: string | null
+  current_status: string | null
+  overview: string | null
+  action_items: string | null
+  dan_comments: string | null
+  update_to_dan: string | null
+  dan_feedback: string | null
+  deadline: string | null
 }
 
-const statusLabels: Record<TaskStatus, string> = {
-  'not-started': 'NOT STARTED',
-  'in-progress': 'IN PROGRESS',
-  review: 'FOR REVIEW',
-  complete: 'DONE',
-}
-
-const statusColors: Record<TaskStatus, string> = {
-  'not-started': 'text-muted bg-black/5 hover:bg-black/10',
-  'in-progress': 'text-orange bg-orange/10 hover:bg-orange/20',
-  review: 'text-blue bg-blue/10 hover:bg-blue/20',
-  complete: 'text-green bg-green/10 hover:bg-green/20',
-}
-
-const nextStatus: Record<TaskStatus, TaskStatus> = {
-  'not-started': 'in-progress',
-  'in-progress': 'review',
-  review: 'complete',
-  complete: 'not-started',
+interface TeamMember {
+  name: string
+  ultraHighTasks: string[]
+  totalActive: number
 }
 
 const teamMembers = ['Cody', 'Sabrina', 'Joe', 'Danny', 'Connor', 'Gib', 'Emily', 'Kendall', 'Alex', 'Liam', 'Dave', 'Tom', 'Kevin']
 
 export function TeamView() {
   const { displayName } = useUser()
-  const [tasks, setTasks] = useState<TaskRow[]>([])
+  const [reviewTasks, setReviewTasks] = useState<MasterTaskReview[]>([])
+  const [reviewEventTasks, setReviewEventTasks] = useState<(EventTask & { event_title: string })[]>([])
+  const [teamData, setTeamData] = useState<TeamMember[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedPerson, setSelectedPerson] = useState<string>('all')
-  const [showComplete, setShowComplete] = useState(false)
-  const [viewMode, setViewMode] = useState<'team' | 'review'>('team')
-  const [masterTasks, setMasterTasks] = useState<{ id: string; title: string; status: string; assignee: string | null; priority: string; links: string | null; current_status: string | null; overview: string | null; action_items: string | null; dan_comments: string | null; update_to_dan: string | null; dan_feedback: string | null }[]>([])
-  const [expandedReview, setExpandedReview] = useState<string | null>(null)
+  const [expandedTask, setExpandedTask] = useState<string | null>(null)
   const [updateText, setUpdateText] = useState('')
   const [feedbackText, setFeedbackText] = useState('')
 
   useEffect(() => {
     async function fetch() {
-      const { data: eventTasks } = await supabase
-        .from('event_tasks')
-        .select('*')
+      // Fetch master tasks in review
+      const { data: mt } = await supabase.from('master_tasks')
+        .select('id, title, status, assignee, priority, links, current_status, overview, action_items, dan_comments, update_to_dan, dan_feedback, deadline')
+        .eq('status', 'review')
+      if (mt) setReviewTasks(mt as MasterTaskReview[])
+
+      // Fetch event tasks in review
+      const { data: et } = await supabase.from('event_tasks').select('*').eq('status', 'review')
+      if (et && (et as EventTask[]).length > 0) {
+        const eventIds = [...new Set((et as EventTask[]).map(t => t.event_id).filter(Boolean))]
+        const { data: events } = await supabase.from('events').select('id, title').in('id', eventIds as string[])
+        const eventMap: Record<string, string> = {}
+        if (events) for (const e of events as { id: string; title: string }[]) eventMap[e.id] = e.title
+        setReviewEventTasks((et as EventTask[]).map(t => ({ ...t, event_title: eventMap[t.event_id] || 'General' })))
+      }
+
+      // Build team data — who's working on what
+      const { data: allMaster } = await supabase.from('master_tasks')
+        .select('title, assignee, priority, status')
+        .neq('status', 'complete')
+      const { data: allEvent } = await supabase.from('event_tasks')
+        .select('title, assignee, priority, status')
+        .neq('status', 'complete')
         .not('assignee', 'is', null)
-        .order('created_at', { ascending: false })
 
-      if (!eventTasks) { setLoading(false); return }
+      const memberMap: Record<string, TeamMember> = {}
+      for (const name of teamMembers) {
+        memberMap[name] = { name, ultraHighTasks: [], totalActive: 0 }
+      }
 
-      const eventIds = [...new Set((eventTasks as EventTask[]).map((t) => t.event_id).filter((id): id is string => Boolean(id)))]
-      const { data: events } = await supabase
-        .from('events')
-        .select('id, title, day_label')
-        .in('id', eventIds)
-
-      const eventMap: Record<string, { title: string; day_label: string }> = {}
-      if (events) {
-        for (const e of events as { id: string; title: string; day_label: string }[]) {
-          eventMap[e.id] = { title: e.title, day_label: e.day_label }
+      if (allMaster) {
+        for (const t of allMaster as { title: string; assignee: string | null; priority: string; status: string }[]) {
+          if (!t.assignee) continue
+          for (const name of t.assignee.split(', ')) {
+            if (memberMap[name]) {
+              memberMap[name].totalActive++
+              if (t.priority === 'ultra-high') memberMap[name].ultraHighTasks.push(t.title)
+            }
+          }
+        }
+      }
+      if (allEvent) {
+        for (const t of allEvent as { title: string; assignee: string | null; priority?: string; status: string }[]) {
+          if (!t.assignee || !memberMap[t.assignee]) continue
+          memberMap[t.assignee].totalActive++
         }
       }
 
-      const rows: TaskRow[] = (eventTasks as EventTask[]).map((t) => ({
-        ...t,
-        event_title: eventMap[t.event_id]?.title ?? 'General',
-        event_day_label: eventMap[t.event_id]?.day_label ?? '',
-      }))
-
-      setTasks(rows)
-
-      // Fetch master tasks in review
-      const { data: mt } = await supabase.from('master_tasks').select('id, title, status, assignee, priority, links, current_status, overview, action_items, dan_comments, update_to_dan, dan_feedback').eq('status', 'review')
-      if (mt) setMasterTasks(mt as typeof masterTasks)
-
+      setTeamData(Object.values(memberMap).filter(m => m.totalActive > 0).sort((a, b) => b.totalActive - a.totalActive))
       setLoading(false)
     }
     fetch()
   }, [])
 
   const handleSaveUpdate = async (taskId: string) => {
-    setMasterTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, update_to_dan: updateText } : t)))
     await supabase.from('master_tasks').update({ update_to_dan: updateText, updated_at: new Date().toISOString() } as never).eq('id', taskId)
   }
 
   const handleDanRespond = async (taskId: string, action: 'approve' | 'revise') => {
     const newStatus = action === 'approve' ? 'complete' : 'in-progress'
-    const updates: Record<string, unknown> = {
+    await supabase.from('master_tasks').update({
       status: newStatus,
       dan_feedback: feedbackText.trim() || null,
+      update_to_dan: null,
       updated_at: new Date().toISOString(),
-    }
-    setMasterTasks((prev) => prev.filter((t) => t.id !== taskId))
-    await supabase.from('master_tasks').update(updates as never).eq('id', taskId)
+    } as never).eq('id', taskId)
+    setReviewTasks((prev) => prev.filter((t) => t.id !== taskId))
     setFeedbackText('')
-    setExpandedReview(null)
+    setExpandedTask(null)
   }
 
-  const handleEventTaskReview = async (taskId: string, action: 'approve' | 'revise') => {
+  const handleEventTaskAction = async (taskId: string, action: 'approve' | 'revise') => {
     const newStatus = action === 'approve' ? 'complete' : 'in-progress'
-    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)))
     await supabase.from('event_tasks').update({ status: newStatus } as never).eq('id', taskId)
+    setReviewEventTasks((prev) => prev.filter((t) => t.id !== taskId))
   }
 
-  const handleStatusCycle = async (taskId: string) => {
-    const task = tasks.find((t) => t.id === taskId)
-    if (!task || !displayName) return
-    const newStatus = nextStatus[task.status]
-    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)))
-    await supabase.from('event_tasks').update({ status: newStatus } as never).eq('id', taskId)
-  }
-
-  // Filter
-  let filtered = selectedPerson === 'all'
-    ? tasks
-    : tasks.filter((t) => t.assignee === selectedPerson)
-
-  if (!showComplete) {
-    filtered = filtered.filter((t) => t.status !== 'complete')
-  }
-
-  // Group by person
-  const byPerson: Record<string, TaskRow[]> = {}
-  for (const t of filtered) {
-    const person = t.assignee || 'Unassigned'
-    if (!byPerson[person]) byPerson[person] = []
-    byPerson[person].push(t)
-  }
-
-  // Sort people by task count (most first)
-  const sortedPeople = Object.entries(byPerson).sort((a, b) => b[1].length - a[1].length)
-
-  // Stats
-  const assignedPeople = [...new Set(tasks.map((t) => t.assignee).filter(Boolean))]
-  const totalAssigned = tasks.filter((t) => t.status !== 'complete').length
-  const overdueCount = tasks.filter((t) => t.deadline && t.status !== 'complete').length
-  const reviewCount = tasks.filter((t) => t.status === 'review').length + masterTasks.length
+  const totalReview = reviewTasks.length + reviewEventTasks.length
 
   if (loading) {
-    return <div className="max-w-6xl mx-auto px-6 py-16 text-center"><p className="text-muted uppercase tracking-widest text-xs font-bold">Loading...</p></div>
+    return <div className="max-w-7xl mx-auto px-6 py-16 text-center"><p className="text-muted uppercase tracking-widest text-xs font-bold">Loading...</p></div>
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-8">
-      {/* View toggle */}
-      <div className="flex items-center gap-2 mb-6">
-        <button onClick={() => setViewMode('team')}
-          className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest border-2 transition-all ${viewMode === 'team' ? 'bg-black text-white border-black' : 'bg-white text-black border-black/20 hover:border-black'}`}>
-          Team Workload
-        </button>
-        <button onClick={() => setViewMode('review')}
-          className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest border-2 transition-all ${viewMode === 'review' ? 'bg-blue text-white border-blue' : 'bg-white text-black border-black/20 hover:border-black'} ${reviewCount > 0 ? 'animate-pulse' : ''}`}>
-          Dan&apos;s Review Queue {reviewCount > 0 ? `(${reviewCount})` : ''}
-        </button>
-      </div>
-
-      {/* Stats */}
-      <div className="flex items-center gap-8 mb-8 flex-wrap">
-        <div><p className="text-3xl font-bold">{assignedPeople.length}</p><p className="text-xs font-bold uppercase tracking-widest text-muted">Team Members</p></div>
-        <div><p className="text-3xl font-bold text-red">{totalAssigned}</p><p className="text-xs font-bold uppercase tracking-widest text-muted">Active Tasks</p></div>
-        <div><p className="text-3xl font-bold text-blue">{reviewCount}</p><p className="text-xs font-bold uppercase tracking-widest text-muted">Awaiting Review</p></div>
-      </div>
-
-      {/* Filters — only in team view */}
-      {viewMode === 'team' && (
-      <div className="flex items-center gap-4 mb-6 flex-wrap">
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Person:</span>
-          <select
-            value={selectedPerson}
-            onChange={(e) => setSelectedPerson(e.target.value)}
-            className="border-2 border-black/20 bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black cursor-pointer"
-          >
-            <option value="all">Everyone</option>
-            {teamMembers.map((n) => <option key={n} value={n}>{n}</option>)}
-          </select>
-        </div>
-        <button
-          onClick={() => setShowComplete(!showComplete)}
-          className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border-2 transition-all ${showComplete ? 'bg-black text-white border-black' : 'bg-white text-black border-black/20 hover:border-black'}`}
-        >
-          {showComplete ? 'Hide Complete' : 'Show Complete'}
-        </button>
-      </div>
-      )}
-
-      {/* Dan's Review Queue */}
-      {viewMode === 'review' && (
-        <div>
-          {reviewCount === 0 ? (
-            <p className="text-muted text-center py-12 uppercase tracking-widest text-xs font-bold">No items awaiting review.</p>
-          ) : (
-            <div className="space-y-0">
-              <div className="bg-blue text-white px-6 py-4 flex items-center justify-between">
-                <h2 className="text-sm font-bold tracking-widest uppercase">Awaiting Review</h2>
-                <span className="text-xs font-bold tracking-wider opacity-70">{reviewCount} ITEMS</span>
+    <div className="max-w-7xl mx-auto px-6 py-6">
+      <div className="flex gap-6 items-start">
+        {/* Left panel — Team */}
+        <div className="w-64 shrink-0">
+          <div className="bg-blue text-white px-4 py-3">
+            <h2 className="text-xs font-bold tracking-widest uppercase">Team</h2>
+          </div>
+          <div className="border-l-2 border-r-2 border-b-2 border-black/10 divide-y divide-black/5">
+            {teamData.map((member) => (
+              <div key={member.name} className="px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold">{member.name}</span>
+                  <span className="text-[10px] font-bold text-muted">{member.totalActive}</span>
+                </div>
+                {member.ultraHighTasks.length > 0 && (
+                  <div className="mt-1.5 space-y-0.5">
+                    {member.ultraHighTasks.slice(0, 2).map((t, i) => (
+                      <p key={i} className="text-[10px] text-red font-bold truncate">{t}</p>
+                    ))}
+                    {member.ultraHighTasks.length > 2 && (
+                      <p className="text-[10px] text-muted">+{member.ultraHighTasks.length - 2} more</p>
+                    )}
+                  </div>
+                )}
               </div>
+            ))}
+            {teamData.length === 0 && (
+              <p className="px-4 py-3 text-xs text-muted">No active assignments</p>
+            )}
+          </div>
+        </div>
 
-              <div className="border-l-2 border-r-2 border-b-2 border-black/10">
-                {/* Master tasks */}
-                {masterTasks.map((mt, i) => {
-                  const isExpanded = expandedReview === mt.id
+        {/* Main panel — Dan's Dashboard */}
+        <div className="flex-1 min-w-0">
+          <div className="bg-red text-white px-6 py-4 flex items-center justify-between">
+            <h2 className="text-sm font-bold tracking-widest uppercase">Dan&apos;s Dashboard</h2>
+            <span className="text-xs font-bold tracking-wider opacity-70">
+              {totalReview} ITEM{totalReview !== 1 ? 'S' : ''} FOR REVIEW
+            </span>
+          </div>
 
-                  return (
-                    <div key={mt.id} className={i > 0 ? 'border-t border-black/5' : ''}>
-                      <button
-                        onClick={() => { setExpandedReview(isExpanded ? null : mt.id); setUpdateText(mt.update_to_dan || ''); setFeedbackText('') }}
-                        className="w-full text-left px-5 py-4 hover:bg-cream-dark transition-colors"
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div>
-                            <h3 className="text-sm font-bold">{mt.title}</h3>
-                            <div className="flex items-center gap-2 mt-1">
-                              {mt.assignee && <span className="text-[10px] font-bold text-blue uppercase tracking-wider">{mt.assignee}</span>}
-                              <span className={`text-[10px] font-bold uppercase tracking-wider ${mt.priority === 'ultra-high' ? 'text-red' : mt.priority === 'high' ? 'text-orange' : 'text-muted'}`}>{mt.priority}</span>
-                            </div>
-                          </div>
-                          <span className="text-[10px] font-bold uppercase tracking-widest text-blue bg-blue/10 px-3 py-1 shrink-0">FOR REVIEW</span>
-                        </div>
-                      </button>
+          {totalReview === 0 ? (
+            <div className="border-l-2 border-r-2 border-b-2 border-black/10 px-6 py-16 text-center">
+              <p className="text-sm font-bold text-muted mb-1">All clear</p>
+              <p className="text-xs text-muted">No items awaiting review right now.</p>
+            </div>
+          ) : (
+            <div className="border-l-2 border-r-2 border-b-2 border-black/10">
+              {/* Master tasks in review */}
+              {reviewTasks.map((task, i) => {
+                const isExpanded = expandedTask === task.id
 
-                      {isExpanded && (
-                        <div className="px-5 pb-5 border-t border-black/5 bg-white">
-                          {/* Team member's update to Dan */}
-                          <div className="pt-4 mb-4">
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Update for Dan</p>
-                            <textarea
-                              value={updateText || mt.update_to_dan || ''}
-                              onChange={(e) => setUpdateText(e.target.value)}
-                              onBlur={() => handleSaveUpdate(mt.id)}
-                              placeholder={"Dan,\n\nHere's the update on this task...\n\nNext Steps:\n- ...\n- ...\n\n— " + (mt.assignee || 'Team')}
-                              rows={8}
-                              className="w-full border-2 border-black bg-white px-4 py-3 text-sm text-black leading-relaxed focus:outline-none focus:border-blue placeholder:text-muted/30"
-                            />
-                          </div>
-
-                          {/* Links */}
-                          {mt.links && (
-                            <div className="mb-4">
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Attachments</p>
-                              <div className="space-y-1">
-                                {mt.links.split('\n').filter(Boolean).map((link, li) => (
-                                  <a key={li} href={link.trim().startsWith('http') ? link.trim() : `https://${link.trim()}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue hover:text-red underline block">{link.trim()}</a>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Context — collapsed by default */}
-                          {(mt.current_status || mt.overview || mt.action_items) && (
-                            <details className="mb-4">
-                              <summary className="text-[10px] font-bold uppercase tracking-widest text-muted cursor-pointer hover:text-black">Task Context</summary>
-                              <div className="mt-2 pl-3 border-l-2 border-black/10 space-y-3">
-                                {mt.current_status && <div><p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-0.5">Status</p><p className="text-xs">{mt.current_status}</p></div>}
-                                {mt.overview && <div><p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-0.5">Overview</p><p className="text-xs">{mt.overview}</p></div>}
-                                {mt.action_items && (
-                                  <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-0.5">Action Items</p>
-                                    <ul className="space-y-0.5">{mt.action_items.split('\n').map((item, idx) => <li key={idx} className="text-xs">&mdash; {item}</li>)}</ul>
-                                  </div>
-                                )}
-                              </div>
-                            </details>
-                          )}
-
-                          {/* Dan's previous comments */}
-                          {mt.dan_comments && (
-                            <div className="mb-4 border-l-4 border-muted pl-3">
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Dan&apos;s Previous Comments</p>
-                              <p className="text-xs italic">{mt.dan_comments}</p>
-                            </div>
-                          )}
-
-                          {/* Dan's previous feedback */}
-                          {mt.dan_feedback && (
-                            <div className="mb-4 border-l-4 border-red pl-3">
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-red mb-1">Dan&apos;s Last Feedback</p>
-                              <p className="text-xs">{mt.dan_feedback}</p>
-                            </div>
-                          )}
-
-                          {/* Dan's feedback box */}
-                          <div className="border-t-2 border-black/10 pt-4 mt-4">
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-red mb-2">Dan&apos;s Feedback</p>
-                            <textarea
-                              value={feedbackText}
-                              onChange={(e) => setFeedbackText(e.target.value)}
-                              placeholder="Leave feedback, notes, or next steps..."
-                              rows={4}
-                              className="w-full border-2 border-red/30 bg-white px-4 py-3 text-sm text-black leading-relaxed focus:outline-none focus:border-red placeholder:text-muted/30 mb-3"
-                            />
-                            <div className="flex gap-2">
-                              <button onClick={() => handleDanRespond(mt.id, 'approve')}
-                                className="bg-green text-white px-5 py-2.5 text-xs font-bold uppercase tracking-widest hover:bg-green-light transition-colors">
-                                Approve &amp; Complete
-                              </button>
-                              <button onClick={() => handleDanRespond(mt.id, 'revise')}
-                                className="bg-orange text-white px-5 py-2.5 text-xs font-bold uppercase tracking-widest hover:bg-red transition-colors">
-                                Send Back with Feedback
-                              </button>
-                            </div>
+                return (
+                  <div key={task.id} className={i > 0 ? 'border-t-2 border-black/10' : ''}>
+                    <button
+                      onClick={() => { setExpandedTask(isExpanded ? null : task.id); setUpdateText(task.update_to_dan || ''); setFeedbackText('') }}
+                      className="w-full text-left px-6 py-5 hover:bg-cream-dark transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <h3 className="text-base font-bold">{task.title}</h3>
+                          <div className="flex items-center gap-3 mt-1.5">
+                            {task.assignee && <span className="text-xs font-bold text-blue uppercase tracking-wider">{task.assignee}</span>}
+                            <span className={`text-xs font-bold uppercase tracking-wider ${task.priority === 'ultra-high' ? 'text-red' : task.priority === 'high' ? 'text-orange' : 'text-muted'}`}>{task.priority}</span>
+                            {task.deadline && <span className="text-xs font-bold text-red">Due {new Date(task.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
                           </div>
                         </div>
-                      )}
-                    </div>
-                  )
-                })}
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-blue bg-blue/10 px-3 py-1.5 shrink-0">
+                          {isExpanded ? 'COLLAPSE' : 'REVIEW'}
+                        </span>
+                      </div>
+                    </button>
 
-                {/* Event tasks in review */}
-                {tasks.filter(t => t.status === 'review').map((task, i) => (
-                  <div key={task.id} className={`border-t border-black/5`}>
-                    <div className="px-5 py-4 flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <p className="text-sm font-bold">{task.event_title} &mdash; {task.title}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          {task.assignee && <span className="text-[10px] font-bold text-blue uppercase tracking-wider">{task.assignee}</span>}
-                          <span className="text-[10px] text-muted uppercase tracking-wider">{task.category}</span>
-                          {task.event_id && <a href={`/events/${task.event_id}`} className="text-[10px] font-bold text-blue uppercase tracking-widest hover:text-red">View Event &rarr;</a>}
+                    {isExpanded && (
+                      <div className="px-6 pb-6 bg-white border-t border-black/5">
+                        {/* Team member's update */}
+                        <div className="pt-5 mb-5">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">
+                            Update from {task.assignee || 'Team'}
+                          </p>
+                          <textarea
+                            value={updateText}
+                            onChange={(e) => setUpdateText(e.target.value)}
+                            onBlur={() => handleSaveUpdate(task.id)}
+                            placeholder={"Dan,\n\nHere's the update on this task...\n\nNext Steps:\n- ...\n- ...\n\n— " + (task.assignee || 'Team')}
+                            rows={10}
+                            className="w-full border-2 border-black/20 bg-white px-5 py-4 text-sm text-black leading-relaxed focus:outline-none focus:border-blue placeholder:text-muted/30"
+                          />
+                        </div>
+
+                        {/* Links */}
+                        {task.links && (
+                          <div className="mb-5">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Attachments</p>
+                            <div className="space-y-1.5">
+                              {task.links.split('\n').filter(Boolean).map((link, li) => (
+                                <a key={li} href={link.trim().startsWith('http') ? link.trim() : `https://${link.trim()}`} target="_blank" rel="noopener noreferrer"
+                                  className="text-sm text-blue hover:text-red underline block">
+                                  {link.trim()}
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Context */}
+                        {(task.current_status || task.overview || task.action_items) && (
+                          <details className="mb-5">
+                            <summary className="text-[10px] font-bold uppercase tracking-widest text-muted cursor-pointer hover:text-black">Show Task Context</summary>
+                            <div className="mt-3 pl-4 border-l-2 border-black/10 space-y-3">
+                              {task.current_status && <div><p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-0.5">Current Status</p><p className="text-sm">{task.current_status}</p></div>}
+                              {task.overview && <div><p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-0.5">Overview</p><p className="text-sm">{task.overview}</p></div>}
+                              {task.action_items && (
+                                <div>
+                                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-0.5">Action Items</p>
+                                  <ul className="space-y-1">{task.action_items.split('\n').map((item, idx) => <li key={idx} className="text-sm">&mdash; {item}</li>)}</ul>
+                                </div>
+                              )}
+                            </div>
+                          </details>
+                        )}
+
+                        {/* Dan's previous feedback */}
+                        {task.dan_feedback && (
+                          <div className="mb-5 border-l-4 border-red pl-4">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-red mb-1">Previous Feedback</p>
+                            <p className="text-sm">{task.dan_feedback}</p>
+                          </div>
+                        )}
+
+                        {task.dan_comments && (
+                          <div className="mb-5 border-l-4 border-muted/30 pl-4">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Original Comments</p>
+                            <p className="text-sm italic text-muted">{task.dan_comments}</p>
+                          </div>
+                        )}
+
+                        {/* Dan's feedback input */}
+                        <div className="border-t-2 border-black/10 pt-5">
+                          <p className="text-xs font-bold uppercase tracking-widest text-red mb-2">Dan&apos;s Feedback</p>
+                          <textarea
+                            value={feedbackText}
+                            onChange={(e) => setFeedbackText(e.target.value)}
+                            placeholder="Leave feedback, direction, or next steps..."
+                            rows={5}
+                            className="w-full border-2 border-red/30 bg-white px-5 py-4 text-sm text-black leading-relaxed focus:outline-none focus:border-red placeholder:text-muted/30 mb-4"
+                          />
+                          <div className="flex gap-3">
+                            <button onClick={() => handleDanRespond(task.id, 'approve')}
+                              className="bg-green text-white px-6 py-3 text-xs font-bold uppercase tracking-widest hover:bg-green-light transition-colors">
+                              Approve &amp; Complete
+                            </button>
+                            <button onClick={() => handleDanRespond(task.id, 'revise')}
+                              className="bg-orange text-white px-6 py-3 text-xs font-bold uppercase tracking-widest hover:bg-red transition-colors">
+                              Send Back with Feedback
+                            </button>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex gap-1 shrink-0">
-                        <button onClick={() => handleEventTaskReview(task.id, 'approve')}
-                          className="text-[10px] font-bold uppercase tracking-widest text-green bg-green/10 px-2 py-1 hover:bg-green/20 transition-colors">
-                          Done
-                        </button>
-                        <button onClick={() => handleEventTaskReview(task.id, 'revise')}
-                          className="text-[10px] font-bold uppercase tracking-widest text-orange bg-orange/10 px-2 py-1 hover:bg-orange/20 transition-colors">
-                          Revise
-                        </button>
-                      </div>
+                    )}
+                  </div>
+                )
+              })}
+
+              {/* Event tasks in review */}
+              {reviewEventTasks.map((task) => (
+                <div key={task.id} className="border-t-2 border-black/10 px-6 py-5 flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-base font-bold">{task.event_title} &mdash; {task.title}</p>
+                    <div className="flex items-center gap-3 mt-1.5">
+                      {task.assignee && <span className="text-xs font-bold text-blue uppercase tracking-wider">{task.assignee}</span>}
+                      <span className="text-xs text-muted uppercase tracking-wider">{task.category}</span>
+                      {task.event_id && <a href={`/events/${task.event_id}`} className="text-xs font-bold text-blue uppercase tracking-widest hover:text-red">View Event &rarr;</a>}
                     </div>
                   </div>
-                ))}
-              </div>
+                  <div className="flex gap-2 shrink-0">
+                    <button onClick={() => handleEventTaskAction(task.id, 'approve')}
+                      className="text-xs font-bold uppercase tracking-widest text-green bg-green/10 px-3 py-2 hover:bg-green/20 transition-colors">
+                      Done
+                    </button>
+                    <button onClick={() => handleEventTaskAction(task.id, 'revise')}
+                      className="text-xs font-bold uppercase tracking-widest text-orange bg-orange/10 px-3 py-2 hover:bg-orange/20 transition-colors">
+                      Revise
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
-      )}
-
-      {/* Task list by person */}
-      {viewMode === 'team' && (
-      sortedPeople.length === 0 ? (
-        <p className="text-muted text-center py-12 uppercase tracking-widest text-xs font-bold">No assigned tasks found.</p>
-      ) : (
-        <div className="space-y-6">
-          {sortedPeople.map(([person, personTasks]) => {
-            const active = personTasks.filter((t) => t.status !== 'complete').length
-            const done = personTasks.filter((t) => t.status === 'complete').length
-
-            return (
-              <div key={person}>
-                <div className="bg-blue text-white px-6 py-3 flex items-center justify-between">
-                  <h2 className="text-sm font-bold tracking-widest uppercase">{person}</h2>
-                  <span className="text-xs font-bold tracking-wider opacity-70">
-                    {active} active{done > 0 ? ` · ${done} done` : ''}
-                  </span>
-                </div>
-
-                <div className="border-l-2 border-r-2 border-b-2 border-black/10">
-                  {personTasks.map((task, i) => (
-                    <div key={task.id} className={`px-5 py-3 flex items-start justify-between gap-4 hover:bg-cream-dark transition-colors ${i > 0 ? 'border-t border-black/5' : ''}`}>
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-bold leading-tight ${task.status === 'complete' ? 'line-through text-muted' : ''}`}>
-                          {task.title}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <span className="text-[10px] text-muted uppercase tracking-wider">{task.category}</span>
-                          {task.event_title && (
-                            <a href={`/events/${task.event_id}`} className="text-[10px] font-bold text-blue uppercase tracking-wider hover:text-red transition-colors">
-                              {task.event_title}
-                            </a>
-                          )}
-                          {task.deadline && (
-                            <span className="text-[10px] font-bold text-red uppercase tracking-wider">
-                              Due {task.deadline}
-                            </span>
-                          )}
-                          {task.assigned_at && (
-                            <span className="text-[10px] text-muted uppercase tracking-wider">
-                              Assigned {new Date(task.assigned_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                            </span>
-                          )}
-                        </div>
-                        {task.notes && <p className="text-xs text-muted italic mt-1">{task.notes}</p>}
-                      </div>
-
-                      <button
-                        onClick={() => handleStatusCycle(task.id)}
-                        disabled={!displayName}
-                        className={`shrink-0 px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase cursor-pointer transition-all disabled:opacity-40 ${statusColors[task.status]}`}
-                      >
-                        {statusLabels[task.status]}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      ))}
+      </div>
     </div>
   )
 }
