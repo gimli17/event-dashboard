@@ -50,6 +50,11 @@ export function TeamView() {
   const [updateText, setUpdateText] = useState('')
   const [feedbackText, setFeedbackText] = useState('')
   const [newCheckItem, setNewCheckItem] = useState('')
+  const [showNewTask, setShowNewTask] = useState(false)
+  const [newTitle, setNewTitle] = useState('')
+  const [newAssignee, setNewAssignee] = useState('')
+  const [newPriority, setNewPriority] = useState('high')
+  const [newDeadline, setNewDeadline] = useState('')
   const [editingCheckItem, setEditingCheckItem] = useState<string | null>(null)
   const [editCheckText, setEditCheckText] = useState('')
 
@@ -94,6 +99,40 @@ export function TeamView() {
   }, [])
 
   // Handlers
+  const handleCreateTask = async () => {
+    if (!newTitle.trim()) return
+    const taskId = `mt-${Date.now()}`
+    const task: MasterTaskFull = {
+      id: taskId,
+      title: newTitle.trim(),
+      assignee: newAssignee || null,
+      priority: newPriority,
+      status: 'not-started',
+      deadline: newDeadline || null,
+      links: null,
+      current_status: null,
+      overview: null,
+      action_items: null,
+      dan_comments: null,
+      update_to_dan: null,
+      dan_feedback: null,
+      dan_checklist: [],
+    }
+    setAllMasterTasks((prev) => [task, ...prev])
+    setShowNewTask(false)
+    setNewTitle('')
+    setNewAssignee('')
+    setNewPriority('high')
+    setNewDeadline('')
+
+    await supabase.from('master_tasks').insert({
+      ...task,
+      sort_order: 0,
+      event_id: null,
+      week_of: null,
+    } as never)
+  }
+
   const handleSaveUpdate = async (taskId: string) => {
     setAllMasterTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, update_to_dan: updateText } : t)))
     await supabase.from('master_tasks').update({ update_to_dan: updateText, updated_at: new Date().toISOString() } as never).eq('id', taskId)
@@ -383,10 +422,47 @@ export function TeamView() {
               {/* Dan's Dashboard */}
               <div className="bg-purple text-white px-6 py-5 flex items-center justify-between">
                 <h2 className="text-lg font-bold tracking-widest uppercase">Dan&apos;s Dashboard</h2>
-                <span className="text-sm font-bold tracking-wider opacity-70">{totalReview} item{totalReview !== 1 ? 's' : ''} for review</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-bold tracking-wider opacity-70">{totalReview} for review</span>
+                  <button onClick={() => setShowNewTask(!showNewTask)}
+                    className={`px-4 py-2 text-xs font-bold uppercase tracking-widest transition-colors ${showNewTask ? 'bg-white text-purple' : 'bg-white/20 text-white hover:bg-white/30'}`}>
+                    {showNewTask ? 'Cancel' : '+ New Task'}
+                  </button>
+                </div>
               </div>
 
-              {totalReview === 0 ? (
+              {/* New task form */}
+              {showNewTask && (
+                <div className="border-l-2 border-r-2 border-b-2 border-purple/20 bg-white px-6 py-5 space-y-3">
+                  <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && newTitle.trim()) handleCreateTask() }}
+                    placeholder="WHAT NEEDS TO BE DONE..."
+                    autoFocus
+                    className="w-full border-2 border-black bg-white px-4 py-3 text-sm font-bold text-black placeholder:text-muted/40 focus:outline-none focus:border-purple" />
+                  <div className="flex gap-3 flex-wrap">
+                    <select value={newAssignee} onChange={(e) => setNewAssignee(e.target.value)}
+                      className="border-2 border-black/20 bg-white px-3 py-2 text-xs font-bold uppercase tracking-widest focus:outline-none focus:border-black">
+                      <option value="">Unassigned</option>
+                      {allTeamMembers.map((n) => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                    <select value={newPriority} onChange={(e) => setNewPriority(e.target.value)}
+                      className="border-2 border-black/20 bg-white px-3 py-2 text-xs font-bold uppercase tracking-widest focus:outline-none focus:border-black">
+                      <option value="ultra-high">Very High</option>
+                      <option value="high">High</option>
+                      <option value="medium">Medium</option>
+                      <option value="backlog">Backlog</option>
+                    </select>
+                    <input type="date" value={newDeadline} onChange={(e) => setNewDeadline(e.target.value)}
+                      className="border-2 border-black/20 bg-white px-3 py-2 text-xs font-bold uppercase tracking-widest focus:outline-none focus:border-black cursor-pointer" />
+                    <button onClick={handleCreateTask} disabled={!newTitle.trim()}
+                      className="bg-purple text-white px-6 py-2 text-xs font-bold uppercase tracking-widest hover:bg-purple-light transition-colors disabled:opacity-40">
+                      Create &amp; Assign
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {totalReview === 0 && !showNewTask ? (
                 <div className="border-l-2 border-r-2 border-b-2 border-black/10 px-8 py-20 text-center">
                   <p className="text-lg font-bold text-muted mb-2">All clear</p>
                   <p className="text-sm text-muted">No items awaiting review right now.</p>
