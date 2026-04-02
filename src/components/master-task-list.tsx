@@ -279,7 +279,7 @@ export function MasterTaskList() {
       </div>
 
       {/* Tasks grouped by priority */}
-      {Object.keys(grouped).length === 0 ? (
+      {viewMode === 'completed' ? null : Object.keys(grouped).length === 0 ? (
         <p className="text-muted text-center py-12 uppercase tracking-widest text-xs font-bold">No tasks match this filter.</p>
       ) : (
         <div className="space-y-0">
