@@ -54,39 +54,24 @@ export default async function HubPage() {
       </section>
 
       <section className="bg-cream flex-1">
-        <div className="max-w-6xl mx-auto px-6 py-12 space-y-10">
-
-          {/* Row 1: Task Managers */}
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted mb-3">Task Management</p>
-            <div className="grid grid-cols-2 gap-4">
-              <Tile title="Master Tasks" description="All BRMF priorities — ultra-high to backlog — with owners and Dan's comments" href="/tasks" color="bg-red" />
-              <Tile title="Event Schedule" description="Full festival timeline — Wed through Sun with task tracking per event" href="/schedule" color="bg-blue" />
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="flex gap-3 items-stretch">
+            {/* Task Management */}
+            <div className="flex gap-3 flex-1 border-r-2 border-black/10 pr-3">
+              <div className="flex-1"><Tile title="Master Tasks" href="/tasks" color="bg-red" label="Tasks" /></div>
+              <div className="flex-1"><Tile title="Event Schedule" href="/schedule" color="bg-blue" label="Schedule" /></div>
+            </div>
+            {/* Program Details */}
+            <div className="flex gap-3 flex-1 border-r-2 border-black/10 pr-3">
+              <div className="flex-1"><Tile title="Bold Conversations" href="/bold-conversations" color="bg-green" label="Topics" /></div>
+              <div className="flex-1"><Tile title="Private Parties" href="/private-parties" color="bg-gold" label="Sponsors" /></div>
+            </div>
+            {/* External */}
+            <div className="flex gap-3 flex-1">
+              <div className="flex-1"><Tile title="Sponsor Portal" href="https://brmf-sponsor-portal.vercel.app/" color="bg-orange" external label="External" /></div>
+              <div className="flex-1"><Tile title="Ticket Tracker" href="https://boulderrootstickettracker.vercel.app/" color="bg-black" external label="External" /></div>
             </div>
           </div>
-
-          <div className="h-px bg-black/10" />
-
-          {/* Row 2: Sub-activities */}
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted mb-3">Program Details</p>
-            <div className="grid grid-cols-2 gap-4">
-              <Tile title="Bold Conversations" description="18 topics across 3 tracks — founder interest signals and session planning" href="/bold-conversations" color="bg-green" />
-              <Tile title="Private Parties" description="9 sponsor event slots across Fri–Sun — claimed vs. open, task progress" href="/private-parties" color="bg-gold" />
-            </div>
-          </div>
-
-          <div className="h-px bg-black/10" />
-
-          {/* Row 3: External links */}
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted mb-3">External Tools</p>
-            <div className="grid grid-cols-2 gap-4">
-              <Tile title="Sponsor Portal" description="Manage sponsors, tiers, packages, and event selections" href="https://brmf-sponsor-portal.vercel.app/" color="bg-orange" external />
-              <Tile title="Ticket Tracker" description="Live Eventbrite ticket sales, revenue, and capacity tracking" href="https://boulderrootstickettracker.vercel.app/" color="bg-black" external />
-            </div>
-          </div>
-
         </div>
       </section>
 
@@ -99,23 +84,22 @@ export default async function HubPage() {
   )
 }
 
-function Tile({ title, description, href, color, external }: {
+function Tile({ title, href, color, external, label }: {
   title: string
-  description: string
   href: string
   color: string
   external?: boolean
+  label?: string
 }) {
   const inner = (
     <div className="group h-full">
-      <div className={`${color} text-white px-6 py-4 flex items-center justify-between`}>
-        <h2 className="text-sm font-bold tracking-widest uppercase">{title}</h2>
-        {external && (
-          <span className="text-[9px] font-bold tracking-widest uppercase opacity-50">External &nearr;</span>
-        )}
+      <div className={`${color} text-white px-4 py-3`}>
+        <h2 className="text-xs font-bold tracking-widest uppercase leading-tight">{title}</h2>
       </div>
-      <div className="border-l-2 border-r-2 border-b-2 border-black/10 px-6 py-5 bg-white group-hover:bg-cream-dark transition-colors">
-        <p className="text-sm text-muted leading-relaxed">{description}</p>
+      <div className="border-l-2 border-r-2 border-b-2 border-black/10 px-4 py-2.5 bg-white group-hover:bg-cream-dark transition-colors">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-muted">
+          {external ? 'External \u2197' : label || 'View'}
+        </p>
       </div>
     </div>
   )
