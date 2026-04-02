@@ -34,8 +34,8 @@ interface TeamMember {
 
 const allTeamMembers = ['Cody', 'Sabrina', 'Joe', 'Danny', 'Connor', 'Gib', 'Emily', 'Kendall', 'Alex', 'Liam', 'Dave', 'Tom', 'Kevin']
 
-const priorityLabels: Record<string, string> = { 'ultra-high': 'VERY HIGH', high: 'HIGH', medium: 'MEDIUM', backlog: 'BACKLOG' }
-const priorityColors: Record<string, string> = { 'ultra-high': 'bg-red text-white', high: 'bg-orange text-white', medium: 'bg-gold text-white', backlog: 'bg-black/20 text-black' }
+const priorityLabels: Record<string, string> = { 'ultra-high': 'VERY HIGH', high: 'HIGH', medium: 'MEDIUM', low: 'LOW', backlog: 'BACKLOG' }
+const priorityColors: Record<string, string> = { 'ultra-high': 'bg-red text-white', high: 'bg-orange text-white', medium: 'bg-gold text-white', low: 'bg-blue text-white', backlog: 'bg-black/20 text-black' }
 
 export function TeamView() {
   const { displayName } = useUser()
@@ -366,10 +366,10 @@ export function TeamView() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold uppercase tracking-widest text-muted">Priority:</span>
-                {['ultra-high', 'high', 'medium', 'backlog'].map((p) => (
+                {['ultra-high', 'high', 'medium', 'low', 'backlog'].map((p) => (
                   <button key={p} onClick={() => handleDanPriority(task.id, p)}
                     className={`px-3 py-1.5 text-xs font-bold tracking-widest uppercase transition-all ${task.priority === p ? priorityColors[p] : 'bg-black/5 text-muted/40 hover:text-muted'}`}>
-                    {p === 'ultra-high' ? 'VERY' : p.toUpperCase()}
+                    {p === 'ultra-high' ? 'VERY HIGH' : p.toUpperCase()}
                   </button>
                 ))}
               </div>
@@ -513,6 +513,7 @@ export function TeamView() {
                       <option value="ultra-high">Very High</option>
                       <option value="high">High</option>
                       <option value="medium">Medium</option>
+                      <option value="low">Low</option>
                       <option value="backlog">Backlog</option>
                     </select>
                     <input type="date" value={newDeadline} onChange={(e) => setNewDeadline(e.target.value)}

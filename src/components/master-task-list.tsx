@@ -68,12 +68,13 @@ interface EventTaskRow {
   priority: string | null
 }
 
-const priorityOrder = ['ultra-high', 'high', 'medium', 'backlog']
+const priorityOrder = ['ultra-high', 'high', 'medium', 'low', 'backlog']
 
 const priorityColors: Record<string, string> = {
   'ultra-high': 'bg-red text-white',
   high: 'bg-orange text-white',
   medium: 'bg-gold text-white',
+  low: 'bg-blue text-white',
   backlog: 'bg-black/20 text-black',
 }
 
@@ -81,13 +82,15 @@ const priorityLabels: Record<string, string> = {
   'ultra-high': 'VERY HIGH PRIORITY',
   high: 'HIGH PRIORITY',
   medium: 'MEDIUM PRIORITY',
+  low: 'LOW PRIORITY',
   backlog: 'BACKLOG — DEPRIORITIZED',
 }
 
 const priorityDeadlines: Record<string, string> = {
-  'ultra-high': 'Deadline 4/1',
-  high: 'Deadline 4/3',
-  medium: 'Deadline 4/6',
+  'ultra-high': '',
+  high: '',
+  medium: '',
+  low: '',
   backlog: '',
 }
 
@@ -446,7 +449,7 @@ export function MasterTaskList() {
       } else if (deadline <= nextSunday) {
         autoPriority = 'medium' // Late next week
       } else {
-        autoPriority = 'backlog' // Beyond next week
+        autoPriority = 'low' // Beyond next week
       }
     }
 
@@ -603,7 +606,7 @@ export function MasterTaskList() {
             </select>
             <select value={newTaskPriority} onChange={(e) => setNewTaskPriority(e.target.value)}
               className="border-2 border-black/20 bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black">
-              {priorityOrder.map((p) => <option key={p} value={p}>{p === 'ultra-high' ? 'Very High' : p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
+              {priorityOrder.map((p) => <option key={p} value={p}>{p === 'ultra-high' ? 'Very High' : p === 'backlog' ? 'Backlog' : p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
             </select>
             <input type="date" value={newTaskDeadline} onChange={(e) => {
               setNewTaskDeadline(e.target.value)
@@ -692,6 +695,11 @@ export function MasterTaskList() {
                               <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                                 {task.assignee && <span className="text-[10px] font-bold text-blue uppercase tracking-wider">{task.assignee}</span>}
                                 {!task.assignee && <span className="text-[10px] text-muted/40 uppercase tracking-wider">Unassigned</span>}
+                                {task.event_id && ep && (
+                                  <a href={`/events/${task.event_id}`} className="text-[10px] font-bold text-teal uppercase tracking-wider hover:text-red transition-colors">
+                                    Event: {ep.done}/{ep.total} &rarr;
+                                  </a>
+                                )}
                                 {task.deadline && (
                                   <span className="text-[10px] font-bold text-red uppercase tracking-wider">
                                     Due {new Date(task.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -883,7 +891,7 @@ export function MasterTaskList() {
                               {priorityOrder.map((p) => (
                                 <button key={p} onClick={() => handlePriorityChange(task, p)}
                                   className={`px-2 py-1 text-[9px] font-bold tracking-widest uppercase transition-all ${task.priority === p ? priorityColors[p] : 'bg-black/5 text-muted/40 hover:text-muted'}`}>
-                                  {p === 'ultra-high' ? 'VERY' : p.toUpperCase()}
+                                  {p === 'ultra-high' ? 'VERY HIGH' : p.toUpperCase()}
                                 </button>
                               ))}
                             </div>
@@ -968,57 +976,6 @@ export function MasterTaskList() {
         </DndContext>
       )}
 
-      {/* Founders Experience Events — every event task as a flat row */}
-      {viewMode === 'all' && eventTaskRows.length > 0 && (
-        <div className="mt-6">
-          <div className="bg-blue text-white px-6 py-4 flex items-center justify-between">
-            <h2 className="text-sm font-bold tracking-widest uppercase">
-              Founders Experience Events
-            </h2>
-            <span className="text-xs font-bold tracking-wider opacity-70">
-              {eventTaskRows.length} TASKS
-            </span>
-          </div>
-
-          <div className="border-l-2 border-r-2 border-b-2 border-black/10">
-            {eventTaskRows.map((row, i) => (
-              <div key={row.id} className={`px-5 py-3 flex items-start justify-between gap-4 hover:bg-cream-dark transition-colors ${i > 0 ? 'border-t border-black/5' : ''}`}>
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-bold leading-tight ${row.status === 'complete' ? 'line-through text-muted' : ''}`}>
-                    {row.event_title} — {row.title}
-                  </p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] text-muted uppercase tracking-wider">{row.category}</span>
-                    {row.assignee && <span className="text-[10px] font-bold text-blue uppercase tracking-wider">{row.assignee}</span>}
-                    <a href={`/events/${row.event_id}`} className="text-[10px] font-bold text-blue uppercase tracking-widest hover:text-red transition-colors">
-                      View Event &rarr;
-                    </a>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <button
-                    onClick={() => handleEventTaskPriority(row.id)}
-                    className={`px-2 py-1 text-[9px] font-bold tracking-widest uppercase cursor-pointer ${
-                      row.priority === 'high' ? 'text-red bg-red/10' : row.priority === 'medium' ? 'text-gold bg-gold/10' : 'text-muted bg-black/5'
-                    }`}
-                    title="Click to change priority"
-                  >
-                    {row.priority === 'high' ? 'HIGH' : row.priority === 'medium' ? 'MED' : 'LOW'}
-                  </button>
-                  <button
-                    onClick={() => handleEventTaskStatus(row.id)}
-                    className={`px-2 py-1 text-[9px] font-bold tracking-widest uppercase cursor-pointer ${statusColors[row.status]}`}
-                    title="Click to change status"
-                  >
-                    {statusLabels[row.status]}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Weekly Report — completed tasks */}
       {viewMode === 'completed' && (

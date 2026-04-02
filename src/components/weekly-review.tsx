@@ -19,6 +19,7 @@ const priorityLabels: Record<string, string> = {
   'ultra-high': 'VERY HIGH',
   high: 'HIGH',
   medium: 'MEDIUM',
+  low: 'LOW',
   backlog: 'BACKLOG',
 }
 
@@ -26,6 +27,7 @@ const priorityColors: Record<string, string> = {
   'ultra-high': 'bg-red text-white',
   high: 'bg-orange text-white',
   medium: 'bg-gold text-white',
+  low: 'bg-blue text-white',
   backlog: 'bg-black/20 text-black',
 }
 

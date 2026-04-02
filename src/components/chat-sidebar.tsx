@@ -563,6 +563,7 @@ export function ChatSidebar() {
                   <option value="ultra-high">Very High</option>
                   <option value="high">High</option>
                   <option value="medium">Medium</option>
+                  <option value="low">Low</option>
                   <option value="backlog">Backlog</option>
                 </select>
               </div>
