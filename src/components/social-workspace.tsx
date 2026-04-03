@@ -26,7 +26,17 @@ interface SocialPost {
   created_at: string
 }
 
-type View = 'dashboard' | 'compose' | 'library' | 'post-detail'
+type View = 'dashboard' | 'compose' | 'library' | 'post-detail' | 'content'
+
+interface DriveFile {
+  id: string
+  name: string
+  mimeType: string
+  thumbnailLink: string | null
+  webViewLink: string | null
+  size: string | null
+  folder: string
+}
 
 const platformColors: Record<string, string> = {
   instagram: 'bg-pink-500', linkedin: 'bg-blue', tiktok: 'bg-black', all: 'bg-muted',
@@ -64,6 +74,9 @@ export function SocialWorkspace() {
   const [saving, setSaving] = useState(false)
   const [aiPrompt, setAiPrompt] = useState('')
   const [aiGenerating, setAiGenerating] = useState(false)
+  const [driveFiles, setDriveFiles] = useState<DriveFile[]>([])
+  const [selectedMedia, setSelectedMedia] = useState<DriveFile | null>(null)
+  const [loadingDrive, setLoadingDrive] = useState(false)
   const [aiRecommendations, setAiRecommendations] = useState<{
     timing?: string; audience?: string; boosting?: string; creative_direction?: string; variations?: string
   } | null>(null)
@@ -171,6 +184,7 @@ export function SocialWorkspace() {
             { id: 'dashboard' as View, label: 'Dashboard', icon: '📊' },
             { id: 'compose' as View, label: 'Compose', icon: '✍️' },
             { id: 'library' as View, label: 'Post Log', icon: '📋' },
+            { id: 'content' as View, label: 'Content', icon: '🖼️' },
           ].map(item => (
             <button key={item.id} onClick={() => { setView(item.id); setSelectedPost(null) }}
               className={`w-full text-left px-3 py-2.5 text-sm font-bold flex items-center gap-2 transition-colors rounded ${view === item.id ? 'bg-amber-200 text-amber-900' : 'text-amber-700 hover:bg-amber-100'}`}>
@@ -544,6 +558,96 @@ export function SocialWorkspace() {
               <div className="bg-white border-2 border-black/10 p-6">
                 <p className="text-sm font-bold uppercase tracking-widest text-muted mb-2">Internal Notes</p>
                 <p className="text-sm text-muted">{selectedPost.notes}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── CONTENT LIBRARY ── */}
+        {view === 'content' && (
+          <div className="p-8">
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-2xl font-bold uppercase tracking-tight">Content Library</h1>
+              <button onClick={async () => {
+                setLoadingDrive(true)
+                const res = await fetch('/api/drive-content')
+                const data = await res.json()
+                if (data.files) setDriveFiles(data.files)
+                setLoadingDrive(false)
+              }} className="bg-blue text-white px-6 py-2.5 text-xs font-bold uppercase tracking-widest hover:bg-blue-light transition-colors">
+                {loadingDrive ? 'Loading...' : 'Refresh from Drive'}
+              </button>
+            </div>
+
+            {driveFiles.length === 0 && !loadingDrive && (
+              <div className="text-center py-16">
+                <p className="text-muted text-sm mb-2">No content loaded yet.</p>
+                <p className="text-xs text-muted">Click &quot;Refresh from Drive&quot; to load content from Google Drive.</p>
+              </div>
+            )}
+
+            {loadingDrive && <p className="text-center text-muted py-16 text-sm">Loading content from Google Drive...</p>}
+
+            {/* Group by folder */}
+            {!loadingDrive && driveFiles.length > 0 && (() => {
+              const folders = [...new Set(driveFiles.map(f => f.folder))]
+              return (
+                <div className="space-y-8">
+                  {folders.map(folder => (
+                    <div key={folder}>
+                      <h2 className="text-sm font-bold uppercase tracking-widest text-muted mb-3">{folder}</h2>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {driveFiles.filter(f => f.folder === folder).map(file => (
+                          <div key={file.id}
+                            onClick={() => setSelectedMedia(selectedMedia?.id === file.id ? null : file)}
+                            className={`bg-white border-2 cursor-pointer transition-all overflow-hidden ${selectedMedia?.id === file.id ? 'border-blue shadow-lg' : 'border-black/10 hover:border-black/20'}`}>
+                            {/* Thumbnail */}
+                            <div className="aspect-square bg-black/5 flex items-center justify-center overflow-hidden">
+                              {file.thumbnailLink ? (
+                                <img src={file.thumbnailLink} alt={file.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="text-3xl">{file.mimeType.startsWith('video') ? '🎬' : '🖼️'}</span>
+                              )}
+                            </div>
+                            <div className="p-3">
+                              <p className="text-xs font-bold truncate">{file.name}</p>
+                              <div className="flex items-center justify-between mt-1">
+                                <span className="text-[9px] text-muted uppercase">{file.mimeType.startsWith('video') ? 'Video' : 'Image'}</span>
+                                {file.size && <span className="text-[9px] text-muted">{(parseInt(file.size) / 1024 / 1024).toFixed(1)}MB</span>}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
+
+            {/* Selected media detail */}
+            {selectedMedia && (
+              <div className="fixed bottom-0 left-56 right-0 bg-white border-t-4 border-blue p-4 shadow-lg z-50 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">{selectedMedia.mimeType.startsWith('video') ? '🎬' : '🖼️'}</span>
+                  <div>
+                    <p className="text-sm font-bold">{selectedMedia.name}</p>
+                    <p className="text-xs text-muted">{selectedMedia.folder}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <a href={selectedMedia.webViewLink || '#'} target="_blank" rel="noopener noreferrer"
+                    className="bg-blue text-white px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-blue-light transition-colors">
+                    Open in Drive
+                  </a>
+                  <button onClick={() => {
+                    setCompLinks(prev => prev ? prev + '\n' + selectedMedia.webViewLink : selectedMedia.webViewLink || '')
+                    setSelectedMedia(null)
+                    setView('compose')
+                  }} className="bg-green text-white px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-green-light transition-colors">
+                    Use in Post
+                  </button>
+                </div>
               </div>
             )}
           </div>
