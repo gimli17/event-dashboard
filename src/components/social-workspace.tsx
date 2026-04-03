@@ -325,46 +325,10 @@ export function SocialWorkspace() {
                 <p className="text-[9px] text-muted mt-1">AI will draft copy, hashtags, and posting recommendations</p>
               </div>
 
-              {/* AI Recommendations */}
-              {aiRecommendations && (
-                <div className="grid grid-cols-2 gap-3">
-                  {aiRecommendations.timing && (
-                    <div className="bg-blue/5 border border-blue/20 p-3">
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-blue mb-1">Timing</p>
-                      <p className="text-xs leading-relaxed">{aiRecommendations.timing}</p>
-                    </div>
-                  )}
-                  {aiRecommendations.audience && (
-                    <div className="bg-green/5 border border-green/20 p-3">
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-green mb-1">Target Audience</p>
-                      <p className="text-xs leading-relaxed">{aiRecommendations.audience}</p>
-                    </div>
-                  )}
-                  {aiRecommendations.boosting && (
-                    <div className="bg-orange/5 border border-orange/20 p-3">
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-orange mb-1">Boosting</p>
-                      <p className="text-xs leading-relaxed">{aiRecommendations.boosting}</p>
-                    </div>
-                  )}
-                  {aiRecommendations.creative_direction && (
-                    <div className="bg-purple/5 border border-purple/20 p-3">
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-purple mb-1">Creative Direction</p>
-                      <p className="text-xs leading-relaxed">{aiRecommendations.creative_direction}</p>
-                    </div>
-                  )}
-                  {aiRecommendations.variations && (
-                    <div className="col-span-2 bg-gold/5 border border-gold/20 p-3">
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-gold mb-1">Alternative Version</p>
-                      <p className="text-xs leading-relaxed whitespace-pre-wrap">{aiRecommendations.variations}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Post Copy</label>
                 <textarea value={compCopy} onChange={(e) => setCompCopy(e.target.value)}
-                  placeholder="Write your post copy..."
+                  placeholder="Write your post copy or use the AI assistant above to generate a draft..."
                   rows={6}
                   style={{ resize: 'vertical', minHeight: '150px' }}
                   className="w-full border-2 border-black/20 bg-white px-4 py-3 text-sm leading-relaxed focus:outline-none focus:border-blue placeholder:text-muted/30" />
@@ -376,6 +340,45 @@ export function SocialWorkspace() {
                   placeholder="#BoulderRoots #MusicFest #Boulder2026"
                   className="w-full border-2 border-black/20 bg-white px-4 py-2.5 text-sm focus:outline-none focus:border-blue placeholder:text-muted/30" />
               </div>
+
+              {/* AI Recommendations */}
+              {aiRecommendations && (
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-3">AI Recommendations</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {aiRecommendations.timing && (
+                      <div className="bg-blue/5 border border-blue/20 p-4">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-blue mb-1.5">Timing</p>
+                        <p className="text-sm leading-relaxed">{aiRecommendations.timing}</p>
+                      </div>
+                    )}
+                    {aiRecommendations.audience && (
+                      <div className="bg-green/5 border border-green/20 p-4">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-green mb-1.5">Target Audience</p>
+                        <p className="text-sm leading-relaxed">{aiRecommendations.audience}</p>
+                      </div>
+                    )}
+                    {aiRecommendations.boosting && (
+                      <div className="bg-orange/5 border border-orange/20 p-4">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-orange mb-1.5">Boosting</p>
+                        <p className="text-sm leading-relaxed">{aiRecommendations.boosting}</p>
+                      </div>
+                    )}
+                    {aiRecommendations.creative_direction && (
+                      <div className="bg-purple/5 border border-purple/20 p-4">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-purple mb-1.5">Creative Direction</p>
+                        <p className="text-sm leading-relaxed">{aiRecommendations.creative_direction}</p>
+                      </div>
+                    )}
+                    {aiRecommendations.variations && (
+                      <div className="col-span-2 bg-gold/5 border border-gold/20 p-4">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-gold mb-1.5">Alternative Version</p>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{aiRecommendations.variations}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Content Links (images, videos, assets)</label>

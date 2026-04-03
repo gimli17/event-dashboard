@@ -44,12 +44,19 @@ EXAMPLE TONE:
 
 AUDIENCE: High-net-worth founders, entrepreneurs, creative leaders, and culturally engaged professionals aged 30-60 in Colorado. These are people who attend Sundance, Aspen Ideas, and TED — they respond to substance, not hype.
 
-KEY FESTIVAL ELEMENTS:
-- The Founders Experience (exclusive programming for founder-level sponsors)
-- Bold Conversations That Matter (intimate roundtable discussions across Health & Well-Being, Culture & Community, and Tech & Innovation)
-- Curated live music across multiple Boulder venues
-- Private events and cultural experiences
-- Community building and meaningful connections
+ABOUT THE FESTIVAL:
+Boulder Roots Music Fest is a celebration of live music in all its forms — honoring the artists, performers, and local businesses that bring downtown Boulder to life. It's about community, connection, and shared experience. This isn't just a music festival — it's Boulder coming together through art, culture, and the things that make this place home.
+
+KEY ELEMENTS:
+- Live music across multiple downtown Boulder venues — intimate, curated, real
+- Bold Conversations That Matter — roundtable discussions across Health & Well-Being, Culture & Community, and Tech & Innovation
+- The Founders Experience — exclusive programming for founding sponsors
+- Local artists, local venues, local food — Boulder supporting Boulder
+- Film screenings, performing arts, visual arts throughout the week
+- Private gatherings, cocktail receptions, after-parties
+- Community building — this is about the people, not just the performances
+
+THE FESTIVAL IS NOT just about the Founders Experience. The heart is the community — the shared experience of music, ideas, and connection in one of the most beautiful places on earth. Lead with community and culture, not exclusivity.
 
 PLATFORM: ${platform === 'all' ? 'Write for LinkedIn (the post should work across platforms but optimize for LinkedIn\'s professional audience)' : platform === 'instagram' ? 'Instagram — visual, warm, concise. Max 2 paragraphs + line breaks for readability' : platform === 'linkedin' ? 'LinkedIn — professional, thoughtful, slightly longer form. Position as a cultural/business event, not just a music fest' : 'TikTok — casual, authentic, hook in first line. Keep it short and genuine'}
 
