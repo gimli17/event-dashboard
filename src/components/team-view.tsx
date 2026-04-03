@@ -729,11 +729,12 @@ export function TeamView() {
                                 <input type="text" value={titleEditValue}
                                   onChange={(e) => setTitleEditValue(e.target.value)}
                                   onBlur={() => handleTitleSave(task.id)}
+                                  onClick={(e) => e.stopPropagation()}
                                   onKeyDown={(e) => { if (e.key === 'Enter') handleTitleSave(task.id); if (e.key === 'Escape') setEditingTaskTitle(null) }}
                                   autoFocus
-                                  className="text-lg font-bold w-full border-2 border-black bg-white px-2 py-1 focus:outline-none focus:border-blue" />
+                                  className="text-lg font-bold w-full border-2 border-black bg-white px-3 py-2 focus:outline-none focus:border-blue min-h-[44px]" />
                               ) : (
-                                <h3 className="text-lg font-bold cursor-pointer hover:text-blue transition-colors"
+                                <h3 className="text-lg font-bold cursor-pointer hover:text-blue transition-colors min-h-[44px] flex items-center"
                                   onClick={(e) => { e.stopPropagation(); setEditingTaskTitle(task.id); setTitleEditValue(task.title) }}
                                   title="Click to edit title">{task.title}</h3>
                               )}
@@ -928,11 +929,12 @@ export function TeamView() {
                                 <input type="text" value={titleEditValue}
                                   onChange={(e) => setTitleEditValue(e.target.value)}
                                   onBlur={() => handleTitleSave(task.id)}
+                                  onClick={(e) => e.stopPropagation()}
                                   onKeyDown={(e) => { if (e.key === 'Enter') handleTitleSave(task.id); if (e.key === 'Escape') setEditingTaskTitle(null) }}
                                   autoFocus
-                                  className="text-lg font-bold w-full border-2 border-black bg-white px-2 py-1 focus:outline-none focus:border-blue" />
+                                  className="text-lg font-bold w-full border-2 border-black bg-white px-3 py-2 focus:outline-none focus:border-blue min-h-[44px]" />
                               ) : (
-                                <h3 className="text-lg font-bold cursor-pointer hover:text-blue transition-colors"
+                                <h3 className="text-lg font-bold cursor-pointer hover:text-blue transition-colors min-h-[44px] flex items-center"
                                   onClick={(e) => { e.stopPropagation(); setEditingTaskTitle(task.id); setTitleEditValue(task.title) }}
                                   title="Click to edit title">{task.title}</h3>
                               )}
