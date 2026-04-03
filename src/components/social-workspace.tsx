@@ -286,10 +286,12 @@ export function SocialWorkspace() {
 
         {/* ── COMPOSE ── */}
         {view === 'compose' && (
-          <div className="p-8 max-w-3xl">
+          <div className="p-8">
             <h1 className="text-2xl font-bold uppercase tracking-tight mb-6">Compose Post</h1>
 
-            <div className="space-y-5">
+            <div className="flex gap-8 items-start">
+            {/* Left — Editor */}
+            <div className="flex-1 min-w-0 space-y-5">
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Title / Campaign</label>
                 <input type="text" value={compTitle} onChange={(e) => setCompTitle(e.target.value)}
@@ -418,6 +420,105 @@ export function SocialWorkspace() {
                   Cancel
                 </button>
               </div>
+            </div>
+
+            {/* Right — Live Preview */}
+            <div className="w-96 shrink-0 sticky top-8">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-3">Preview</p>
+
+              {compPlatform === 'instagram' || compPlatform === 'all' ? (
+                <div className="bg-white border border-black/10 rounded-lg overflow-hidden mb-4 shadow-sm">
+                  {/* Instagram header */}
+                  <div className="flex items-center gap-2 px-3 py-2 border-b border-black/5">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple to-pink-500 flex items-center justify-center text-white text-[10px] font-bold">BR</div>
+                    <div>
+                      <p className="text-xs font-bold">boulderrootsmusicfest</p>
+                      <p className="text-[9px] text-muted">Boulder, Colorado</p>
+                    </div>
+                  </div>
+                  {/* Image area */}
+                  <div className="aspect-square bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center">
+                    {selectedMedia?.thumbnailLink ? (
+                      <img src={selectedMedia.thumbnailLink} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <p className="text-muted/30 text-sm">Add media from Content</p>
+                    )}
+                  </div>
+                  {/* Engagement icons */}
+                  <div className="px-3 py-2 flex gap-4">
+                    <span className="text-lg">♡</span>
+                    <span className="text-lg">💬</span>
+                    <span className="text-lg">↗</span>
+                  </div>
+                  {/* Caption */}
+                  <div className="px-3 pb-3">
+                    <p className="text-xs leading-relaxed">
+                      <span className="font-bold">boulderrootsmusicfest </span>
+                      {compCopy ? compCopy.substring(0, 150) + (compCopy.length > 150 ? '...' : '') : 'Your post copy will appear here...'}
+                    </p>
+                    {compHashtags && <p className="text-xs text-blue mt-1">{compHashtags}</p>}
+                  </div>
+                </div>
+              ) : null}
+
+              {compPlatform === 'linkedin' || compPlatform === 'all' ? (
+                <div className="bg-white border border-black/10 rounded-lg overflow-hidden mb-4 shadow-sm">
+                  {/* LinkedIn header */}
+                  <div className="flex items-center gap-2 px-4 py-3 border-b border-black/5">
+                    <div className="w-10 h-10 rounded-full bg-blue flex items-center justify-center text-white text-xs font-bold">BR</div>
+                    <div>
+                      <p className="text-sm font-bold">Boulder Roots Music Fest</p>
+                      <p className="text-[10px] text-muted">Music Festival &middot; Boulder, CO</p>
+                      <p className="text-[9px] text-muted">Just now &middot; 🌐</p>
+                    </div>
+                  </div>
+                  {/* Copy */}
+                  <div className="px-4 py-3">
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                      {compCopy || 'Your post copy will appear here...'}
+                    </p>
+                    {compHashtags && <p className="text-sm text-blue mt-2">{compHashtags}</p>}
+                  </div>
+                  {/* Image */}
+                  {selectedMedia?.thumbnailLink && (
+                    <div className="border-t border-black/5">
+                      <img src={selectedMedia.thumbnailLink} alt="" className="w-full" />
+                    </div>
+                  )}
+                  {/* Engagement */}
+                  <div className="px-4 py-2 border-t border-black/5 flex justify-between text-[10px] text-muted">
+                    <span>👍 Like</span><span>💬 Comment</span><span>↗ Repost</span><span>✉ Send</span>
+                  </div>
+                </div>
+              ) : null}
+
+              {compPlatform === 'tiktok' ? (
+                <div className="bg-black rounded-lg overflow-hidden mb-4 shadow-sm aspect-[9/16] max-h-[400px] flex flex-col justify-end relative">
+                  {selectedMedia?.thumbnailLink ? (
+                    <img src={selectedMedia.thumbnailLink} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60" />
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/80" />
+                  )}
+                  <div className="relative px-4 pb-4">
+                    <p className="text-white text-sm font-bold mb-1">@boulderrootsfest</p>
+                    <p className="text-white/90 text-xs leading-relaxed">
+                      {compCopy ? compCopy.substring(0, 100) + (compCopy.length > 100 ? '...' : '') : 'Your post copy...'}
+                    </p>
+                    {compHashtags && <p className="text-white/60 text-[10px] mt-1">{compHashtags}</p>}
+                  </div>
+                  {/* TikTok side icons */}
+                  <div className="absolute right-3 bottom-20 flex flex-col items-center gap-4">
+                    <div className="text-center"><span className="text-white text-lg">♡</span><p className="text-white text-[8px]">0</p></div>
+                    <div className="text-center"><span className="text-white text-lg">💬</span><p className="text-white text-[8px]">0</p></div>
+                    <div className="text-center"><span className="text-white text-lg">↗</span><p className="text-white text-[8px]">0</p></div>
+                  </div>
+                </div>
+              ) : null}
+
+              {!compCopy && !selectedMedia && (
+                <p className="text-xs text-muted text-center mt-4">Start typing or generate with AI to see a live preview</p>
+              )}
+            </div>
             </div>
           </div>
         )}
