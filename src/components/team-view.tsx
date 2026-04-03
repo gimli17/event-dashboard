@@ -312,14 +312,46 @@ export function TeamView() {
           <p className="text-sm font-bold uppercase tracking-widest text-purple mb-3">
             {isDanView ? `Update from ${task.assignee || 'Team'}` : 'Your Update for Dan'}
           </p>
-          <textarea
-            value={expandedTask === task.id ? updateText : (task.update_to_dan || '')}
-            onChange={(e) => setUpdateText(e.target.value)}
+          <div className="flex items-center gap-1 border-2 border-b-0 border-black/20 bg-cream-dark px-3 py-2">
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); document.getElementById(`editor-${task.id}`)?.focus(); setTimeout(() => document.execCommand('bold', false), 0) }}
+              className="px-2.5 py-1 text-sm font-bold hover:bg-black/10 transition-colors rounded" title="Bold"><strong>B</strong></button>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); document.getElementById(`editor-${task.id}`)?.focus(); setTimeout(() => document.execCommand('italic', false), 0) }}
+              className="px-2.5 py-1 text-sm italic hover:bg-black/10 transition-colors rounded" title="Italic"><em>I</em></button>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); document.getElementById(`editor-${task.id}`)?.focus(); setTimeout(() => document.execCommand('underline', false), 0) }}
+              className="px-2.5 py-1 text-sm underline hover:bg-black/10 transition-colors rounded" title="Underline">U</button>
+            <div className="w-px h-5 bg-black/10 mx-1" />
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); const el = document.getElementById(`editor-${task.id}`); if (el) { el.focus(); document.execCommand('insertHTML', false, '<br>&bull;&nbsp;') } }}
+              className="px-2.5 py-1 text-sm hover:bg-black/10 transition-colors rounded" title="Bullet">&bull;</button>
+            <button type="button" onMouseDown={(e) => { e.preventDefault(); const el = document.getElementById(`editor-${task.id}`); if (el) { el.focus(); document.execCommand('insertHTML', false, '<br>&mdash;&nbsp;') } }}
+              className="px-2.5 py-1 text-sm hover:bg-black/10 transition-colors rounded" title="Dash">&mdash;</button>
+          </div>
+          <div
+            id={`editor-${task.id}`}
+            contentEditable
+            suppressContentEditableWarning
+            dangerouslySetInnerHTML={{ __html: expandedTask === task.id ? updateText : (task.update_to_dan || '') }}
+            onInput={(e) => setUpdateText(e.currentTarget.innerHTML)}
             onBlur={() => handleSaveUpdate(task.id)}
-            placeholder={"Dan,\n\nHere's the update...\n\nNext Steps:\n- ...\n\n— " + (task.assignee || 'Team')}
-            rows={10}
-            className="w-full border-2 border-black/20 bg-white px-6 py-5 text-base text-black leading-relaxed focus:outline-none focus:border-purple placeholder:text-muted/30"
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); document.execCommand('insertLineBreak') } }}
+            className="w-full border-2 border-black/20 bg-white px-6 py-5 text-base text-black leading-relaxed focus:outline-none focus:border-purple overflow-auto"
+            style={{ minHeight: '200px' }}
           />
+          <div
+            className="w-full h-3 border-2 border-t-0 border-black/20 bg-cream-dark cursor-ns-resize flex items-center justify-center hover:bg-black/10 transition-colors"
+            onMouseDown={(e) => {
+              e.preventDefault()
+              const editor = document.getElementById(`editor-${task.id}`)
+              if (!editor) return
+              const startY = e.clientY
+              const startH = editor.offsetHeight
+              const onMove = (ev: MouseEvent) => { editor.style.height = Math.max(150, startH + ev.clientY - startY) + 'px' }
+              const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp) }
+              document.addEventListener('mousemove', onMove)
+              document.addEventListener('mouseup', onUp)
+            }}
+          >
+            <div className="w-8 h-1 bg-black/20 rounded-full" />
+          </div>
         </div>
 
         {/* Dan Advise Checklist */}
