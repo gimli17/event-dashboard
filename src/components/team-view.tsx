@@ -160,7 +160,7 @@ export function TeamView() {
       deadline: personNewDeadline || null,
       links: personNewLinks.trim() || null,
       current_status: null,
-      overview: personNewNotes.trim() || null,
+      overview: (document.getElementById('rich-editor')?.innerHTML || personNewNotes).trim() || null,
       action_items: null,
       dan_comments: null,
       update_to_dan: null,
@@ -193,8 +193,10 @@ export function TeamView() {
   }
 
   const handleSaveUpdate = async (taskId: string) => {
-    setAllMasterTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, update_to_dan: updateText } : t)))
-    await supabase.from('master_tasks').update({ update_to_dan: updateText, updated_at: new Date().toISOString() } as never).eq('id', taskId)
+    const editor = document.getElementById(`editor-${taskId}`)
+    const html = editor?.innerHTML || updateText
+    setAllMasterTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, update_to_dan: html } : t)))
+    await supabase.from('master_tasks').update({ update_to_dan: html, updated_at: new Date().toISOString() } as never).eq('id', taskId)
   }
 
   const handleSubmitForReview = async (taskId: string) => {
@@ -329,9 +331,13 @@ export function TeamView() {
             id={`editor-${task.id}`}
             contentEditable
             suppressContentEditableWarning
-            dangerouslySetInnerHTML={{ __html: expandedTask === task.id ? updateText : (task.update_to_dan || '') }}
-            onInput={(e) => setUpdateText(e.currentTarget.innerHTML)}
-            onBlur={() => handleSaveUpdate(task.id)}
+            ref={(el) => {
+              if (el && !el.dataset.initialized) {
+                el.innerHTML = task.update_to_dan || ''
+                el.dataset.initialized = 'true'
+              }
+            }}
+            onBlur={(e) => { setUpdateText(e.currentTarget.innerHTML); handleSaveUpdate(task.id) }}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); document.execCommand('insertLineBreak') } }}
             className="w-full border-2 border-black/20 bg-white px-6 py-5 text-base text-black leading-relaxed focus:outline-none focus:border-purple overflow-auto"
             style={{ minHeight: '200px' }}
@@ -798,7 +804,7 @@ export function TeamView() {
                     <div
                       contentEditable
                       suppressContentEditableWarning
-                      onInput={(e) => setPersonNewNotes(e.currentTarget.innerHTML)}
+                      onBlur={(e) => setPersonNewNotes(e.currentTarget.innerHTML)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                           e.preventDefault()
