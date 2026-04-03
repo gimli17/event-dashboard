@@ -758,17 +758,21 @@ export function TeamView() {
                       <button type="button" onMouseDown={(e) => {
                         e.preventDefault()
                         const editor = document.getElementById('rich-editor')
-                        if (editor) editor.focus()
-                        setTimeout(() => document.execCommand('insertUnorderedList', false), 0)
+                        if (editor) {
+                          editor.focus()
+                          document.execCommand('insertHTML', false, '<br>&bull;&nbsp;')
+                        }
                       }}
-                        className="px-2.5 py-1 text-sm hover:bg-black/10 transition-colors rounded" title="Bullet list">&bull; List</button>
+                        className="px-2.5 py-1 text-sm hover:bg-black/10 transition-colors rounded" title="Bullet point">&bull;</button>
                       <button type="button" onMouseDown={(e) => {
                         e.preventDefault()
                         const editor = document.getElementById('rich-editor')
-                        if (editor) editor.focus()
-                        setTimeout(() => document.execCommand('insertOrderedList', false), 0)
+                        if (editor) {
+                          editor.focus()
+                          document.execCommand('insertHTML', false, '<br>&mdash;&nbsp;')
+                        }
                       }}
-                        className="px-2.5 py-1 text-sm hover:bg-black/10 transition-colors rounded" title="Numbered list">1. List</button>
+                        className="px-2.5 py-1 text-sm hover:bg-black/10 transition-colors rounded" title="Dash">&mdash;</button>
                     </div>
                     <div
                       contentEditable
