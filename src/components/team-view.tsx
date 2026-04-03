@@ -419,17 +419,6 @@ export function TeamView() {
           />
         </div>
 
-        {/* Context */}
-        {(task.current_status || task.overview || task.action_items) && (
-          <details className="mb-6">
-            <summary className="text-sm font-bold uppercase tracking-widest text-muted cursor-pointer hover:text-black">Show Task Context</summary>
-            <div className="mt-4 pl-5 border-l-2 border-black/10 space-y-4">
-              {task.current_status && <div><p className="text-xs font-bold uppercase tracking-widest text-muted mb-1">Current Status</p><div className="text-base prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: task.current_status }} /></div>}
-              {task.overview && <div><p className="text-xs font-bold uppercase tracking-widest text-muted mb-1">Overview</p><div className="text-base prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: task.overview }} /></div>}
-              {task.action_items && <div><p className="text-xs font-bold uppercase tracking-widest text-muted mb-1">Action Items</p><div className="text-base prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: task.action_items }} /></div>}
-            </div>
-          </details>
-        )}
 
         {/* Dan's previous feedback */}
         {task.dan_feedback && (
