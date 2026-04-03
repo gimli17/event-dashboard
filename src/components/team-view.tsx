@@ -68,6 +68,8 @@ export function TeamView() {
   const [personNewCheckInput, setPersonNewCheckInput] = useState('')
   const [editingCheckItem, setEditingCheckItem] = useState<string | null>(null)
   const [editCheckText, setEditCheckText] = useState('')
+  const [editingTaskTitle, setEditingTaskTitle] = useState<string | null>(null)
+  const [titleEditValue, setTitleEditValue] = useState('')
 
   useEffect(() => {
     async function fetch() {
@@ -146,6 +148,13 @@ export function TeamView() {
       event_id: null,
       week_of: null,
     } as never)
+  }
+
+  const handleTitleSave = async (taskId: string) => {
+    if (!titleEditValue.trim()) { setEditingTaskTitle(null); return }
+    setAllMasterTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, title: titleEditValue.trim() } : t)))
+    setEditingTaskTitle(null)
+    await supabase.from('master_tasks').update({ title: titleEditValue.trim(), updated_at: new Date().toISOString() } as never).eq('id', taskId)
   }
 
   const handlePersonCreateTask = async () => {
@@ -716,7 +725,18 @@ export function TeamView() {
                           className="w-full text-left px-8 py-6 hover:bg-cream-dark transition-colors">
                           <div className="flex items-start justify-between gap-6">
                             <div>
-                              <h3 className="text-lg font-bold">{task.title}</h3>
+                              {editingTaskTitle === task.id ? (
+                                <input type="text" value={titleEditValue}
+                                  onChange={(e) => setTitleEditValue(e.target.value)}
+                                  onBlur={() => handleTitleSave(task.id)}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') handleTitleSave(task.id); if (e.key === 'Escape') setEditingTaskTitle(null) }}
+                                  autoFocus
+                                  className="text-lg font-bold w-full border-2 border-black bg-white px-2 py-1 focus:outline-none focus:border-blue" />
+                              ) : (
+                                <h3 className="text-lg font-bold cursor-pointer hover:text-blue transition-colors"
+                                  onClick={(e) => { e.stopPropagation(); setEditingTaskTitle(task.id); setTitleEditValue(task.title) }}
+                                  title="Click to edit title">{task.title}</h3>
+                              )}
                               <div className="flex items-center gap-4 mt-2">
                                 {task.assignee && <span className="text-sm font-bold text-purple">{task.assignee}</span>}
                                 <span className={`text-sm font-bold ${task.priority === 'ultra-high' ? 'text-red' : task.priority === 'high' ? 'text-orange' : 'text-muted'}`}>{task.priority}</span>
@@ -904,7 +924,18 @@ export function TeamView() {
                           className="w-full text-left px-8 py-6 hover:bg-cream-dark transition-colors">
                           <div className="flex items-start justify-between gap-6">
                             <div>
-                              <h3 className="text-lg font-bold">{task.title}</h3>
+                              {editingTaskTitle === task.id ? (
+                                <input type="text" value={titleEditValue}
+                                  onChange={(e) => setTitleEditValue(e.target.value)}
+                                  onBlur={() => handleTitleSave(task.id)}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') handleTitleSave(task.id); if (e.key === 'Escape') setEditingTaskTitle(null) }}
+                                  autoFocus
+                                  className="text-lg font-bold w-full border-2 border-black bg-white px-2 py-1 focus:outline-none focus:border-blue" />
+                              ) : (
+                                <h3 className="text-lg font-bold cursor-pointer hover:text-blue transition-colors"
+                                  onClick={(e) => { e.stopPropagation(); setEditingTaskTitle(task.id); setTitleEditValue(task.title) }}
+                                  title="Click to edit title">{task.title}</h3>
+                              )}
                               <div className="flex items-center gap-4 mt-2">
                                 <span className={`text-sm font-bold uppercase tracking-wider ${task.priority === 'ultra-high' ? 'text-red' : task.priority === 'high' ? 'text-orange' : 'text-muted'}`}>{priorityLabels[task.priority] || task.priority}</span>
                                 {task.deadline && <span className="text-sm font-bold text-red">Due {new Date(task.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
