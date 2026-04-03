@@ -39,6 +39,9 @@ export function Navbar() {
           <Link href="/private-parties" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
             Private Parties
           </Link>
+          <Link href="/social" className="text-xs font-bold tracking-widest uppercase bg-pink-500/20 hover:bg-pink-500/30 px-3 py-1.5 transition-colors">
+            Social
+          </Link>
           <Link href="/board" className="text-xs font-bold tracking-widest uppercase bg-amber-500/30 hover:bg-amber-500/50 px-3 py-1.5 transition-colors">
             Board
           </Link>
