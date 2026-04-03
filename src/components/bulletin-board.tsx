@@ -61,6 +61,8 @@ export function BulletinBoard() {
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [replyInput, setReplyInput] = useState('')
   const [expandedNote, setExpandedNote] = useState<string | null>(null)
+  const [editingNote, setEditingNote] = useState<string | null>(null)
+  const [editText, setEditText] = useState('')
 
   useEffect(() => {
     async function fetch() {
@@ -129,6 +131,13 @@ export function BulletinBoard() {
     const newViewedBy = [...note.viewed_by, displayName]
     setNotes((prev) => prev.map(n => n.id === noteId ? { ...n, viewed_by: newViewedBy } : n))
     await supabase.from('comments').update({ viewed_by: newViewedBy } as never).eq('id', noteId)
+  }
+
+  const handleSaveEdit = async (noteId: string) => {
+    if (!editText.trim()) { setEditingNote(null); return }
+    setNotes((prev) => prev.map(n => n.id === noteId ? { ...n, message: editText.trim() } : n))
+    setEditingNote(null)
+    await supabase.from('comments').update({ message: editText.trim() } as never).eq('id', noteId)
   }
 
   const handleDelete = async (noteId: string) => {
@@ -242,7 +251,24 @@ export function BulletinBoard() {
 
                   {/* Content */}
                   <div className="flex-1 px-4 pb-2 overflow-auto">
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: note.message.replace(/@(\w+)/g, '<span class="font-bold text-red">@$1</span>') }} />
+                    {editingNote === note.id ? (
+                      <textarea
+                        value={editText}
+                        onChange={(e) => setEditText(e.target.value)}
+                        onBlur={() => handleSaveEdit(note.id)}
+                        onKeyDown={(e) => { if (e.key === 'Escape') setEditingNote(null) }}
+                        autoFocus
+                        className="w-full h-full bg-transparent text-sm leading-relaxed focus:outline-none resize-none"
+                        style={{ minHeight: '80px' }}
+                      />
+                    ) : (
+                      <div
+                        className={`text-sm leading-relaxed whitespace-pre-wrap ${displayName === note.author ? 'cursor-pointer hover:bg-black/5 rounded px-1 -mx-1 transition-colors' : ''}`}
+                        onClick={() => { if (displayName === note.author) { setEditingNote(note.id); setEditText(note.message) } }}
+                        title={displayName === note.author ? 'Click to edit' : undefined}
+                        dangerouslySetInnerHTML={{ __html: note.message.replace(/@(\w+)/g, '<span class="font-bold text-red">@$1</span>') }}
+                      />
+                    )}
                   </div>
 
                   {/* Tags */}
