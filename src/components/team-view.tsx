@@ -269,7 +269,8 @@ export function TeamView() {
   }
 
   // Derived data
-  const reviewTasks = allMasterTasks.filter((t) => t.status === 'review')
+  const priorityRank: Record<string, number> = { 'ultra-high': 0, high: 1, medium: 2, low: 3, backlog: 4 }
+  const reviewTasks = allMasterTasks.filter((t) => t.status === 'review').sort((a, b) => (priorityRank[a.priority] ?? 4) - (priorityRank[b.priority] ?? 4))
   const totalReview = reviewTasks.length + reviewEventTasks.length
   const personTasks = selectedPerson
     ? allMasterTasks
