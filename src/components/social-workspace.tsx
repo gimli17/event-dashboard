@@ -82,12 +82,19 @@ export function SocialWorkspace() {
   } | null>(null)
 
   useEffect(() => {
-    async function fetch() {
+    async function fetchData() {
       const { data } = await supabase.from('social_posts').select('*').order('created_at', { ascending: false })
       if (data) setPosts(data as SocialPost[])
       setLoading(false)
+
+      // Auto-load drive content
+      try {
+        const res = await fetch('/api/drive-content')
+        const driveData = await res.json()
+        if (driveData.files) setDriveFiles(driveData.files)
+      } catch {}
     }
-    fetch()
+    fetchData()
   }, [])
 
   const handleAiDraft = async () => {
