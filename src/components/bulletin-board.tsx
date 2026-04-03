@@ -17,25 +17,36 @@ interface Note {
 
 const teamMembers = ['Dan', 'Cody', 'Sabrina', 'Joe', 'Danny', 'Connor', 'Gib', 'Emily', 'Kendall', 'Alex', 'Liam', 'Dave', 'Tom', 'Kevin']
 
+// Avatar photos — add more as you get them
+const avatarPhotos: Record<string, string> = {
+  Sabrina: '/avatars/sabrina.jpg',
+}
+
+// Colors for initial avatars
+const avatarColors: Record<string, string> = {
+  Dan: 'bg-purple', Cody: 'bg-blue', Joe: 'bg-green', Danny: 'bg-orange',
+  Connor: 'bg-red', Gib: 'bg-gold', Emily: 'bg-pink-500', Kendall: 'bg-cyan-600',
+  Alex: 'bg-indigo-500', Liam: 'bg-teal', Dave: 'bg-amber-600', Tom: 'bg-rose-600', Kevin: 'bg-emerald-600',
+}
+
 const noteColors = [
-  'bg-yellow-100 border-yellow-300',
-  'bg-blue-50 border-blue-200',
-  'bg-green-50 border-green-200',
-  'bg-pink-50 border-pink-200',
-  'bg-purple-50 border-purple-200',
-  'bg-orange-50 border-orange-200',
-  'bg-cyan-50 border-cyan-200',
-  'bg-rose-50 border-rose-200',
+  'bg-yellow-200', 'bg-blue-200', 'bg-green-200', 'bg-pink-200',
+  'bg-purple-200', 'bg-orange-200', 'bg-cyan-200', 'bg-rose-200',
 ]
 
-function renderMessage(text: string) {
-  const parts = text.split(/(@\w+)/g)
-  return parts.map((part, i) =>
-    part.startsWith('@') ? (
-      <span key={i} className="font-bold text-red bg-red/10 px-0.5 rounded">{part}</span>
-    ) : (
-      <span key={i}>{part}</span>
-    )
+function Avatar({ name, size = 'md' }: { name: string; size?: 'sm' | 'md' }) {
+  const photo = avatarPhotos[name]
+  const color = avatarColors[name] || 'bg-muted'
+  const dim = size === 'sm' ? 'w-6 h-6 text-[9px]' : 'w-9 h-9 text-xs'
+
+  if (photo) {
+    return <img src={photo} alt={name} className={`${dim} rounded-full object-cover border-2 border-white shadow-sm`} />
+  }
+
+  return (
+    <div className={`${dim} ${color} rounded-full flex items-center justify-center text-white font-bold border-2 border-white shadow-sm`}>
+      {name.charAt(0)}
+    </div>
   )
 }
 
@@ -129,7 +140,6 @@ export function BulletinBoard() {
     setTaggedPeople(prev => prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name])
   }
 
-  // Separate top-level notes and replies
   const topNotes = notes.filter(n => !n.parent_id)
   const getReplies = (noteId: string) => notes.filter(n => n.parent_id === noteId).sort((a, b) => a.created_at.localeCompare(b.created_at))
 
@@ -142,7 +152,7 @@ export function BulletinBoard() {
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-amber-50/80" style={{ backgroundImage: 'radial-gradient(circle, #d4a574 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
+    <div className="flex-1 flex flex-col bg-amber-50" style={{ backgroundImage: 'radial-gradient(circle, #d4a574 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
       {/* Top bar */}
       <div className="bg-amber-700 text-white px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -156,39 +166,44 @@ export function BulletinBoard() {
           </button>
           <button onClick={() => setFilter('mine')}
             className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors ${filter === 'mine' ? 'bg-white text-amber-700' : 'bg-white/20 text-white'}`}>
-            Tagged for Me
+            For Me
           </button>
         </div>
       </div>
 
       {/* Compose */}
-      <div className="px-6 py-4 bg-amber-100/50 border-b-2 border-amber-200">
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handlePost() } }}
-          placeholder={displayName ? 'Write a note... (Shift+Enter for new line, @name to mention)' : 'Set your name first'}
-          disabled={!displayName}
-          rows={2}
-          className="w-full border-2 border-amber-300 bg-yellow-50 px-4 py-3 text-sm text-black leading-relaxed focus:outline-none focus:border-amber-500 disabled:opacity-40 placeholder:text-amber-400"
-          style={{ resize: 'vertical' }}
-        />
-        <div className="flex items-center justify-between mt-3 gap-4">
-          <div className="flex items-center gap-1 flex-wrap flex-1">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-amber-700 mr-1">Tag:</span>
-            {teamMembers.map(name => (
-              <button key={name} onClick={() => toggleTag(name)}
-                className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider transition-all rounded-sm ${
-                  taggedPeople.includes(name) ? 'bg-red text-white' : 'bg-amber-200/50 text-amber-700 hover:bg-amber-200'
-                }`}>
-                {name}
+      <div className="px-6 py-4 bg-amber-100/60 border-b-2 border-amber-200">
+        <div className="flex gap-4 items-start">
+          {displayName && <Avatar name={displayName} />}
+          <div className="flex-1">
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handlePost() } }}
+              placeholder={displayName ? 'Write a note... (Shift+Enter for new line)' : 'Set your name first'}
+              disabled={!displayName}
+              rows={2}
+              className="w-full border-2 border-amber-300 bg-yellow-50 px-4 py-3 text-sm text-black leading-relaxed focus:outline-none focus:border-amber-500 disabled:opacity-40 placeholder:text-amber-400"
+              style={{ resize: 'vertical' }}
+            />
+            <div className="flex items-center justify-between mt-2 gap-4">
+              <div className="flex items-center gap-1 flex-wrap flex-1">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-amber-700 mr-1">Tag:</span>
+                {teamMembers.map(name => (
+                  <button key={name} onClick={() => toggleTag(name)}
+                    className={`px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider transition-all rounded-sm ${
+                      taggedPeople.includes(name) ? 'bg-red text-white' : 'bg-amber-200/50 text-amber-700 hover:bg-amber-200'
+                    }`}>
+                    {name}
+                  </button>
+                ))}
+              </div>
+              <button onClick={handlePost} disabled={!input.trim() || !displayName || sending}
+                className="bg-amber-700 text-white px-6 py-2 text-xs font-bold uppercase tracking-widest hover:bg-amber-800 transition-colors disabled:opacity-40 shrink-0 shadow">
+                {sending ? 'Posting...' : 'Post'}
               </button>
-            ))}
+            </div>
           </div>
-          <button onClick={handlePost} disabled={!input.trim() || !displayName || sending}
-            className="bg-amber-700 text-white px-8 py-2.5 text-sm font-bold uppercase tracking-widest hover:bg-amber-800 transition-colors disabled:opacity-40 shrink-0 shadow-md">
-            {sending ? 'Posting...' : 'Post'}
-          </button>
         </div>
       </div>
 
@@ -197,8 +212,8 @@ export function BulletinBoard() {
         {filtered.length === 0 ? (
           <p className="text-center text-amber-600 text-lg mt-20 italic">No notes yet. Post one!</p>
         ) : (
-          <div className="columns-1 sm:columns-2 lg:columns-3 gap-5 space-y-5">
-            {filtered.map((note) => {
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {filtered.map((note, idx) => {
               const color = noteColors[note.author.length % noteColors.length]
               const replies = getReplies(note.id)
               const isExpanded = expandedNote === note.id
@@ -206,98 +221,87 @@ export function BulletinBoard() {
               const isTagged = displayName ? note.tagged.includes(displayName) : false
 
               return (
-                <div key={note.id} className={`${color} border-2 shadow-lg break-inside-avoid ${isTagged && !isViewed ? 'ring-2 ring-red ring-offset-2' : ''}`}>
-                  {/* Note content */}
-                  <div className="px-5 py-4 group/note relative">
-                    <button onClick={() => handleDelete(note.id)}
-                      className="absolute top-2 right-3 text-black/10 hover:text-red transition-colors text-lg font-bold opacity-0 group-hover/note:opacity-100">
-                      &times;
-                    </button>
+                <div key={note.id} className={`${color} shadow-lg aspect-square flex flex-col relative group/note ${isTagged && !isViewed ? 'ring-2 ring-red ring-offset-2' : ''}`}
+                  style={{ minHeight: '220px' }}>
+                  {/* Delete */}
+                  <button onClick={() => handleDelete(note.id)}
+                    className="absolute top-2 right-2 text-black/10 hover:text-red transition-colors text-lg font-bold opacity-0 group-hover/note:opacity-100 z-10">
+                    &times;
+                  </button>
 
-                    <div className="text-sm leading-relaxed whitespace-pre-wrap pr-6" dangerouslySetInnerHTML={{ __html: note.message.replace(/@(\w+)/g, '<span class="font-bold text-red">@$1</span>') }} />
-
-                    {/* Tagged people */}
-                    {note.tagged.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-3">
-                        {note.tagged.map(name => (
-                          <span key={name} className="text-[9px] font-bold uppercase tracking-wider bg-red/10 text-red px-1.5 py-0.5 rounded-sm">
-                            @{name}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Footer */}
-                    <div className="flex items-center justify-between mt-3 pt-2 border-t border-black/5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-bold text-black/50">{note.author}</span>
-                        <span className="text-[10px] text-black/30">
-                          {new Date(note.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {/* Reply count */}
-                        <button onClick={() => setExpandedNote(isExpanded ? null : note.id)}
-                          className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 transition-colors ${replies.length > 0 ? 'text-blue bg-blue/10 hover:bg-blue/20' : 'text-black/30 hover:text-black/50'}`}>
-                          {replies.length > 0 ? `${replies.length} ${replies.length === 1 ? 'reply' : 'replies'}` : 'Reply'}
-                        </button>
-                        {/* Viewed */}
-                        {displayName && !isViewed ? (
-                          <button onClick={() => handleMarkViewed(note.id)}
-                            className="w-6 h-6 rounded border border-green/30 hover:border-green hover:bg-green/10 flex items-center justify-center transition-colors"
-                            title="Mark as seen">
-                            <svg className="w-3.5 h-3.5 text-green/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                            </svg>
-                          </button>
-                        ) : isViewed ? (
-                          <div className="w-6 h-6 rounded bg-green/20 flex items-center justify-center" title={`Seen by: ${note.viewed_by.join(', ')}`}>
-                            <svg className="w-3.5 h-3.5 text-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                            </svg>
-                          </div>
-                        ) : null}
-                        {note.viewed_by.length > 0 && (
-                          <span className="text-[9px] text-black/30" title={`Seen by: ${note.viewed_by.join(', ')}`}>{note.viewed_by.length}</span>
-                        )}
-                      </div>
+                  {/* Author header */}
+                  <div className="flex items-center gap-2 px-4 pt-4 pb-2">
+                    <Avatar name={note.author} size="sm" />
+                    <div>
+                      <span className="text-[11px] font-bold text-black/70">{note.author}</span>
+                      <span className="text-[9px] text-black/30 ml-1.5">
+                        {new Date(note.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>
                     </div>
                   </div>
 
-                  {/* Replies thread */}
+                  {/* Content */}
+                  <div className="flex-1 px-4 pb-2 overflow-auto">
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: note.message.replace(/@(\w+)/g, '<span class="font-bold text-red">@$1</span>') }} />
+                  </div>
+
+                  {/* Tags */}
+                  {note.tagged.length > 0 && (
+                    <div className="flex flex-wrap gap-1 px-4 pb-2">
+                      {note.tagged.map(name => (
+                        <span key={name} className="text-[8px] font-bold uppercase tracking-wider bg-red/15 text-red px-1 py-0.5 rounded-sm">@{name}</span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Footer */}
+                  <div className="flex items-center justify-between px-4 py-2 border-t border-black/5">
+                    <button onClick={() => setExpandedNote(isExpanded ? null : note.id)}
+                      className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 transition-colors ${replies.length > 0 ? 'text-blue bg-blue/10' : 'text-black/30 hover:text-black/50'}`}>
+                      {replies.length > 0 ? `${replies.length} ${replies.length === 1 ? 'comment' : 'comments'}` : 'Comment'}
+                    </button>
+                    <div className="flex items-center gap-1">
+                      {note.viewed_by.length > 0 && (
+                        <span className="text-[9px] text-black/30" title={`Seen: ${note.viewed_by.join(', ')}`}>{note.viewed_by.length} seen</span>
+                      )}
+                      {displayName && !isViewed ? (
+                        <button onClick={() => handleMarkViewed(note.id)}
+                          className="w-5 h-5 rounded border border-green/30 hover:border-green hover:bg-green/10 flex items-center justify-center transition-colors" title="Mark as seen">
+                          <svg className="w-3 h-3 text-green/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                        </button>
+                      ) : isViewed ? (
+                        <div className="w-5 h-5 rounded bg-green/20 flex items-center justify-center" title="Seen">
+                          <svg className="w-3 h-3 text-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  {/* Comments thread */}
                   {isExpanded && (
-                    <div className="border-t-2 border-black/10 bg-white/50">
+                    <div className="border-t-2 border-black/10 bg-white/70 max-h-48 overflow-y-auto">
                       {replies.map((reply) => (
-                        <div key={reply.id} className="px-5 py-3 border-b border-black/5 last:border-0 group/reply">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1">
-                              <p className="text-xs leading-relaxed">{renderMessage(reply.message)}</p>
-                              <span className="text-[10px] font-bold text-black/40 mt-1 block">
-                                {reply.author} &middot; {new Date(reply.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} {new Date(reply.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                            </div>
-                            <button onClick={() => handleDelete(reply.id)}
-                              className="text-black/10 hover:text-red text-sm font-bold opacity-0 group-hover/reply:opacity-100 transition-colors">&times;</button>
+                        <div key={reply.id} className="px-4 py-2 border-b border-black/5 last:border-0 group/reply flex items-start gap-2">
+                          <Avatar name={reply.author} size="sm" />
+                          <div className="flex-1 min-w-0">
+                            <span className="text-[10px] font-bold text-black/50">{reply.author}</span>
+                            <p className="text-xs leading-relaxed">{reply.message}</p>
                           </div>
+                          <button onClick={() => handleDelete(reply.id)}
+                            className="text-black/10 hover:text-red text-sm font-bold opacity-0 group-hover/reply:opacity-100 shrink-0">&times;</button>
                         </div>
                       ))}
-
-                      {/* Reply input */}
-                      <div className="px-5 py-3 flex gap-2">
+                      <div className="px-4 py-2 flex gap-2 items-center">
+                        {displayName && <Avatar name={displayName} size="sm" />}
                         <input
                           type="text"
                           value={replyingTo === note.id ? replyInput : ''}
                           onChange={(e) => { setReplyingTo(note.id); setReplyInput(e.target.value) }}
                           onFocus={() => setReplyingTo(note.id)}
                           onKeyDown={(e) => { if (e.key === 'Enter') handleReply(note.id) }}
-                          placeholder="Write a reply..."
-                          className="flex-1 border border-black/20 bg-white px-3 py-1.5 text-xs text-black focus:outline-none focus:border-amber-500 placeholder:text-black/30"
+                          placeholder="Reply..."
+                          className="flex-1 border border-black/15 bg-white px-2 py-1 text-xs text-black focus:outline-none focus:border-amber-500 placeholder:text-black/25"
                         />
-                        <button onClick={() => handleReply(note.id)}
-                          disabled={!replyInput.trim() || replyingTo !== note.id}
-                          className="bg-amber-600 text-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-amber-700 transition-colors disabled:opacity-40">
-                          Reply
-                        </button>
                       </div>
                     </div>
                   )}
