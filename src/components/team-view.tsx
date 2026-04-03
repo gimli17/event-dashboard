@@ -294,7 +294,7 @@ export function TeamView() {
           <div className="bg-purple text-white px-5 py-4 -mx-8 mb-6">
             <p className="text-sm font-bold uppercase tracking-widest">Assigned by Dan</p>
             {task.dan_comments && (
-              <p className="text-base mt-2 leading-relaxed">{task.dan_comments}</p>
+              <div className="text-base mt-2 leading-relaxed" dangerouslySetInnerHTML={{ __html: task.dan_comments }} />
             )}
             {task.links && (
               <div className="mt-2 space-y-1">
@@ -424,9 +424,9 @@ export function TeamView() {
           <details className="mb-6">
             <summary className="text-sm font-bold uppercase tracking-widest text-muted cursor-pointer hover:text-black">Show Task Context</summary>
             <div className="mt-4 pl-5 border-l-2 border-black/10 space-y-4">
-              {task.current_status && <div><p className="text-xs font-bold uppercase tracking-widest text-muted mb-1">Current Status</p><p className="text-base">{task.current_status}</p></div>}
-              {task.overview && <div><p className="text-xs font-bold uppercase tracking-widest text-muted mb-1">Overview</p><p className="text-base">{task.overview}</p></div>}
-              {task.action_items && <div><p className="text-xs font-bold uppercase tracking-widest text-muted mb-1">Action Items</p><ul className="space-y-1">{task.action_items.split('\n').map((item, idx) => <li key={idx} className="text-base">&mdash; {item}</li>)}</ul></div>}
+              {task.current_status && <div><p className="text-xs font-bold uppercase tracking-widest text-muted mb-1">Current Status</p><div className="text-base prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: task.current_status }} /></div>}
+              {task.overview && <div><p className="text-xs font-bold uppercase tracking-widest text-muted mb-1">Overview</p><div className="text-base prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: task.overview }} /></div>}
+              {task.action_items && <div><p className="text-xs font-bold uppercase tracking-widest text-muted mb-1">Action Items</p><div className="text-base prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: task.action_items }} /></div>}
             </div>
           </details>
         )}
@@ -435,14 +435,14 @@ export function TeamView() {
         {task.dan_feedback && (
           <div className="mb-6 border-l-4 border-red pl-5">
             <p className="text-sm font-bold uppercase tracking-widest text-red mb-1">Dan&apos;s Feedback</p>
-            <p className="text-base whitespace-pre-wrap">{task.dan_feedback}</p>
+            <div className="text-base" dangerouslySetInnerHTML={{ __html: task.dan_feedback }} />
           </div>
         )}
 
         {task.dan_comments && (
           <div className="mb-6 border-l-4 border-muted/30 pl-5">
             <p className="text-sm font-bold uppercase tracking-widest text-muted mb-1">Original Comments</p>
-            <p className="text-base italic text-muted">{task.dan_comments}</p>
+            <div className="text-base italic text-muted" dangerouslySetInnerHTML={{ __html: task.dan_comments }} />
           </div>
         )}
 
