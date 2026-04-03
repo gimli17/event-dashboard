@@ -75,6 +75,13 @@ export default async function HubPage() {
             <Tile title="Private Parties" description="9 sponsor event slots — claimed vs. open" href="/private-parties" color="bg-gold" />
             <Tile title="Sponsor Portal" description="Manage sponsors, tiers, and package selections" href="https://brmf-sponsor-portal.vercel.app/" color="bg-orange" external />
             <Tile title="Ticket Tracker" description="Live Eventbrite sales, revenue, and capacity" href="https://boulderrootstickettracker.vercel.app/" color="bg-black" external />
+
+            {/* Additional external sites */}
+            <div className="col-span-6 border-t-2 border-black/20 pt-2 mt-4">
+              <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted">Other Projects</p>
+            </div>
+            <Tile title="Bold Summit" description="Creators website for the Bold Summit initiative" href="https://creators-website-alpha.vercel.app/" color="bg-green" external />
+            <Tile title="Ensuring Colorado" description="Ensuring Colorado initiative site" href="https://ensuring-colorado.vercel.app/" color="bg-blue" external />
           </div>
         </div>
       </section>
