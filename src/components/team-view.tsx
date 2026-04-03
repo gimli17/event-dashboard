@@ -722,34 +722,33 @@ export function TeamView() {
                     const isExpanded = expandedTask === task.id
                     return (
                       <div key={task.id} className={i > 0 ? 'border-t-2 border-black/10' : ''}>
-                        <button onClick={() => { setExpandedTask(isExpanded ? null : task.id); setUpdateText(task.update_to_dan || ''); setFeedbackText(''); setNewCheckItem('') }}
-                          className="w-full text-left px-8 py-6 hover:bg-cream-dark transition-colors">
-                          <div className="flex items-start justify-between gap-6">
-                            <div>
-                              {editingTaskTitle === task.id ? (
-                                <input type="text" value={titleEditValue}
-                                  onChange={(e) => setTitleEditValue(e.target.value)}
-                                  onBlur={() => handleTitleSave(task.id)}
-                                  onClick={(e) => e.stopPropagation()}
-                                  onKeyDown={(e) => { if (e.key === 'Enter') handleTitleSave(task.id); if (e.key === 'Escape') setEditingTaskTitle(null) }}
-                                  autoFocus
-                                  className="text-lg font-bold w-full border-2 border-black bg-white px-3 py-2 focus:outline-none focus:border-blue min-h-[44px]" />
-                              ) : (
-                                <h3 className="text-lg font-bold cursor-pointer hover:text-blue transition-colors min-h-[44px] flex items-center"
-                                  onClick={(e) => { e.stopPropagation(); setEditingTaskTitle(task.id); setTitleEditValue(task.title) }}
-                                  title="Click to edit title">{task.title}</h3>
-                              )}
-                              <div className="flex items-center gap-4 mt-2">
-                                {task.assignee && <span className="text-sm font-bold text-purple">{task.assignee}</span>}
-                                <span className={`text-sm font-bold ${task.priority === 'ultra-high' ? 'text-red' : task.priority === 'high' ? 'text-orange' : 'text-muted'}`}>{task.priority}</span>
-                                {task.deadline && <span className="text-sm font-bold text-red">Due {new Date(task.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
-                              </div>
+                        <div className="px-8 py-6 hover:bg-cream-dark transition-colors">
+                          {/* Title — editable */}
+                          {editingTaskTitle === task.id ? (
+                            <input type="text" value={titleEditValue}
+                              onChange={(e) => setTitleEditValue(e.target.value)}
+                              onBlur={() => handleTitleSave(task.id)}
+                              onKeyDown={(e) => { if (e.key === 'Enter') handleTitleSave(task.id); if (e.key === 'Escape') setEditingTaskTitle(null) }}
+                              autoFocus
+                              className="text-lg font-bold w-full border-2 border-black bg-white px-3 py-2 focus:outline-none focus:border-purple mb-2" />
+                          ) : (
+                            <h3 className="text-lg font-bold cursor-pointer hover:text-purple transition-colors mb-2"
+                              onClick={() => { setEditingTaskTitle(task.id); setTitleEditValue(task.title) }}
+                              title="Click to edit title">{task.title}</h3>
+                          )}
+                          {/* Meta + expand */}
+                          <div className="flex items-center justify-between gap-4 cursor-pointer"
+                            onClick={() => { setExpandedTask(isExpanded ? null : task.id); setUpdateText(task.update_to_dan || ''); setFeedbackText(''); setNewCheckItem('') }}>
+                            <div className="flex items-center gap-4">
+                              {task.assignee && <span className="text-sm font-bold text-purple">{task.assignee}</span>}
+                              <span className={`text-sm font-bold ${task.priority === 'ultra-high' ? 'text-red' : task.priority === 'high' ? 'text-orange' : 'text-muted'}`}>{task.priority}</span>
+                              {task.deadline && <span className="text-sm font-bold text-red">Due {new Date(task.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
                             </div>
                             <span className={`text-xs font-bold uppercase tracking-widest shrink-0 px-4 py-2 ${isExpanded ? 'bg-purple text-white' : 'text-purple bg-purple-light/20'}`}>
                               {isExpanded ? 'VIEWING' : 'REVIEW'}
                             </span>
                           </div>
-                        </button>
+                        </div>
                         {isExpanded && renderTaskDetail(task, true)}
                       </div>
                     )
@@ -922,29 +921,28 @@ export function TeamView() {
                     const isNewFromDan = isFromDan && task.status === 'not-started'
                     return (
                       <div key={task.id} className={i > 0 ? 'border-t-2 border-black/10' : ''}>
-                        <button onClick={() => { setExpandedTask(isExpanded ? null : task.id); setUpdateText(task.update_to_dan || ''); setNewCheckItem('') }}
-                          className="w-full text-left px-8 py-6 hover:bg-cream-dark transition-colors">
-                          <div className="flex items-start justify-between gap-6">
-                            <div>
-                              {editingTaskTitle === task.id ? (
-                                <input type="text" value={titleEditValue}
-                                  onChange={(e) => setTitleEditValue(e.target.value)}
-                                  onBlur={() => handleTitleSave(task.id)}
-                                  onClick={(e) => e.stopPropagation()}
-                                  onKeyDown={(e) => { if (e.key === 'Enter') handleTitleSave(task.id); if (e.key === 'Escape') setEditingTaskTitle(null) }}
-                                  autoFocus
-                                  className="text-lg font-bold w-full border-2 border-black bg-white px-3 py-2 focus:outline-none focus:border-blue min-h-[44px]" />
-                              ) : (
-                                <h3 className="text-lg font-bold cursor-pointer hover:text-blue transition-colors min-h-[44px] flex items-center"
-                                  onClick={(e) => { e.stopPropagation(); setEditingTaskTitle(task.id); setTitleEditValue(task.title) }}
-                                  title="Click to edit title">{task.title}</h3>
-                              )}
-                              <div className="flex items-center gap-4 mt-2">
-                                <span className={`text-sm font-bold uppercase tracking-wider ${task.priority === 'ultra-high' ? 'text-red' : task.priority === 'high' ? 'text-orange' : 'text-muted'}`}>{priorityLabels[task.priority] || task.priority}</span>
-                                {task.deadline && <span className="text-sm font-bold text-red">Due {new Date(task.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
-                                {task.status === 'review' && <span className="text-sm font-bold text-purple">Awaiting Dan&apos;s Review</span>}
-                                {isFromDan && <span className="text-sm font-bold text-purple">From Dan</span>}
-                              </div>
+                        <div className="px-8 py-6 hover:bg-cream-dark transition-colors">
+                          {/* Title — editable */}
+                          {editingTaskTitle === task.id ? (
+                            <input type="text" value={titleEditValue}
+                              onChange={(e) => setTitleEditValue(e.target.value)}
+                              onBlur={() => handleTitleSave(task.id)}
+                              onKeyDown={(e) => { if (e.key === 'Enter') handleTitleSave(task.id); if (e.key === 'Escape') setEditingTaskTitle(null) }}
+                              autoFocus
+                              className="text-lg font-bold w-full border-2 border-black bg-white px-3 py-2 focus:outline-none focus:border-blue mb-2" />
+                          ) : (
+                            <h3 className="text-lg font-bold cursor-pointer hover:text-blue transition-colors mb-2"
+                              onClick={() => { setEditingTaskTitle(task.id); setTitleEditValue(task.title) }}
+                              title="Click to edit title">{task.title}</h3>
+                          )}
+                          {/* Meta + expand */}
+                          <div className="flex items-center justify-between gap-4 cursor-pointer"
+                            onClick={() => { setExpandedTask(isExpanded ? null : task.id); setUpdateText(task.update_to_dan || ''); setNewCheckItem('') }}>
+                            <div className="flex items-center gap-4 flex-wrap">
+                              <span className={`text-sm font-bold uppercase tracking-wider ${task.priority === 'ultra-high' ? 'text-red' : task.priority === 'high' ? 'text-orange' : 'text-muted'}`}>{priorityLabels[task.priority] || task.priority}</span>
+                              {task.deadline && <span className="text-sm font-bold text-red">Due {new Date(task.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
+                              {task.status === 'review' && <span className="text-sm font-bold text-purple">Awaiting Dan&apos;s Review</span>}
+                              {isFromDan && <span className="text-sm font-bold text-purple">From Dan</span>}
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
                               {isNewFromDan && <span className="w-3 h-3 rounded-full bg-purple animate-pulse" title="New task from Dan" />}
@@ -959,7 +957,7 @@ export function TeamView() {
                               </span>
                             </div>
                           </div>
-                        </button>
+                        </div>
                         {isExpanded && renderTaskDetail(task, false)}
                       </div>
                     )
