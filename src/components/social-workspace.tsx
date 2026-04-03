@@ -64,6 +64,9 @@ export function SocialWorkspace() {
   const [saving, setSaving] = useState(false)
   const [aiPrompt, setAiPrompt] = useState('')
   const [aiGenerating, setAiGenerating] = useState(false)
+  const [aiRecommendations, setAiRecommendations] = useState<{
+    timing?: string; audience?: string; boosting?: string; creative_direction?: string; variations?: string
+  } | null>(null)
 
   useEffect(() => {
     async function fetch() {
@@ -86,7 +89,13 @@ export function SocialWorkspace() {
       const data = await res.json()
       if (data.copy) setCompCopy(data.copy)
       if (data.hashtags) setCompHashtags(data.hashtags)
-      if (data.notes) setCompNotes(prev => prev ? prev + '\n\nAI Notes: ' + data.notes : 'AI Notes: ' + data.notes)
+      setAiRecommendations({
+        timing: data.timing,
+        audience: data.audience,
+        boosting: data.boosting,
+        creative_direction: data.creative_direction,
+        variations: data.variations,
+      })
     } catch (e) {
       console.error('AI draft failed:', e)
     }
@@ -315,6 +324,42 @@ export function SocialWorkspace() {
                 </div>
                 <p className="text-[9px] text-muted mt-1">AI will draft copy, hashtags, and posting recommendations</p>
               </div>
+
+              {/* AI Recommendations */}
+              {aiRecommendations && (
+                <div className="grid grid-cols-2 gap-3">
+                  {aiRecommendations.timing && (
+                    <div className="bg-blue/5 border border-blue/20 p-3">
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-blue mb-1">Timing</p>
+                      <p className="text-xs leading-relaxed">{aiRecommendations.timing}</p>
+                    </div>
+                  )}
+                  {aiRecommendations.audience && (
+                    <div className="bg-green/5 border border-green/20 p-3">
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-green mb-1">Target Audience</p>
+                      <p className="text-xs leading-relaxed">{aiRecommendations.audience}</p>
+                    </div>
+                  )}
+                  {aiRecommendations.boosting && (
+                    <div className="bg-orange/5 border border-orange/20 p-3">
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-orange mb-1">Boosting</p>
+                      <p className="text-xs leading-relaxed">{aiRecommendations.boosting}</p>
+                    </div>
+                  )}
+                  {aiRecommendations.creative_direction && (
+                    <div className="bg-purple/5 border border-purple/20 p-3">
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-purple mb-1">Creative Direction</p>
+                      <p className="text-xs leading-relaxed">{aiRecommendations.creative_direction}</p>
+                    </div>
+                  )}
+                  {aiRecommendations.variations && (
+                    <div className="col-span-2 bg-gold/5 border border-gold/20 p-3">
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-gold mb-1">Alternative Version</p>
+                      <p className="text-xs leading-relaxed whitespace-pre-wrap">{aiRecommendations.variations}</p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Post Copy</label>

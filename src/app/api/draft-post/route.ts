@@ -46,9 +46,13 @@ TASK: ${prompt}
 Write the post. Do NOT use generic festival language. Do NOT overuse emojis (1-2 max if any). Make every word count.
 
 Respond with ONLY a JSON object (no markdown, no code blocks) with these fields:
-- "copy": the post copy (clean text, no JSON escaping visible to the reader)
+- "copy": the post copy (clean text, use line breaks for readability, no emojis at the start of lines)
 - "hashtags": 4-6 relevant hashtags (quality over quantity)
-- "notes": specific recommendations for timing, audience targeting, and whether to boost (include budget suggestion if relevant)`
+- "timing": when to post this (specific day of week, time, and why)
+- "audience": who to target (demographics, interests, location specifics)
+- "boosting": whether to boost, suggested budget, and duration
+- "creative_direction": what type of visual/media should accompany this post
+- "variations": one alternative version of the copy with a different angle`
           }
         ],
       }),
