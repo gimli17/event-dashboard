@@ -290,12 +290,12 @@ export function BulletinBoard() {
                       {note.viewed_by.length > 0 && (
                         <span className="text-[9px] text-black/30" title={`Seen: ${note.viewed_by.join(', ')}`}>{note.viewed_by.length} seen</span>
                       )}
-                      {displayName && !isViewed ? (
+                      {displayName && isTagged && !isViewed ? (
                         <button onClick={() => handleMarkViewed(note.id)}
                           className="w-5 h-5 rounded border border-green/30 hover:border-green hover:bg-green/10 flex items-center justify-center transition-colors" title="Mark as seen">
                           <svg className="w-3 h-3 text-green/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                         </button>
-                      ) : isViewed ? (
+                      ) : isTagged && isViewed ? (
                         <div className="w-5 h-5 rounded bg-green/20 flex items-center justify-center" title="Seen">
                           <svg className="w-3 h-3 text-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                         </div>
