@@ -748,15 +748,27 @@ export function TeamView() {
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Notes &amp; Context</p>
                     <div className="flex items-center gap-1 border-2 border-b-0 border-black/20 bg-cream-dark px-3 py-2">
-                      <button type="button" onMouseDown={(e) => { e.preventDefault(); document.execCommand('bold') }}
+                      <button type="button" onMouseDown={(e) => { e.preventDefault(); document.getElementById('rich-editor')?.focus(); setTimeout(() => document.execCommand('bold', false), 0) }}
                         className="px-2.5 py-1 text-sm font-bold hover:bg-black/10 transition-colors rounded" title="Bold"><strong>B</strong></button>
-                      <button type="button" onMouseDown={(e) => { e.preventDefault(); document.execCommand('italic') }}
+                      <button type="button" onMouseDown={(e) => { e.preventDefault(); document.getElementById('rich-editor')?.focus(); setTimeout(() => document.execCommand('italic', false), 0) }}
                         className="px-2.5 py-1 text-sm italic hover:bg-black/10 transition-colors rounded" title="Italic"><em>I</em></button>
-                      <button type="button" onMouseDown={(e) => { e.preventDefault(); document.execCommand('underline') }}
+                      <button type="button" onMouseDown={(e) => { e.preventDefault(); document.getElementById('rich-editor')?.focus(); setTimeout(() => document.execCommand('underline', false), 0) }}
                         className="px-2.5 py-1 text-sm underline hover:bg-black/10 transition-colors rounded" title="Underline">U</button>
                       <div className="w-px h-5 bg-black/10 mx-1" />
-                      <button type="button" onMouseDown={(e) => { e.preventDefault(); document.execCommand('insertUnorderedList') }}
+                      <button type="button" onMouseDown={(e) => {
+                        e.preventDefault()
+                        const editor = document.getElementById('rich-editor')
+                        if (editor) editor.focus()
+                        setTimeout(() => document.execCommand('insertUnorderedList', false), 0)
+                      }}
                         className="px-2.5 py-1 text-sm hover:bg-black/10 transition-colors rounded" title="Bullet list">&bull; List</button>
+                      <button type="button" onMouseDown={(e) => {
+                        e.preventDefault()
+                        const editor = document.getElementById('rich-editor')
+                        if (editor) editor.focus()
+                        setTimeout(() => document.execCommand('insertOrderedList', false), 0)
+                      }}
+                        className="px-2.5 py-1 text-sm hover:bg-black/10 transition-colors rounded" title="Numbered list">1. List</button>
                     </div>
                     <div
                       contentEditable
