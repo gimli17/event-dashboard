@@ -744,14 +744,33 @@ export function TeamView() {
                       className="border-2 border-black/20 bg-white px-3 py-2 text-xs font-bold uppercase tracking-widest focus:outline-none focus:border-black cursor-pointer" />
                   </div>
 
-                  {/* Notes textarea — resizable */}
+                  {/* Rich text area with toolbar */}
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Notes &amp; Context</p>
-                    <textarea value={personNewNotes} onChange={(e) => setPersonNewNotes(e.target.value)}
-                      placeholder={"Notes, context, instructions...\n\nDrag the bottom-right corner to expand"}
-                      rows={8}
-                      style={{ resize: 'vertical', minHeight: '200px' }}
-                      className="w-full border-2 border-black/20 bg-white px-4 py-4 text-sm text-black leading-relaxed focus:outline-none focus:border-blue placeholder:text-muted/30" />
+                    <div className="flex items-center gap-1 border-2 border-b-0 border-black/20 bg-cream-dark px-3 py-2">
+                      <button type="button" onMouseDown={(e) => { e.preventDefault(); document.execCommand('bold') }}
+                        className="px-2.5 py-1 text-sm font-bold hover:bg-black/10 transition-colors rounded" title="Bold"><strong>B</strong></button>
+                      <button type="button" onMouseDown={(e) => { e.preventDefault(); document.execCommand('italic') }}
+                        className="px-2.5 py-1 text-sm italic hover:bg-black/10 transition-colors rounded" title="Italic"><em>I</em></button>
+                      <button type="button" onMouseDown={(e) => { e.preventDefault(); document.execCommand('underline') }}
+                        className="px-2.5 py-1 text-sm underline hover:bg-black/10 transition-colors rounded" title="Underline">U</button>
+                      <div className="w-px h-5 bg-black/10 mx-1" />
+                      <button type="button" onMouseDown={(e) => { e.preventDefault(); document.execCommand('insertUnorderedList') }}
+                        className="px-2.5 py-1 text-sm hover:bg-black/10 transition-colors rounded" title="Bullet list">&bull; List</button>
+                    </div>
+                    <div
+                      contentEditable
+                      suppressContentEditableWarning
+                      onInput={(e) => setPersonNewNotes(e.currentTarget.innerHTML)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault()
+                          document.execCommand('insertLineBreak')
+                        }
+                      }}
+                      className="w-full border-2 border-black/20 bg-white px-4 py-4 text-sm text-black leading-relaxed focus:outline-none focus:border-blue overflow-auto"
+                      style={{ minHeight: '200px', maxHeight: '500px', resize: 'vertical' }}
+                    />
                   </div>
 
                   {/* Links */}
