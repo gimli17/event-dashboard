@@ -62,6 +62,8 @@ export function SocialWorkspace() {
   const [compDate, setCompDate] = useState('')
   const [compNotes, setCompNotes] = useState('')
   const [saving, setSaving] = useState(false)
+  const [aiPrompt, setAiPrompt] = useState('')
+  const [aiGenerating, setAiGenerating] = useState(false)
 
   useEffect(() => {
     async function fetch() {
@@ -71,6 +73,25 @@ export function SocialWorkspace() {
     }
     fetch()
   }, [])
+
+  const handleAiDraft = async () => {
+    if (!aiPrompt.trim() || aiGenerating) return
+    setAiGenerating(true)
+    try {
+      const res = await fetch('/api/draft-post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: aiPrompt.trim(), platform: compPlatform }),
+      })
+      const data = await res.json()
+      if (data.copy) setCompCopy(data.copy)
+      if (data.hashtags) setCompHashtags(data.hashtags)
+      if (data.notes) setCompNotes(prev => prev ? prev + '\n\nAI Notes: ' + data.notes : 'AI Notes: ' + data.notes)
+    } catch (e) {
+      console.error('AI draft failed:', e)
+    }
+    setAiGenerating(false)
+  }
 
   const handleCreate = async () => {
     if (!compTitle.trim() || !compCopy.trim() || saving) return
@@ -277,6 +298,22 @@ export function SocialWorkspace() {
                   <input type="date" value={compDate} onChange={(e) => setCompDate(e.target.value)}
                     className="w-full border-2 border-black/20 bg-white px-3 py-2.5 text-sm font-bold focus:outline-none focus:border-black cursor-pointer" />
                 </div>
+              </div>
+
+              {/* AI Draft */}
+              <div className="bg-purple-light/10 border-2 border-purple-light/30 p-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-purple mb-2">AI Draft Assistant</p>
+                <div className="flex gap-2">
+                  <input type="text" value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleAiDraft() }}
+                    placeholder="Describe what you want to post about... (e.g., 'Announce ticket sales are live')"
+                    className="flex-1 border-2 border-purple-light/40 bg-white px-3 py-2 text-sm focus:outline-none focus:border-purple placeholder:text-muted/40" />
+                  <button onClick={handleAiDraft} disabled={!aiPrompt.trim() || aiGenerating}
+                    className="bg-purple text-white px-5 py-2 text-xs font-bold uppercase tracking-widest hover:bg-purple-light transition-colors disabled:opacity-40 shrink-0">
+                    {aiGenerating ? 'Drafting...' : 'Generate'}
+                  </button>
+                </div>
+                <p className="text-[9px] text-muted mt-1">AI will draft copy, hashtags, and posting recommendations</p>
               </div>
 
               <div>
