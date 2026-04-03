@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useUser } from './user-provider'
 import type { EventTask } from '@/lib/types'
+import { logActivity } from '@/lib/activity-log'
 
 interface ChecklistItem { id: string; text: string; checked: boolean }
 
@@ -148,6 +149,7 @@ export function TeamView() {
       event_id: null,
       week_of: null,
     } as never)
+    if (displayName) logActivity(displayName, 'created task', 'task', taskId, newTitle.trim(), newAssignee ? `Assigned to ${newAssignee}` : undefined)
   }
 
   const handleTitleSave = async (taskId: string) => {
@@ -193,6 +195,7 @@ export function TeamView() {
       event_id: null,
       week_of: null,
     } as never)
+    if (displayName) logActivity(displayName, 'created task', 'task', taskId, personNewTitle.trim(), `Assigned to ${selectedPerson}`)
   }
 
   const handleWithdrawFromReview = async (taskId: string) => {
@@ -209,8 +212,10 @@ export function TeamView() {
   }
 
   const handleSubmitForReview = async (taskId: string) => {
+    const task = allMasterTasks.find(t => t.id === taskId)
     setAllMasterTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: 'review' } : t)))
     await supabase.from('master_tasks').update({ status: 'review', updated_at: new Date().toISOString() } as never).eq('id', taskId)
+    if (displayName) logActivity(displayName, 'submitted for review', 'task', taskId, task?.title)
     setExpandedTask(null)
   }
 
@@ -225,9 +230,11 @@ export function TeamView() {
   }
 
   const handleDanRespond = async (taskId: string, action: 'approve' | 'revise') => {
+    const task = allMasterTasks.find(t => t.id === taskId)
     const newStatus = action === 'approve' ? 'complete' : 'in-progress'
     setAllMasterTasks((prev) => action === 'approve' ? prev.filter((t) => t.id !== taskId) : prev.map((t) => (t.id === taskId ? { ...t, status: newStatus, dan_feedback: feedbackText.trim() || t.dan_feedback } : t)))
     await supabase.from('master_tasks').update({ status: newStatus, dan_feedback: feedbackText.trim() || null, update_to_dan: null, updated_at: new Date().toISOString() } as never).eq('id', taskId)
+    if (displayName) logActivity(displayName, action === 'approve' ? 'approved' : 'sent back', 'task', taskId, task?.title, feedbackText.trim() || undefined)
     setFeedbackText('')
     setExpandedTask(null)
   }

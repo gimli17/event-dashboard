@@ -42,6 +42,9 @@ export function Navbar() {
           <Link href="/board" className="text-xs font-bold tracking-widest uppercase bg-amber-500/30 hover:bg-amber-500/50 px-3 py-1.5 transition-colors">
             Board
           </Link>
+          <Link href="/log" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
+            Log
+          </Link>
           <Link href="/team" className="text-xs font-bold tracking-widest uppercase bg-purple-light/30 hover:bg-purple-light/50 px-3 py-1.5 transition-colors relative">
             Team Workspace
             {reviewCount > 0 && (
