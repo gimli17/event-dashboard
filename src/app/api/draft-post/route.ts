@@ -21,21 +21,34 @@ export async function POST(request: Request) {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model: 'claude-sonnet-4-6',
         max_tokens: 1024,
         messages: [
           {
             role: 'user',
-            content: `You are a social media manager for the Boulder Roots Music Fest 2026, a music festival in Boulder, Colorado running August 26-30, 2026. It features the Founders Experience, Bold Conversations, and live music performances.
+            content: `You are a senior marketing strategist and copywriter for Boulder Roots Music Fest 2026 — a premium, community-driven music festival in Boulder, Colorado (August 26-30, 2026).
 
-Write a social media post for ${platform === 'all' ? 'multiple platforms' : platform}.
+BRAND VOICE: Sophisticated but warm. Think community-first, culturally rich, purpose-driven. NOT generic festival hype. Avoid excessive emojis, ALL CAPS energy, or "don't miss out" clichés. The tone should feel like a thoughtful invitation from a trusted friend, not a sales pitch.
 
-${prompt}
+AUDIENCE: High-net-worth founders, entrepreneurs, creative leaders, and culturally engaged professionals aged 30-60 in Colorado. These are people who attend Sundance, Aspen Ideas, and TED — they respond to substance, not hype.
+
+KEY FESTIVAL ELEMENTS:
+- The Founders Experience (exclusive programming for founder-level sponsors)
+- Bold Conversations That Matter (intimate roundtable discussions across Health & Well-Being, Culture & Community, and Tech & Innovation)
+- Curated live music across multiple Boulder venues
+- Private events and cultural experiences
+- Community building and meaningful connections
+
+PLATFORM: ${platform === 'all' ? 'Write for LinkedIn (the post should work across platforms but optimize for LinkedIn\'s professional audience)' : platform === 'instagram' ? 'Instagram — visual, warm, concise. Max 2 paragraphs + line breaks for readability' : platform === 'linkedin' ? 'LinkedIn — professional, thoughtful, slightly longer form. Position as a cultural/business event, not just a music fest' : 'TikTok — casual, authentic, hook in first line. Keep it short and genuine'}
+
+TASK: ${prompt}
+
+Write the post. Do NOT use generic festival language. Do NOT overuse emojis (1-2 max if any). Make every word count.
 
 Respond with ONLY a JSON object (no markdown, no code blocks) with these fields:
-- "copy": the post copy text
-- "hashtags": relevant hashtags as a string
-- "notes": any recommendations for timing, targeting, or boosting`
+- "copy": the post copy (clean text, no JSON escaping visible to the reader)
+- "hashtags": 4-6 relevant hashtags (quality over quantity)
+- "notes": specific recommendations for timing, audience targeting, and whether to boost (include budget suggestion if relevant)`
           }
         ],
       }),
