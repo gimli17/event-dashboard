@@ -768,9 +768,31 @@ export function TeamView() {
                           document.execCommand('insertLineBreak')
                         }
                       }}
-                      className="w-full border-2 border-black/20 bg-white px-4 py-4 text-sm text-black leading-relaxed focus:outline-none focus:border-blue overflow-auto"
-                      style={{ minHeight: '200px', maxHeight: '500px', resize: 'vertical' }}
+                      id="rich-editor"
+                      className="w-full border-2 border-b-0 border-black/20 bg-white px-4 py-4 text-sm text-black leading-relaxed focus:outline-none focus:border-blue overflow-auto"
+                      style={{ minHeight: '200px', height: '200px' }}
                     />
+                    <div
+                      className="w-full h-3 border-2 border-t-0 border-black/20 bg-cream-dark cursor-ns-resize flex items-center justify-center hover:bg-black/10 transition-colors"
+                      onMouseDown={(e) => {
+                        e.preventDefault()
+                        const editor = document.getElementById('rich-editor')
+                        if (!editor) return
+                        const startY = e.clientY
+                        const startH = editor.offsetHeight
+                        const onMove = (ev: MouseEvent) => {
+                          editor.style.height = Math.max(150, startH + ev.clientY - startY) + 'px'
+                        }
+                        const onUp = () => {
+                          document.removeEventListener('mousemove', onMove)
+                          document.removeEventListener('mouseup', onUp)
+                        }
+                        document.addEventListener('mousemove', onMove)
+                        document.addEventListener('mouseup', onUp)
+                      }}
+                    >
+                      <div className="w-8 h-1 bg-black/20 rounded-full" />
+                    </div>
                   </div>
 
                   {/* Links */}
