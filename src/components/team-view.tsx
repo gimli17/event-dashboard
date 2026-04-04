@@ -71,6 +71,7 @@ export function TeamView() {
   const [editCheckText, setEditCheckText] = useState('')
   const [editingTaskTitle, setEditingTaskTitle] = useState<string | null>(null)
   const [titleEditValue, setTitleEditValue] = useState('')
+  const [showCompleted, setShowCompleted] = useState(false)
 
   useEffect(() => {
     async function fetch() {
@@ -78,7 +79,6 @@ export function TeamView() {
       const { data: mt } = await supabase.from('master_tasks')
         .select('id, title, status, assignee, priority, links, current_status, overview, action_items, dan_comments, update_to_dan, dan_feedback, dan_checklist, deadline, created_by')
         .is('deleted_at', null)
-        .neq('status', 'complete')
         .order('sort_order')
       if (mt) setAllMasterTasks(mt as MasterTaskFull[])
 
@@ -279,9 +279,12 @@ export function TeamView() {
   const priorityRank: Record<string, number> = { 'ultra-high': 0, high: 1, medium: 2, low: 3, backlog: 4 }
   const reviewTasks = allMasterTasks.filter((t) => t.status === 'review').sort((a, b) => (priorityRank[a.priority] ?? 4) - (priorityRank[b.priority] ?? 4))
   const totalReview = reviewTasks.length + reviewEventTasks.length
+  const completedTasks = selectedPerson
+    ? allMasterTasks.filter((t) => t.assignee?.includes(selectedPerson) && t.status === 'complete')
+    : []
   const personTasks = selectedPerson
     ? allMasterTasks
-        .filter((t) => t.assignee?.includes(selectedPerson))
+        .filter((t) => t.assignee?.includes(selectedPerson) && t.status !== 'complete')
         .sort((a, b) => {
           // New from Dan come first
           const aNewDan = (a.created_by === 'Dan' || a.created_by === 'dan') && a.status === 'not-started' ? 1 : 0
@@ -969,6 +972,83 @@ export function TeamView() {
                       </div>
                     )
                   })}
+                </div>
+              )}
+
+              {/* Completed tasks */}
+              {completedTasks.length > 0 && (
+                <div className="mt-4">
+                  <button onClick={() => setShowCompleted(!showCompleted)}
+                    className="w-full text-left px-6 py-3 bg-green/10 border-2 border-green/20 flex items-center justify-between hover:bg-green/15 transition-colors">
+                    <span className="text-sm font-bold text-green uppercase tracking-widest">Completed ({completedTasks.length})</span>
+                    <span className="text-xs text-green">{showCompleted ? '▲ Hide' : '▼ Show'}</span>
+                  </button>
+                  {showCompleted && (
+                    <div className="border-l-2 border-r-2 border-b-2 border-green/20">
+                      {completedTasks.map((task, i) => {
+                        const isExpanded = expandedTask === task.id
+                        return (
+                          <div key={task.id} className={i > 0 ? 'border-t border-black/5' : ''}>
+                            <div className="px-8 py-5 hover:bg-cream-dark transition-colors">
+                              <h3 className="text-lg font-bold text-muted line-through cursor-pointer"
+                                onClick={() => setExpandedTask(isExpanded ? null : task.id)}>
+                                {task.title}
+                              </h3>
+                              <div className="flex items-center gap-3 mt-1">
+                                <span className="text-xs font-bold text-green uppercase tracking-widest">Done</span>
+                                {task.dan_feedback && <span className="text-xs text-purple">Dan left feedback</span>}
+                              </div>
+                            </div>
+                            {isExpanded && (
+                              <div className="px-8 pb-6 bg-white border-t border-black/5">
+                                {/* Show full context of completed task */}
+                                {task.update_to_dan && (
+                                  <div className="pt-4 mb-4">
+                                    <p className="text-sm font-bold uppercase tracking-widest text-purple mb-2">Update Submitted</p>
+                                    <div className="text-sm leading-relaxed border-l-4 border-purple pl-4" dangerouslySetInnerHTML={{ __html: task.update_to_dan }} />
+                                  </div>
+                                )}
+                                {task.dan_feedback && (
+                                  <div className="mb-4">
+                                    <p className="text-sm font-bold uppercase tracking-widest text-red mb-2">Dan&apos;s Feedback</p>
+                                    <div className="text-sm leading-relaxed border-l-4 border-red pl-4" dangerouslySetInnerHTML={{ __html: task.dan_feedback }} />
+                                  </div>
+                                )}
+                                {task.dan_checklist && task.dan_checklist.length > 0 && (
+                                  <div className="mb-4">
+                                    <p className="text-sm font-bold uppercase tracking-widest text-purple mb-2">Dan Advise Checklist</p>
+                                    <div className="space-y-1">
+                                      {task.dan_checklist.map((item) => (
+                                        <div key={item.id} className="flex items-center gap-2">
+                                          <span className={`text-sm ${item.checked ? 'text-green' : 'text-muted'}`}>{item.checked ? '☑' : '☐'}</span>
+                                          <span className={`text-sm ${item.checked ? 'line-through text-muted' : ''}`}>{item.text}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {task.links && (
+                                  <div className="mb-4">
+                                    <p className="text-sm font-bold uppercase tracking-widest text-muted mb-2">Links</p>
+                                    {task.links.split('\n').filter(Boolean).map((link, li) => (
+                                      <a key={li} href={link.trim().startsWith('http') ? link.trim() : `https://${link.trim()}`} target="_blank" rel="noopener noreferrer"
+                                        className="text-sm text-blue hover:text-red underline block">{link.trim()}</a>
+                                    ))}
+                                  </div>
+                                )}
+                                {task.overview && (
+                                  <div className="mb-4">
+                                    <p className="text-sm font-bold uppercase tracking-widest text-muted mb-2">Overview</p>
+                                    <div className="text-sm" dangerouslySetInnerHTML={{ __html: task.overview }} />
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </>
