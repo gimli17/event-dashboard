@@ -71,7 +71,7 @@ export function TeamView() {
   const [editCheckText, setEditCheckText] = useState('')
   const [editingTaskTitle, setEditingTaskTitle] = useState<string | null>(null)
   const [titleEditValue, setTitleEditValue] = useState('')
-  const [showCompleted, setShowCompleted] = useState(false)
+  const [showCompleted, setShowCompleted] = useState(true)
 
   useEffect(() => {
     async function fetch() {
