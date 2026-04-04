@@ -112,6 +112,29 @@ export function Navbar() {
         }
       }
 
+      // Search deleted/archived tasks — these go to the log
+      const { data: deletedTasks } = await supabase
+        .from('master_tasks')
+        .select('id, title, status, assignee, priority, deleted_at')
+        .not('deleted_at', 'is', null)
+        .ilike('title', `%${q}%`)
+        .limit(5) as { data: { id: string; title: string; status: string; assignee: string | null; priority: string; deleted_at: string }[] | null }
+
+      if (deletedTasks) {
+        const existingIds = new Set(allResults.map(r => r.id))
+        for (const t of deletedTasks) {
+          if (!existingIds.has(t.id)) {
+            allResults.push({
+              id: t.id,
+              title: t.title,
+              type: 'task',
+              subtitle: [t.status === 'complete' ? 'Archived' : 'Deleted', t.assignee, t.priority === 'ultra-high' ? 'Very High' : t.priority].filter(Boolean).join(' · '),
+              href: `/log?task=${t.id}`,
+            })
+          }
+        }
+      }
+
       // Search events
       const { data: events } = await supabase
         .from('events')

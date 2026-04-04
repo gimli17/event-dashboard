@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 interface LogEntry {
@@ -42,22 +43,51 @@ const actionColors: Record<string, string> = {
 const teamMembers = ['All', 'Dan', 'Cody', 'Sabrina', 'Joe', 'Danny', 'Connor', 'Gib', 'Emily', 'Kendall', 'Alex', 'Liam', 'Dave', 'Tom', 'Kevin']
 
 export function ActivityLog() {
+  const searchParams = useSearchParams()
+  const highlightTaskId = searchParams.get('task')
   const [entries, setEntries] = useState<LogEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [filterPerson, setFilterPerson] = useState('All')
   const [filterDate, setFilterDate] = useState('')
   const [expandedEntry, setExpandedEntry] = useState<string | null>(null)
   const [taskContexts, setTaskContexts] = useState<Record<string, TaskContext>>({})
+  const highlightRef = useRef<HTMLDivElement>(null)
+  const didScrollRef = useRef(false)
 
   useEffect(() => {
     async function fetch() {
       const query = supabase.from('activity_log').select('*').order('created_at', { ascending: false }).limit(200)
       const { data } = await query
-      if (data) setEntries(data as LogEntry[])
+      if (data) {
+        setEntries(data as LogEntry[])
+        // Auto-expand the first entry matching the highlighted task
+        if (highlightTaskId) {
+          const match = (data as LogEntry[]).find(e => e.target_id === highlightTaskId)
+          if (match) {
+            setExpandedEntry(match.id)
+            // Pre-load context
+            const { data: mt } = await supabase.from('master_tasks')
+              .select('update_to_dan, dan_feedback, dan_checklist, links, overview, status, assignee, priority')
+              .eq('id', highlightTaskId)
+              .single()
+            if (mt) {
+              setTaskContexts(prev => ({ ...prev, [highlightTaskId]: mt as TaskContext }))
+            }
+          }
+        }
+      }
       setLoading(false)
     }
     fetch()
-  }, [])
+  }, [highlightTaskId])
+
+  // Scroll to highlighted entry once loaded
+  useEffect(() => {
+    if (!loading && highlightRef.current && !didScrollRef.current) {
+      didScrollRef.current = true
+      setTimeout(() => highlightRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100)
+    }
+  }, [loading, expandedEntry])
 
   const loadTaskContext = async (entryId: string, taskId: string) => {
     if (taskContexts[taskId]) {
@@ -133,8 +163,9 @@ export function ActivityLog() {
                   const ctx = entry.target_id ? taskContexts[entry.target_id] : null
 
                   return (
-                    <div key={entry.id} className="py-2">
-                      <div className="flex items-start gap-3">
+                    <div key={entry.id} className="py-2"
+                      ref={highlightTaskId && entry.target_id === highlightTaskId ? highlightRef : undefined}>
+                      <div className={`flex items-start gap-3 ${highlightTaskId && entry.target_id === highlightTaskId ? 'bg-gold/10 -mx-2 px-2 py-1 border-l-4 border-gold' : ''}`}>
                         {/* Timeline dot */}
                         <div className={`w-2 h-2 rounded-full mt-1.5 -ml-[21px] ${color.replace('text-', 'bg-')}`} />
 

@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { Navbar } from '@/components/navbar'
 import { BackLink } from '@/components/back-link'
 import { SidebarButtons } from '@/components/sidebar-buttons'
@@ -19,7 +20,9 @@ export default function LogPage() {
         </div>
       </section>
       <section className="bg-cream flex-1">
-        <ActivityLog />
+        <Suspense fallback={<div className="max-w-5xl mx-auto px-6 py-16 text-center"><p className="text-muted uppercase tracking-widest text-xs font-bold">Loading...</p></div>}>
+          <ActivityLog />
+        </Suspense>
       </section>
       <footer className="bg-black text-white/40 text-center py-8">
         <p className="text-xs font-bold tracking-widest uppercase">Boulder Roots Music Fest &middot; 2026</p>
