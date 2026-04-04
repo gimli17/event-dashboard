@@ -14,15 +14,29 @@ interface LogEntry {
   created_at: string
 }
 
+interface TaskContext {
+  update_to_dan: string | null
+  dan_feedback: string | null
+  dan_checklist: { id: string; text: string; checked: boolean }[] | null
+  links: string | null
+  overview: string | null
+  status: string | null
+  assignee: string | null
+  priority: string | null
+}
+
 const actionColors: Record<string, string> = {
   created: 'text-green',
   completed: 'text-green',
+  approved: 'text-green',
   updated: 'text-blue',
   assigned: 'text-purple',
   reviewed: 'text-purple',
   deleted: 'text-red',
   submitted: 'text-orange',
   posted: 'text-gold',
+  sent: 'text-orange',
+  archived: 'text-muted',
 }
 
 const teamMembers = ['All', 'Dan', 'Cody', 'Sabrina', 'Joe', 'Danny', 'Connor', 'Gib', 'Emily', 'Kendall', 'Alex', 'Liam', 'Dave', 'Tom', 'Kevin']
@@ -32,18 +46,34 @@ export function ActivityLog() {
   const [loading, setLoading] = useState(true)
   const [filterPerson, setFilterPerson] = useState('All')
   const [filterDate, setFilterDate] = useState('')
+  const [expandedEntry, setExpandedEntry] = useState<string | null>(null)
+  const [taskContexts, setTaskContexts] = useState<Record<string, TaskContext>>({})
 
   useEffect(() => {
     async function fetch() {
-      // Fetch from activity_log
-      let query = supabase.from('activity_log').select('*').order('created_at', { ascending: false }).limit(200)
-
+      const query = supabase.from('activity_log').select('*').order('created_at', { ascending: false }).limit(200)
       const { data } = await query
       if (data) setEntries(data as LogEntry[])
       setLoading(false)
     }
     fetch()
   }, [])
+
+  const loadTaskContext = async (entryId: string, taskId: string) => {
+    if (taskContexts[taskId]) {
+      setExpandedEntry(expandedEntry === entryId ? null : entryId)
+      return
+    }
+    // Try master_tasks first
+    const { data: mt } = await supabase.from('master_tasks')
+      .select('update_to_dan, dan_feedback, dan_checklist, links, overview, status, assignee, priority')
+      .eq('id', taskId)
+      .single()
+    if (mt) {
+      setTaskContexts(prev => ({ ...prev, [taskId]: mt as TaskContext }))
+    }
+    setExpandedEntry(expandedEntry === entryId ? null : entryId)
+  }
 
   // Filter
   let filtered = entries
@@ -98,27 +128,121 @@ export function ActivityLog() {
                 {dayEntries.map((entry) => {
                   const actionWord = entry.action.split(' ')[0].toLowerCase()
                   const color = actionColors[actionWord] || 'text-muted'
+                  const hasTaskContext = entry.target_type === 'task' && entry.target_id
+                  const isExpanded = expandedEntry === entry.id
+                  const ctx = entry.target_id ? taskContexts[entry.target_id] : null
 
                   return (
-                    <div key={entry.id} className="flex items-start gap-3 py-2">
-                      {/* Timeline dot */}
-                      <div className={`w-2 h-2 rounded-full mt-1.5 -ml-[21px] ${color.replace('text-', 'bg-')}`} />
+                    <div key={entry.id} className="py-2">
+                      <div className="flex items-start gap-3">
+                        {/* Timeline dot */}
+                        <div className={`w-2 h-2 rounded-full mt-1.5 -ml-[21px] ${color.replace('text-', 'bg-')}`} />
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-baseline gap-2 flex-wrap">
-                          <span className="text-sm font-bold">{entry.actor}</span>
-                          <span className={`text-sm ${color}`}>{entry.action}</span>
-                          {entry.target_title && (
-                            <span className="text-sm font-bold">{entry.target_title}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-baseline gap-2 flex-wrap">
+                            <span className="text-sm font-bold">{entry.actor}</span>
+                            <span className={`text-sm ${color}`}>{entry.action}</span>
+                            {entry.target_title && (
+                              <span className="text-sm font-bold">{entry.target_title}</span>
+                            )}
+                            {hasTaskContext && (
+                              <button
+                                onClick={() => loadTaskContext(entry.id, entry.target_id!)}
+                                className="text-[10px] font-bold uppercase tracking-widest text-blue hover:text-purple transition-colors"
+                              >
+                                {isExpanded ? '▲ Hide context' : '▼ View context'}
+                              </button>
+                            )}
+                          </div>
+                          {entry.details && (
+                            <p className="text-xs text-muted mt-0.5">{entry.details}</p>
+                          )}
+                          <span className="text-[10px] text-muted/50">
+                            {new Date(entry.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Expanded task context */}
+                      {isExpanded && ctx && (
+                        <div className="ml-4 mt-2 mb-2 border-l-4 border-blue/20 bg-white px-5 py-4 space-y-3">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            {ctx.status && (
+                              <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 ${
+                                ctx.status === 'complete' ? 'bg-green text-white' :
+                                ctx.status === 'review' ? 'bg-purple text-white' :
+                                ctx.status === 'in-progress' ? 'bg-blue text-white' :
+                                'bg-black/10 text-black'
+                              }`}>{ctx.status}</span>
+                            )}
+                            {ctx.priority && (
+                              <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 ${
+                                ctx.priority === 'ultra-high' ? 'bg-red text-white' :
+                                ctx.priority === 'high' ? 'bg-orange text-white' :
+                                ctx.priority === 'medium' ? 'bg-gold text-white' :
+                                'bg-black/10 text-black'
+                              }`}>{ctx.priority === 'ultra-high' ? 'Very High' : ctx.priority}</span>
+                            )}
+                            {ctx.assignee && (
+                              <span className="text-[10px] font-bold text-blue uppercase tracking-widest">{ctx.assignee}</span>
+                            )}
+                          </div>
+
+                          {ctx.update_to_dan && (
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-purple mb-1">Update Submitted</p>
+                              <div className="text-sm leading-relaxed border-l-4 border-purple pl-3" dangerouslySetInnerHTML={{ __html: ctx.update_to_dan }} />
+                            </div>
+                          )}
+
+                          {ctx.dan_feedback && (
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-red mb-1">Dan&apos;s Feedback</p>
+                              <div className="text-sm leading-relaxed border-l-4 border-red pl-3" dangerouslySetInnerHTML={{ __html: ctx.dan_feedback }} />
+                            </div>
+                          )}
+
+                          {ctx.dan_checklist && ctx.dan_checklist.length > 0 && (
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-purple mb-1">Checklist</p>
+                              <div className="space-y-1">
+                                {ctx.dan_checklist.map((item) => (
+                                  <div key={item.id} className="flex items-center gap-2">
+                                    <span className={`text-sm ${item.checked ? 'text-green' : 'text-muted'}`}>{item.checked ? '☑' : '☐'}</span>
+                                    <span className={`text-sm ${item.checked ? 'line-through text-muted' : ''}`}>{item.text}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {ctx.links && (
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Links</p>
+                              {ctx.links.split('\n').filter(Boolean).map((link, li) => (
+                                <a key={li} href={link.trim().startsWith('http') ? link.trim() : `https://${link.trim()}`} target="_blank" rel="noopener noreferrer"
+                                  className="text-sm text-blue hover:text-red underline block">{link.trim()}</a>
+                              ))}
+                            </div>
+                          )}
+
+                          {ctx.overview && (
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Overview</p>
+                              <div className="text-sm" dangerouslySetInnerHTML={{ __html: ctx.overview }} />
+                            </div>
+                          )}
+
+                          {!ctx.update_to_dan && !ctx.dan_feedback && !ctx.overview && !ctx.links && (
+                            <p className="text-xs text-muted italic">No additional context on this task.</p>
                           )}
                         </div>
-                        {entry.details && (
-                          <p className="text-xs text-muted mt-0.5">{entry.details}</p>
-                        )}
-                        <span className="text-[10px] text-muted/50">
-                          {new Date(entry.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
+                      )}
+                      {isExpanded && !ctx && entry.target_id && (
+                        <div className="ml-4 mt-2 mb-2 border-l-4 border-black/10 bg-white px-5 py-3">
+                          <p className="text-xs text-muted italic">Loading task context...</p>
+                        </div>
+                      )}
                     </div>
                   )
                 })}

@@ -599,8 +599,9 @@ export function TeamView() {
                 )}
                 <button onClick={async () => {
                   await supabase.from('master_tasks').update({ status: 'complete', updated_at: new Date().toISOString() } as never).eq('id', task.id)
-                  setAllMasterTasks((prev) => prev.filter((t) => t.id !== task.id))
+                  setAllMasterTasks((prev) => prev.map((t) => t.id === task.id ? { ...t, status: 'complete' } : t))
                   setExpandedTask(null)
+                  if (displayName) logActivity(displayName, 'completed', 'task', task.id, task.title)
                 }}
                   className="bg-green text-white px-8 py-3.5 text-sm font-bold uppercase tracking-widest hover:bg-green-light transition-colors">
                   Mark as Done
@@ -989,15 +990,24 @@ export function TeamView() {
                         const isExpanded = expandedTask === task.id
                         return (
                           <div key={task.id} className={i > 0 ? 'border-t border-black/5' : ''}>
-                            <div className="px-8 py-5 hover:bg-cream-dark transition-colors">
-                              <h3 className="text-lg font-bold text-muted line-through cursor-pointer"
-                                onClick={() => setExpandedTask(isExpanded ? null : task.id)}>
-                                {task.title}
-                              </h3>
-                              <div className="flex items-center gap-3 mt-1">
-                                <span className="text-xs font-bold text-green uppercase tracking-widest">Done</span>
-                                {task.dan_feedback && <span className="text-xs text-purple">Dan left feedback</span>}
+                            <div className="px-8 py-5 hover:bg-cream-dark transition-colors flex items-start justify-between gap-4">
+                              <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setExpandedTask(isExpanded ? null : task.id)}>
+                                <h3 className="text-lg font-bold text-muted line-through">
+                                  {task.title}
+                                </h3>
+                                <div className="flex items-center gap-3 mt-1">
+                                  <span className="text-xs font-bold text-green uppercase tracking-widest">Done</span>
+                                  {task.dan_feedback && <span className="text-xs text-purple">Dan left feedback</span>}
+                                </div>
                               </div>
+                              <button onClick={async () => {
+                                await supabase.from('master_tasks').update({ deleted_at: new Date().toISOString() } as never).eq('id', task.id)
+                                setAllMasterTasks((prev) => prev.filter((t) => t.id !== task.id))
+                                if (displayName) logActivity(displayName, 'archived', 'task', task.id, task.title)
+                              }}
+                                className="text-[10px] font-bold uppercase tracking-widest text-muted bg-black/5 hover:bg-red hover:text-white px-3 py-1.5 transition-colors shrink-0 mt-1">
+                                Archive
+                              </button>
                             </div>
                             {isExpanded && (
                               <div className="px-8 pb-6 bg-white border-t border-black/5">

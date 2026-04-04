@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useUser } from './user-provider'
+import { logActivity } from '@/lib/activity-log'
 import { WeeklyReviewButton } from './weekly-review'
 import {
   DndContext,
@@ -1018,12 +1019,25 @@ export function MasterTaskList() {
                     </div>
                     <div className="border-l-2 border-r-2 border-b-2 border-black/10">
                       {completedMaster.map((task, i) => (
-                        <div key={task.id} className={`px-5 py-3 ${i > 0 ? 'border-t border-black/5' : ''}`}>
-                          <p className="text-sm font-bold line-through text-muted">{task.title}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            {task.assignee && <span className="text-[10px] font-bold text-blue uppercase tracking-wider">{task.assignee}</span>}
-                            <span className="text-[10px] font-bold text-green uppercase tracking-widest">DONE</span>
+                        <div key={task.id} className={`px-5 py-3 flex items-center justify-between gap-4 ${i > 0 ? 'border-t border-black/5' : ''}`}>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold line-through text-muted">{task.title}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              {task.assignee && <span className="text-[10px] font-bold text-blue uppercase tracking-wider">{task.assignee}</span>}
+                              <span className="text-[10px] font-bold text-green uppercase tracking-widest">DONE</span>
+                            </div>
                           </div>
+                          <button
+                            onClick={async () => {
+                              await supabase.from('master_tasks').update({ deleted_at: new Date().toISOString() } as never).eq('id', task.id)
+                              setTasks((prev) => prev.filter((t) => t.id !== task.id))
+                              setDeletedTasks((prev) => [...prev, { ...task, status: 'complete' } as MasterTask])
+                              if (displayName) logActivity(displayName, 'archived', 'task', task.id, task.title)
+                            }}
+                            className="text-[10px] font-bold uppercase tracking-widest text-muted bg-black/5 hover:bg-red hover:text-white px-3 py-1.5 transition-colors shrink-0"
+                          >
+                            Archive
+                          </button>
                         </div>
                       ))}
                     </div>
