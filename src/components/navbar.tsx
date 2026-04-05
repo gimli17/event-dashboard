@@ -201,43 +201,33 @@ export function Navbar() {
   const typeIcons: Record<string, string> = { task: '☐', event: '◆', note: '■' }
   const typeColors: Record<string, string> = { task: 'text-blue', event: 'text-green', note: 'text-gold' }
 
+  const [menuOpen, setMenuOpen] = useState(false)
+
   return (
     <>
-      <nav className="bg-blue text-white">
+      <nav className="bg-blue text-white relative">
         <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
           <Link href="/" className="text-sm font-bold tracking-widest uppercase">
             Boulder Roots 2026
           </Link>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-5">
             {/* Search trigger */}
             <button
               onClick={() => { setSearchOpen(true); setTimeout(() => inputRef.current?.focus(), 50) }}
               className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors flex items-center gap-1.5"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-              <span className="hidden lg:inline">Search</span>
               <kbd className="hidden lg:inline text-[9px] bg-white/20 px-1.5 py-0.5 rounded font-mono">⌘K</kbd>
             </button>
+            {/* Primary nav items */}
             <Link href="/tasks" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
               Tasks
-            </Link>
-            <Link href="/schedule" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
-              Schedule
-            </Link>
-            <Link href="/bold-conversations" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
-              Bold Conversations
-            </Link>
-            <Link href="/private-parties" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
-              Private Parties
             </Link>
             <Link href="/social" className="text-xs font-bold tracking-widest uppercase bg-pink-500/20 hover:bg-pink-500/30 px-3 py-1.5 transition-colors">
               Social
             </Link>
             <Link href="/board" className="text-xs font-bold tracking-widest uppercase bg-amber-500/30 hover:bg-amber-500/50 px-3 py-1.5 transition-colors">
               Board
-            </Link>
-            <Link href="/log" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
-              Log
             </Link>
             <Link href="/team" className="text-xs font-bold tracking-widest uppercase bg-purple-light/30 hover:bg-purple-light/50 px-3 py-1.5 transition-colors relative">
               Team Workspace
@@ -247,8 +237,44 @@ export function Navbar() {
                 </span>
               )}
             </Link>
+            {/* Hamburger menu */}
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="hover:text-cream transition-colors p-1"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {menuOpen
+                  ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                  : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
+                }
+              </svg>
+            </button>
           </div>
         </div>
+        {/* Dropdown menu */}
+        {menuOpen && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
+            <div className="absolute right-6 top-14 z-50 bg-white border-2 border-black shadow-lg min-w-[200px]">
+              <Link href="/schedule" onClick={() => setMenuOpen(false)}
+                className="block px-5 py-3 text-xs font-bold tracking-widest uppercase text-black hover:bg-cream transition-colors">
+                Schedule
+              </Link>
+              <Link href="/bold-conversations" onClick={() => setMenuOpen(false)}
+                className="block px-5 py-3 text-xs font-bold tracking-widest uppercase text-black hover:bg-cream transition-colors border-t border-black/10">
+                Bold Conversations
+              </Link>
+              <Link href="/private-parties" onClick={() => setMenuOpen(false)}
+                className="block px-5 py-3 text-xs font-bold tracking-widest uppercase text-black hover:bg-cream transition-colors border-t border-black/10">
+                Private Parties
+              </Link>
+              <Link href="/log" onClick={() => setMenuOpen(false)}
+                className="block px-5 py-3 text-xs font-bold tracking-widest uppercase text-black hover:bg-cream transition-colors border-t border-black/10">
+                Activity Log
+              </Link>
+            </div>
+          </>
+        )}
       </nav>
 
       {/* Search modal overlay */}
