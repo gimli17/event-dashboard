@@ -240,9 +240,9 @@ export function Navbar() {
             {/* Hamburger menu */}
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="hover:text-cream transition-colors p-1"
+              className="hover:text-cream transition-colors p-1 relative z-[60]"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 transition-transform duration-300" style={{ transform: menuOpen ? 'rotate(90deg)' : 'rotate(0deg)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 {menuOpen
                   ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
                   : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" />
@@ -251,31 +251,57 @@ export function Navbar() {
             </button>
           </div>
         </div>
-        {/* Dropdown menu */}
-        {menuOpen && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
-            <div className="absolute right-6 top-14 z-50 bg-white border-2 border-black shadow-lg min-w-[200px]">
-              <Link href="/schedule" onClick={() => setMenuOpen(false)}
-                className="block px-5 py-3 text-xs font-bold tracking-widest uppercase text-black hover:bg-cream transition-colors">
-                Schedule
-              </Link>
-              <Link href="/bold-conversations" onClick={() => setMenuOpen(false)}
-                className="block px-5 py-3 text-xs font-bold tracking-widest uppercase text-black hover:bg-cream transition-colors border-t border-black/10">
-                Bold Conversations
-              </Link>
-              <Link href="/private-parties" onClick={() => setMenuOpen(false)}
-                className="block px-5 py-3 text-xs font-bold tracking-widest uppercase text-black hover:bg-cream transition-colors border-t border-black/10">
-                Private Parties
-              </Link>
-              <Link href="/log" onClick={() => setMenuOpen(false)}
-                className="block px-5 py-3 text-xs font-bold tracking-widest uppercase text-black hover:bg-cream transition-colors border-t border-black/10">
-                Activity Log
-              </Link>
-            </div>
-          </>
-        )}
       </nav>
+
+      {/* Slide-out panel */}
+      <div
+        className={`fixed inset-0 z-50 pointer-events-none transition-opacity duration-300 ${menuOpen ? 'opacity-100' : 'opacity-0'}`}
+      >
+        {/* Backdrop */}
+        <div
+          className={`absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${menuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0'}`}
+          onClick={() => setMenuOpen(false)}
+        />
+        {/* Panel */}
+        <div
+          className={`absolute top-0 right-0 h-full w-72 bg-white shadow-2xl pointer-events-auto transform transition-transform duration-300 ease-out ${menuOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        >
+          {/* Close button */}
+          <div className="flex items-center justify-between px-6 h-14 border-b border-black/10">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Menu</span>
+            <button onClick={() => setMenuOpen(false)} className="text-muted hover:text-black transition-colors p-1">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          {/* Menu items */}
+          <div className="py-2">
+            {[
+              { href: '/schedule', label: 'Schedule', icon: '▦' },
+              { href: '/bold-conversations', label: 'Bold Conversations', icon: '◉' },
+              { href: '/private-parties', label: 'Private Parties', icon: '◈' },
+              { href: '/log', label: 'Activity Log', icon: '▤' },
+            ].map((item, i) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-4 px-6 py-4 text-black hover:bg-cream transition-colors group"
+                style={{ transitionDelay: menuOpen ? `${(i + 1) * 50}ms` : '0ms' }}
+              >
+                <span className="text-muted/40 group-hover:text-blue transition-colors text-sm">{item.icon}</span>
+                <span className="text-xs font-bold tracking-widest uppercase group-hover:text-blue transition-colors">{item.label}</span>
+              </Link>
+            ))}
+          </div>
+          {/* Footer */}
+          <div className="absolute bottom-0 left-0 right-0 px-6 py-6 border-t border-black/10">
+            <p className="text-[9px] font-bold tracking-widest uppercase text-muted/40">Boulder Roots Music Fest</p>
+            <p className="text-[9px] font-bold tracking-widest uppercase text-muted/40 mt-1">Operations Portal 2026</p>
+          </div>
+        </div>
+      </div>
 
       {/* Search modal overlay */}
       {searchOpen && (
