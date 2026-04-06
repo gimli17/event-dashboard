@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useSidebar } from '@/lib/sidebar-context'
 import { supabase } from '@/lib/supabase'
+import { INITIATIVES, type InitiativeKey } from '@/lib/initiatives'
 
 interface SearchResult {
   id: string
@@ -14,7 +15,7 @@ interface SearchResult {
   href: string
 }
 
-export function Navbar() {
+export function Navbar({ initiative }: { initiative?: InitiativeKey } = {}) {
   const sidebar = useSidebar()
   const router = useRouter()
   const [reviewCount, setReviewCount] = useState(0)
@@ -70,18 +71,19 @@ export function Navbar() {
       // Search master_tasks
       const { data: tasks } = await supabase
         .from('master_tasks')
-        .select('id, title, status, assignee, priority, overview, current_status')
+        .select('id, title, status, assignee, priority, overview, current_status, initiative')
         .is('deleted_at', null)
         .ilike('title', `%${q}%`)
-        .limit(10) as { data: { id: string; title: string; status: string; assignee: string | null; priority: string; overview: string | null; current_status: string | null }[] | null }
+        .limit(10) as { data: { id: string; title: string; status: string; assignee: string | null; priority: string; overview: string | null; current_status: string | null; initiative: string }[] | null }
 
       if (tasks) {
         for (const t of tasks) {
+          const initLabel = INITIATIVES[t.initiative as InitiativeKey]?.shortLabel
           allResults.push({
             id: t.id,
             title: t.title,
             type: 'task',
-            subtitle: [t.assignee, t.priority === 'ultra-high' ? 'Very High' : t.priority, t.status].filter(Boolean).join(' · '),
+            subtitle: [initLabel, t.assignee, t.priority === 'ultra-high' ? 'Very High' : t.priority, t.status].filter(Boolean).join(' · '),
             href: `/tasks`,
           })
         }
@@ -91,20 +93,21 @@ export function Navbar() {
       if (allResults.length < 5) {
         const { data: tasks2 } = await supabase
           .from('master_tasks')
-          .select('id, title, status, assignee, priority, overview, current_status')
+          .select('id, title, status, assignee, priority, overview, current_status, initiative')
           .is('deleted_at', null)
           .or(`overview.ilike.%${q}%,current_status.ilike.%${q}%,action_items.ilike.%${q}%,dan_comments.ilike.%${q}%`)
-          .limit(10) as { data: { id: string; title: string; status: string; assignee: string | null; priority: string; overview: string | null; current_status: string | null }[] | null }
+          .limit(10) as { data: { id: string; title: string; status: string; assignee: string | null; priority: string; overview: string | null; current_status: string | null; initiative: string }[] | null }
 
         if (tasks2) {
           const existingIds = new Set(allResults.map(r => r.id))
           for (const t of tasks2) {
             if (!existingIds.has(t.id)) {
+              const initLabel2 = INITIATIVES[t.initiative as InitiativeKey]?.shortLabel
               allResults.push({
                 id: t.id,
                 title: t.title,
                 type: 'task',
-                subtitle: [t.assignee, t.priority === 'ultra-high' ? 'Very High' : t.priority, t.status].filter(Boolean).join(' · '),
+                subtitle: [initLabel2, t.assignee, t.priority === 'ultra-high' ? 'Very High' : t.priority, t.status].filter(Boolean).join(' · '),
                 href: `/tasks`,
               })
             }
@@ -207,9 +210,16 @@ export function Navbar() {
     <>
       <nav className="bg-blue text-white relative">
         <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
-          <Link href="/" className="text-sm font-bold tracking-widest uppercase">
-            Boulder Roots 2026
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link href="/" className="text-sm font-bold tracking-widest uppercase">
+              Caruso Ventures
+            </Link>
+            {initiative && INITIATIVES[initiative] && (
+              <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 ${INITIATIVES[initiative].color} text-white`}>
+                {INITIATIVES[initiative].shortLabel}
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-5">
             {/* Search trigger */}
             <button
@@ -278,27 +288,34 @@ export function Navbar() {
           {/* Menu items */}
           <div className="py-2">
             {[
+              // Initiative sections
+              { href: '/brmf', label: 'BRMF', icon: '♫', section: true },
+              { href: '/bold-summit', label: 'Bold Summit', icon: '◆', section: true },
+              { href: '/ensuring-colorado', label: 'Ensuring Colorado', icon: '★', section: true },
+              // BRMF-specific (shown always for now)
               { href: '/schedule', label: 'Schedule', icon: '▦' },
               { href: '/bold-conversations', label: 'Bold Conversations', icon: '◉' },
               { href: '/private-parties', label: 'Private Parties', icon: '◈' },
               { href: '/log', label: 'Activity Log', icon: '▤' },
             ].map((item, i) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-4 px-6 py-4 text-black hover:bg-cream transition-colors group"
-                style={{ transitionDelay: menuOpen ? `${(i + 1) * 50}ms` : '0ms' }}
-              >
-                <span className="text-muted/40 group-hover:text-blue transition-colors text-sm">{item.icon}</span>
-                <span className="text-xs font-bold tracking-widest uppercase group-hover:text-blue transition-colors">{item.label}</span>
-              </Link>
+              <div key={item.href}>
+                {i === 3 && <div className="border-t border-black/10 my-2 mx-6" />}
+                <Link
+                  href={item.href}
+                  onClick={() => setMenuOpen(false)}
+                  className={`flex items-center gap-4 px-6 py-4 text-black hover:bg-cream transition-colors group ${(item as { section?: boolean }).section ? 'font-bold' : ''}`}
+                  style={{ transitionDelay: menuOpen ? `${(i + 1) * 50}ms` : '0ms' }}
+                >
+                  <span className="text-muted/40 group-hover:text-blue transition-colors text-sm">{item.icon}</span>
+                  <span className="text-xs font-bold tracking-widest uppercase group-hover:text-blue transition-colors">{item.label}</span>
+                </Link>
+              </div>
             ))}
           </div>
           {/* Footer */}
           <div className="absolute bottom-0 left-0 right-0 px-6 py-6 border-t border-black/10">
-            <p className="text-[9px] font-bold tracking-widest uppercase text-muted/40">Boulder Roots Music Fest</p>
-            <p className="text-[9px] font-bold tracking-widest uppercase text-muted/40 mt-1">Operations Portal 2026</p>
+            <p className="text-[9px] font-bold tracking-widest uppercase text-muted/40">Caruso Ventures</p>
+            <p className="text-[9px] font-bold tracking-widest uppercase text-muted/40 mt-1">Operations Hub 2026</p>
           </div>
         </div>
       </div>

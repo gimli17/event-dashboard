@@ -12,8 +12,8 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "BRMF 2026 — Boulder Roots Music Fest",
-  description: "The Founders Experience — August 26\u201330, 2026",
+  title: "Caruso Ventures — Operations Hub",
+  description: "Central hub for BRMF, Bold Summit, and Ensuring Colorado initiatives",
 };
 
 export default function RootLayout({

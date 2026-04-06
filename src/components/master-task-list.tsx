@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useUser } from './user-provider'
 import { logActivity } from '@/lib/activity-log'
+import { INITIATIVES, ALL_INITIATIVE_KEYS, type InitiativeKey } from '@/lib/initiatives'
 import { WeeklyReviewButton } from './weekly-review'
 import {
   DndContext,
@@ -41,6 +42,7 @@ interface MasterTask {
   sort_order: number
   event_id: string | null
   week_of: string | null
+  initiative: string
 }
 
 interface TaskComment {
@@ -146,7 +148,7 @@ function SortableRow({ id, children }: { id: string; children: React.ReactNode }
   )
 }
 
-export function MasterTaskList() {
+export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = {}) {
   const { displayName } = useUser()
   const [tasks, setTasks] = useState<MasterTask[]>([])
   const [comments, setComments] = useState<TaskComment[]>([])
@@ -165,6 +167,7 @@ export function MasterTaskList() {
   const [sending, setSending] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('all')
   const [filterAssignee, setFilterAssignee] = useState('all')
+  const [filterInitiative, setFilterInitiative] = useState<string>(initiative || 'all')
   const [showAddTask, setShowAddTask] = useState(false)
   const [editingField, setEditingField] = useState<{ taskId: string; field: string } | null>(null)
   const [editValue, setEditValue] = useState('')
@@ -174,6 +177,7 @@ export function MasterTaskList() {
   const [newTaskAssignee, setNewTaskAssignee] = useState('')
   const [newTaskPriority, setNewTaskPriority] = useState('medium')
   const [newTaskDeadline, setNewTaskDeadline] = useState('')
+  const [newTaskInitiative, setNewTaskInitiative] = useState<string>(initiative || 'brmf')
   const [activeId, setActiveId] = useState<string | null>(null)
   const teamMembers = ['Cody', 'Sabrina', 'Joe', 'Danny', 'Connor', 'Gib', 'Emily', 'Kendall', 'Alex', 'Liam', 'Dave', 'Tom', 'Kevin']
   const commentEndRef = useRef<HTMLDivElement>(null)
@@ -285,6 +289,7 @@ export function MasterTaskList() {
       sort_order: tasks.length + 1,
       event_id: null,
       week_of: '2026-03-30',
+      initiative: newTaskInitiative,
     }
     setTasks((prev) => [...prev, newTask])
     setShowAddTask(false)
@@ -292,6 +297,7 @@ export function MasterTaskList() {
     setNewTaskAssignee('')
     setNewTaskPriority('medium')
     setNewTaskDeadline('')
+    setNewTaskInitiative(initiative || 'brmf')
 
     await supabase.from('master_tasks').insert(newTask as never)
   }
@@ -509,6 +515,9 @@ export function MasterTaskList() {
   if (filterAssignee !== 'all') {
     filtered = filtered.filter((t) => t.assignee?.includes(filterAssignee))
   }
+  if (filterInitiative !== 'all') {
+    filtered = filtered.filter((t) => t.initiative === filterInitiative)
+  }
 
   // Group by priority, sort by deadline within each group
   const grouped: Record<string, MasterTask[]> = {}
@@ -580,6 +589,16 @@ export function MasterTaskList() {
             {assignees.map((a) => <option key={a} value={a}>{a}</option>)}
           </select>
         </div>
+        {!initiative && (
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Initiative:</span>
+            <select value={filterInitiative} onChange={(e) => setFilterInitiative(e.target.value)}
+              className="border-2 border-black/20 bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black cursor-pointer">
+              <option value="all">All</option>
+              {ALL_INITIATIVE_KEYS.map((k) => <option key={k} value={k}>{INITIATIVES[k].shortLabel}</option>)}
+            </select>
+          </div>
+        )}
         <button
           onClick={() => setShowAddTask(!showAddTask)}
           className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest border-2 transition-all ${showAddTask ? 'bg-red text-white border-red' : 'bg-white text-black border-black/20 hover:border-black'}`}
@@ -636,6 +655,12 @@ export function MasterTaskList() {
               }
             }}
               className="border-2 border-black/20 bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black cursor-pointer" />
+            {!initiative && (
+              <select value={newTaskInitiative} onChange={(e) => setNewTaskInitiative(e.target.value)}
+                className="border-2 border-black/20 bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black">
+                {ALL_INITIATIVE_KEYS.map((k) => <option key={k} value={k}>{INITIATIVES[k].shortLabel}</option>)}
+              </select>
+            )}
             <button
               onClick={handleAddMasterTask}
               disabled={!newTaskTitle.trim() || !displayName}
@@ -696,6 +721,11 @@ export function MasterTaskList() {
                               <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                                 {task.assignee && <span className="text-[10px] font-bold text-blue uppercase tracking-wider">{task.assignee}</span>}
                                 {!task.assignee && <span className="text-[10px] text-muted/40 uppercase tracking-wider">Unassigned</span>}
+                                {!initiative && task.initiative && INITIATIVES[task.initiative as InitiativeKey] && (
+                                  <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 ${INITIATIVES[task.initiative as InitiativeKey].color} text-white`}>
+                                    {INITIATIVES[task.initiative as InitiativeKey].shortLabel}
+                                  </span>
+                                )}
                                 {task.event_id && ep && (
                                   <a href={`/events/${task.event_id}`} className="text-[10px] font-bold text-teal uppercase tracking-wider hover:text-red transition-colors">
                                     Event: {ep.done}/{ep.total} &rarr;

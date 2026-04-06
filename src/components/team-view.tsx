@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useUser } from './user-provider'
 import type { EventTask } from '@/lib/types'
 import { logActivity } from '@/lib/activity-log'
+import { INITIATIVES, ALL_INITIATIVE_KEYS, type InitiativeKey } from '@/lib/initiatives'
 
 interface ChecklistItem { id: string; text: string; checked: boolean }
 
@@ -24,6 +25,7 @@ interface MasterTaskFull {
   dan_checklist: ChecklistItem[]
   deadline: string | null
   created_by: string | null
+  initiative: string
 }
 
 interface TeamMember {
@@ -72,12 +74,13 @@ export function TeamView() {
   const [editingTaskTitle, setEditingTaskTitle] = useState<string | null>(null)
   const [titleEditValue, setTitleEditValue] = useState('')
   const [showCompleted, setShowCompleted] = useState(true)
+  const [filterInitiative, setFilterInitiative] = useState<string>('all')
 
   useEffect(() => {
     async function fetch() {
       // Fetch ALL master tasks (not just review)
       const { data: mt } = await supabase.from('master_tasks')
-        .select('id, title, status, assignee, priority, links, current_status, overview, action_items, dan_comments, update_to_dan, dan_feedback, dan_checklist, deadline, created_by')
+        .select('id, title, status, assignee, priority, links, current_status, overview, action_items, dan_comments, update_to_dan, dan_feedback, dan_checklist, deadline, created_by, initiative')
         .is('deleted_at', null)
         .order('sort_order')
       if (mt) setAllMasterTasks(mt as MasterTaskFull[])
@@ -133,6 +136,7 @@ export function TeamView() {
       dan_feedback: null,
       dan_checklist: [],
       created_by: displayName || 'Dan',
+      initiative: filterInitiative !== 'all' ? filterInitiative : 'brmf',
     }
     setAllMasterTasks((prev) => [task, ...prev])
     setShowNewTask(false)
@@ -178,6 +182,7 @@ export function TeamView() {
       dan_feedback: null,
       dan_checklist: personNewChecklist.length > 0 ? personNewChecklist : [],
       created_by: displayName || selectedPerson,
+      initiative: filterInitiative !== 'all' ? filterInitiative : 'brmf',
     }
     setAllMasterTasks((prev) => [task, ...prev])
     setShowPersonNewTask(false)
@@ -277,13 +282,32 @@ export function TeamView() {
 
   // Derived data
   const priorityRank: Record<string, number> = { 'ultra-high': 0, high: 1, medium: 2, low: 3, backlog: 4 }
-  const reviewTasks = allMasterTasks.filter((t) => t.status === 'review').sort((a, b) => (priorityRank[a.priority] ?? 4) - (priorityRank[b.priority] ?? 4))
+  const filteredTasks = filterInitiative === 'all' ? allMasterTasks : allMasterTasks.filter((t) => t.initiative === filterInitiative)
+  const reviewTasks = filteredTasks.filter((t) => t.status === 'review').sort((a, b) => (priorityRank[a.priority] ?? 4) - (priorityRank[b.priority] ?? 4))
   const totalReview = reviewTasks.length + reviewEventTasks.length
   const completedTasks = selectedPerson
-    ? allMasterTasks.filter((t) => t.assignee?.includes(selectedPerson) && t.status === 'complete')
+    ? filteredTasks.filter((t) => t.assignee?.includes(selectedPerson) && t.status === 'complete')
     : []
+
+  // Compute team data dynamically based on initiative filter
+  const filteredTeamData = (() => {
+    const memberMap: Record<string, TeamMember> = {}
+    for (const name of allTeamMembers) memberMap[name] = { name, ultraHighTasks: [], highTasks: [], totalActive: 0 }
+    for (const t of filteredTasks) {
+      if (!t.assignee || t.status === 'complete') continue
+      for (const name of t.assignee.split(', ')) {
+        if (memberMap[name]) {
+          memberMap[name].totalActive++
+          if (t.priority === 'ultra-high') memberMap[name].ultraHighTasks.push({ title: t.title, id: t.id })
+          if (t.priority === 'high') memberMap[name].highTasks.push({ title: t.title, id: t.id })
+        }
+      }
+    }
+    return Object.values(memberMap)
+  })()
+
   const personTasks = selectedPerson
-    ? allMasterTasks
+    ? filteredTasks
         .filter((t) => t.assignee?.includes(selectedPerson) && t.status !== 'complete')
         .sort((a, b) => {
           // New from Dan come first
@@ -641,7 +665,7 @@ export function TeamView() {
 
           <div className="border-l-2 border-r-2 border-b-2 border-black/10">
             {allTeamMembers.map((name) => {
-              const member = teamData.find((m) => m.name === name)
+              const member = filteredTeamData.find((m) => m.name === name)
               const isSelected = selectedPerson === name
               const isExpanded = expandedMember === name && !isSelected
               const count = member?.totalActive || 0
@@ -676,6 +700,11 @@ export function TeamView() {
               <div className="bg-purple text-white px-6 py-5 flex items-center justify-between">
                 <h2 className="text-lg font-bold tracking-widest uppercase">Dan&apos;s Dashboard</h2>
                 <div className="flex items-center gap-3">
+                  <select value={filterInitiative} onChange={(e) => setFilterInitiative(e.target.value)}
+                    className="bg-white/20 text-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest focus:outline-none cursor-pointer border border-white/30">
+                    <option value="all" className="text-black">All Initiatives</option>
+                    {ALL_INITIATIVE_KEYS.map((k) => <option key={k} value={k} className="text-black">{INITIATIVES[k].shortLabel}</option>)}
+                  </select>
                   <span className="text-sm font-bold tracking-wider opacity-70">{totalReview} for review</span>
                   <button onClick={() => setShowNewTask(!showNewTask)}
                     className={`px-4 py-2 text-xs font-bold uppercase tracking-widest transition-colors ${showNewTask ? 'bg-white text-purple' : 'bg-white/20 text-white hover:bg-white/30'}`}>
@@ -754,6 +783,11 @@ export function TeamView() {
                               {task.assignee && <span className="text-sm font-bold text-purple">{task.assignee}</span>}
                               <span className={`text-sm font-bold ${task.priority === 'ultra-high' ? 'text-red' : task.priority === 'high' ? 'text-orange' : 'text-muted'}`}>{task.priority}</span>
                               {task.deadline && <span className="text-sm font-bold text-red">Due {new Date(task.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
+                              {filterInitiative === 'all' && task.initiative && INITIATIVES[task.initiative as InitiativeKey] && (
+                                <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 ${INITIATIVES[task.initiative as InitiativeKey].color} text-white`}>
+                                  {INITIATIVES[task.initiative as InitiativeKey].shortLabel}
+                                </span>
+                              )}
                             </div>
                             <span className={`text-xs font-bold uppercase tracking-widest shrink-0 px-4 py-2 ${isExpanded ? 'bg-purple text-white' : 'text-purple bg-purple-light/20'}`}>
                               {isExpanded ? 'VIEWING' : 'REVIEW'}
