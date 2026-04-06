@@ -802,17 +802,27 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
                                   {task.title} <span className="text-muted/30 text-xs">&#9998;</span>
                                 </button>
                               )}
-                              <button
-                                onClick={async () => {
-                                  if (!confirm(`Delete "${task.title}"? It will be moved to the deleted backlog.`)) return
-                                  setTasks((prev) => prev.filter((t) => t.id !== task.id))
-                                  setExpandedTask(null)
-                                  await supabase.from('master_tasks').update({ deleted_at: new Date().toISOString() } as never).eq('id', task.id)
-                                }}
-                                className="text-red bg-red/10 hover:bg-red hover:text-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors shrink-0"
-                              >
-                                Delete
-                              </button>
+                              <div className="flex items-center gap-2 shrink-0">
+                                {task.status !== 'complete' && (
+                                  <button
+                                    onClick={() => handleStatusChange(task, 'complete')}
+                                    className="text-green bg-green/10 hover:bg-green hover:text-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors"
+                                  >
+                                    Mark Done
+                                  </button>
+                                )}
+                                <button
+                                  onClick={async () => {
+                                    if (!confirm(`Delete "${task.title}"? It will be moved to the deleted backlog.`)) return
+                                    setTasks((prev) => prev.filter((t) => t.id !== task.id))
+                                    setExpandedTask(null)
+                                    await supabase.from('master_tasks').update({ deleted_at: new Date().toISOString() } as never).eq('id', task.id)
+                                  }}
+                                  className="text-red bg-red/10 hover:bg-red hover:text-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors"
+                                >
+                                  Delete
+                                </button>
+                              </div>
                             </div>
 
                             {/* Assignee + Deadline */}
@@ -999,18 +1009,6 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
                                   .map(ms => <option key={ms.id} value={ms.id}>{ms.title}</option>)}
                               </select>
                             </div>
-
-                            {/* Mark as Done button */}
-                            {task.status !== 'complete' && (
-                              <div className="mt-4">
-                                <button
-                                  onClick={() => handleStatusChange(task, 'complete')}
-                                  className="bg-green text-white px-6 py-2.5 text-xs font-bold uppercase tracking-widest hover:bg-green-light transition-colors"
-                                >
-                                  Mark as Done
-                                </button>
-                              </div>
-                            )}
 
                             {/* Comments */}
                             <div className="mt-4 border-t-2 border-black/5 pt-4">
