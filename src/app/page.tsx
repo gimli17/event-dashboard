@@ -81,7 +81,7 @@ export default async function HubPage() {
 
             {/* Bold Summit */}
             <Link href="/bold-summit" className="group">
-              <div className="bg-green text-white h-full">
+              <div className="bg-gold text-white h-full">
                 <div className="px-7 pt-8 pb-6">
                   <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/50 mb-4">3-Day Summit</p>
                   <h2 className="text-3xl font-bold uppercase tracking-tight leading-[0.95] mb-6">
@@ -119,7 +119,7 @@ export default async function HubPage() {
         <div className="max-w-7xl mx-auto px-8 pb-16">
           <div className="grid grid-cols-4 gap-0 border-2 border-black">
             <Link href="/tasks" className="group border-r-2 border-black">
-              <div className="bg-gold text-white px-6 py-5">
+              <div className="bg-black text-white px-6 py-5">
                 <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/60">Hub</p>
                 <h3 className="text-lg font-bold uppercase tracking-tight mt-1">Master Task List</h3>
               </div>
@@ -147,7 +147,7 @@ export default async function HubPage() {
               </div>
             </Link>
             <Link href="/social" className="group">
-              <div className="bg-black text-white px-6 py-5">
+              <div className="bg-green text-white px-6 py-5">
                 <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/60">Hub</p>
                 <h3 className="text-lg font-bold uppercase tracking-tight mt-1">Social</h3>
               </div>
