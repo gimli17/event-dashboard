@@ -321,7 +321,8 @@ export function TeamView() {
           // Then tasks in review
           if (a.status === 'review' && b.status !== 'review') return -1
           if (a.status !== 'review' && b.status === 'review') return 1
-          return 0
+          // Then by priority
+          return (priorityRank[a.priority] ?? 4) - (priorityRank[b.priority] ?? 4)
         })
     : []
 
