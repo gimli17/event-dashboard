@@ -65,10 +65,22 @@ const accessLabels: Record<string, string> = {
 export function Dashboard({
   events,
   tasksByEvent,
+  title = 'Event Schedule',
+  headerColor = 'bg-[#4080c4]',
+  backHref = '/',
+  footerText = 'Boulder Roots Music Fest · 2026',
+  dayMetaOverride,
 }: {
   events: Event[]
   tasksByEvent: Record<string, EventTask[]>
+  title?: string
+  headerColor?: string
+  backHref?: string
+  footerText?: string
+  dayMetaOverride?: Record<string, { title: string; subtitle: string; color: string }>
 }) {
+  const activeDayMeta = dayMetaOverride || dayMeta
+  const activeDayOrder = dayMetaOverride ? Object.keys(dayMetaOverride) : dayOrder
   const [filter, setFilter] = useState<EventStatus | 'all'>('all')
 
   const filtered =
@@ -97,14 +109,14 @@ export function Dashboard({
   return (
     <>
       {/* Hero */}
-      <section className="bg-[#4478b8] text-white py-6">
+      <section className={`${headerColor} text-white py-6`}>
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link href="/" className="inline-flex items-center gap-1.5 bg-white/20 hover:bg-white/30 px-3 py-1.5 text-xs font-bold tracking-widest uppercase text-white transition-colors">
+            <Link href={backHref} className="inline-flex items-center gap-1.5 bg-white/20 hover:bg-white/30 px-3 py-1.5 text-xs font-bold tracking-widest uppercase text-white transition-colors">
               <span>&larr;</span> Back
             </Link>
             <h1 className="text-2xl font-bold tracking-tight leading-none uppercase">
-              Event Schedule
+              {title}
             </h1>
           </div>
           <SidebarButtons />
@@ -158,7 +170,7 @@ export function Dashboard({
             <p className="text-muted text-center py-20 text-lg">No events match this filter.</p>
           ) : (
             <div className="space-y-0">
-              {dayOrder
+              {activeDayOrder
                 .filter((day) => grouped[day])
                 .map((day) => (
                   <div key={day}>
@@ -167,14 +179,15 @@ export function Dashboard({
                       const openSlots = grouped[day].filter(
                         (e) => e.sponsorship_available && !e.sponsor_name
                       ).length
+                      const meta = activeDayMeta[day] || { title: day.toUpperCase(), subtitle: '', color: 'bg-black text-white' }
                       return (
-                        <div className={`${dayMeta[day].color} px-6 py-4 flex items-center justify-between mt-8`}>
+                        <div className={`${meta.color} px-6 py-4 flex items-center justify-between mt-8`}>
                           <div className="flex items-baseline gap-4">
                             <h2 className="text-2xl font-bold tracking-tight uppercase">
-                              {dayMeta[day].title}
+                              {meta.title}
                             </h2>
                             <span className="text-xs font-bold tracking-widest uppercase opacity-70">
-                              {dayMeta[day].subtitle}
+                              {meta.subtitle}
                             </span>
                           </div>
                           {openSlots > 0 && (
@@ -276,7 +289,7 @@ export function Dashboard({
       {/* Footer */}
       <footer className="bg-black text-white/40 text-center py-8">
         <p className="text-xs font-bold tracking-widest uppercase">
-          Boulder Roots Music Fest &middot; 2026
+          {footerText}
         </p>
       </footer>
     </>

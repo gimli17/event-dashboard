@@ -26,7 +26,7 @@ export default async function EnsuringColoradoPage() {
     <>
       <Navbar initiative="ensuring-colorado" />
 
-      <section className="bg-[#c45858] text-white py-6">
+      <section className="bg-[#cc4444] text-white py-6">
         <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight leading-none uppercase">
@@ -43,7 +43,7 @@ export default async function EnsuringColoradoPage() {
       <section className="bg-cream-dark border-b-2 border-black/10">
         <div className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-center gap-16">
           <div className="text-center">
-            <p className="text-3xl font-bold text-[#c45858]">{activeCount}</p>
+            <p className="text-3xl font-bold text-[#cc4444]">{activeCount}</p>
             <p className="text-xs text-muted uppercase tracking-widest font-bold mt-1">Active Tasks</p>
           </div>
         </div>
@@ -53,7 +53,7 @@ export default async function EnsuringColoradoPage() {
         <div className="max-w-6xl mx-auto px-6 py-12">
           <div className="grid grid-cols-3 gap-3">
             <Link href="/ensuring-colorado/tasks" className="group">
-              <div className="bg-[#c45858] text-white px-6 h-28 flex items-center">
+              <div className="bg-[#cc4444] text-white px-6 h-28 flex items-center">
                 <h2 className="text-sm font-bold tracking-widest uppercase">Tasks</h2>
               </div>
               <div className="border-l-2 border-r-2 border-b-2 border-black/10 px-6 h-20 flex items-center bg-white group-hover:bg-cream-dark transition-colors">
@@ -61,7 +61,7 @@ export default async function EnsuringColoradoPage() {
               </div>
             </Link>
             <a href="https://ensuring-colorado.vercel.app/" target="_blank" rel="noopener noreferrer" className="group">
-              <div className="bg-[#c45858] text-white px-6 h-28 flex items-center justify-between">
+              <div className="bg-[#cc4444] text-white px-6 h-28 flex items-center justify-between">
                 <h2 className="text-sm font-bold tracking-widest uppercase">Website</h2>
                 <span className="text-xs font-bold tracking-widest uppercase opacity-50">&nearr;</span>
               </div>
