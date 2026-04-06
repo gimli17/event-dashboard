@@ -43,6 +43,13 @@ interface MasterTask {
   event_id: string | null
   week_of: string | null
   initiative: string
+  milestone_id: string | null
+}
+
+interface MilestoneOption {
+  id: string
+  title: string
+  initiative: string
 }
 
 interface TaskComment {
@@ -156,6 +163,7 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
   const [eventTaskRows, setEventTaskRows] = useState<EventTaskRow[]>([])
   const [completedTasks, setCompletedTasks] = useState<EventTaskRow[]>([])
   const [deletedTasks, setDeletedTasks] = useState<MasterTask[]>([])
+  const [milestoneOptions, setMilestoneOptions] = useState<MilestoneOption[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedTask, setExpandedTask] = useState<string | null>(() => {
     if (typeof window !== 'undefined' && window.location.hash) {
@@ -185,12 +193,14 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
 
   useEffect(() => {
     async function fetch() {
-      const [tasksRes, commentsRes] = await Promise.all([
+      const [tasksRes, commentsRes, msRes] = await Promise.all([
         supabase.from('master_tasks').select('*').is('deleted_at', null).order('sort_order'),
         supabase.from('master_task_comments').select('*').order('created_at'),
+        supabase.from('milestones').select('id, title, initiative').order('sort_order'),
       ])
       if (tasksRes.data) setTasks(tasksRes.data as MasterTask[])
       if (commentsRes.data) setComments(commentsRes.data as TaskComment[])
+      if (msRes.data) setMilestoneOptions(msRes.data as MilestoneOption[])
 
       // Fetch event task progress for linked tasks
       const { data: eventTasks } = await supabase.from('event_tasks').select('id, event_id, title, status, category, assignee')
@@ -301,6 +311,7 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
       event_id: null,
       week_of: '2026-03-30',
       initiative: newTaskInitiative,
+      milestone_id: null,
     }
     setTasks((prev) => [...prev, newTask])
     setShowAddTask(false)
@@ -968,6 +979,25 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
                                   {statusLabels[s]}
                                 </button>
                               ))}
+                            </div>
+
+                            {/* Milestone assignment */}
+                            <div className="mt-2 flex items-center gap-2">
+                              <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Milestone:</span>
+                              <select
+                                value={task.milestone_id || ''}
+                                onChange={async (e) => {
+                                  const val = e.target.value || null
+                                  setTasks(prev => prev.map(t => t.id === task.id ? { ...t, milestone_id: val } : t))
+                                  await supabase.from('master_tasks').update({ milestone_id: val } as never).eq('id', task.id)
+                                }}
+                                className="border-2 border-black/10 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black cursor-pointer"
+                              >
+                                <option value="">None</option>
+                                {milestoneOptions
+                                  .filter(ms => !initiative || ms.initiative === (task.initiative || initiative))
+                                  .map(ms => <option key={ms.id} value={ms.id}>{ms.title}</option>)}
+                              </select>
                             </div>
 
                             {/* Mark as Done button */}
