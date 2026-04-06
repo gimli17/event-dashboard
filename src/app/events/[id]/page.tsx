@@ -34,17 +34,20 @@ export default async function EventPage({
   }
 
   const tasks = await getEventTasks(id)
+  const isBoldSummit = (event as { initiative?: string }).initiative === 'bold-summit'
+  const backHref = isBoldSummit ? '/bold-summit/events' : '/schedule'
+  const headerColor = isBoldSummit ? 'bg-[#d4a838]' : 'bg-[#4478b8]'
 
   return (
     <>
-      <Navbar />
+      <Navbar initiative={isBoldSummit ? 'bold-summit' : 'brmf'} />
 
       {/* Hero */}
-      <section className="bg-[#4478b8] text-white py-6">
+      <section className={`${headerColor} text-white py-6`}>
         <div className="max-w-5xl mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link
-              href="/schedule"
+              href={backHref}
               className="inline-flex items-center gap-1.5 bg-white/20 hover:bg-white/30 px-3 py-1.5 text-xs font-bold tracking-widest uppercase text-white transition-colors"
             >
               <span>&larr;</span> Back
