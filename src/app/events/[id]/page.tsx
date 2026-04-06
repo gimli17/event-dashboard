@@ -36,7 +36,7 @@ export default async function EventPage({
   const tasks = await getEventTasks(id)
   const isBoldSummit = (event as { initiative?: string }).initiative === 'bold-summit'
   const backHref = isBoldSummit ? '/bold-summit/events' : '/schedule'
-  const headerColor = isBoldSummit ? 'bg-[#d4a020]' : 'bg-[#4080c4]'
+  const headerColor = isBoldSummit ? 'bg-[#d4a020]' : 'bg-[#2a4e80]'
 
   return (
     <>

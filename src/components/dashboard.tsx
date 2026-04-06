@@ -66,7 +66,7 @@ export function Dashboard({
   events,
   tasksByEvent,
   title = 'Event Schedule',
-  headerColor = 'bg-[#4080c4]',
+  headerColor = 'bg-[#2a4e80]',
   backHref = '/',
   footerText = 'Boulder Roots Music Fest · 2026',
   dayMetaOverride,

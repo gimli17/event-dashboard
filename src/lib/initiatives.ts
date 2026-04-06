@@ -2,10 +2,10 @@ export const INITIATIVES = {
   'brmf': {
     label: 'Boulder Roots Music Fest',
     shortLabel: 'Boulder Roots',
-    color: 'bg-[#4080c4]',
-    textColor: 'text-[#4080c4]',
-    borderColor: 'border-[#4080c4]',
-    lightBg: 'bg-[#4080c4]/10',
+    color: 'bg-[#2a4e80]',
+    textColor: 'text-[#2a4e80]',
+    borderColor: 'border-[#2a4e80]',
+    lightBg: 'bg-[#2a4e80]/10',
     description: 'The Founders Experience — August 26–30, 2026',
   },
   'bold-summit': {

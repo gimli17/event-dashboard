@@ -14,7 +14,7 @@ export default async function BrmfPage() {
     <>
       <Navbar initiative="brmf" />
 
-      <section className="bg-[#4080c4] text-white py-6">
+      <section className="bg-[#2a4e80] text-white py-6">
         <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight leading-none uppercase">
@@ -57,12 +57,12 @@ export default async function BrmfPage() {
       <section className="bg-cream flex-1">
         <div className="max-w-6xl mx-auto px-6 py-12">
           <div className="grid grid-cols-3 gap-3">
-            <Tile title="Boulder Roots Tasks" description="All Boulder Roots priorities with owners and Dan's comments" href="/tasks?initiative=brmf" color="bg-blue" />
-            <Tile title="Event Schedule" description="Full festival timeline with task tracking per event" href="/schedule" color="bg-purple" />
-            <Tile title="Bold Conversations" description="18 topics across 3 tracks with founder interest" href="/bold-conversations" color="bg-green" />
-            <Tile title="Private Parties" description="9 sponsor event slots — claimed vs. open" href="/private-parties" color="bg-gold" />
-            <Tile title="Sponsor Portal" description="Manage sponsors, tiers, and package selections" href="https://brmf-sponsor-portal.vercel.app/" color="bg-orange" external />
-            <Tile title="Ticket Tracker" description="Live Eventbrite sales, revenue, and capacity" href="https://boulderrootstickettracker.vercel.app/" color="bg-black" external />
+            <Tile title="Boulder Roots Tasks" description="All Boulder Roots priorities with owners and Dan's comments" href="/tasks?initiative=brmf" color="bg-[#4080c4]" />
+            <Tile title="Event Schedule" description="Full festival timeline with task tracking per event" href="/schedule" color="bg-[#335a90]" />
+            <Tile title="Bold Conversations" description="18 topics across 3 tracks with founder interest" href="/bold-conversations" color="bg-[#2a4e80]" />
+            <Tile title="Private Parties" description="9 sponsor event slots — claimed vs. open" href="/private-parties" color="bg-[#3568a0]" />
+            <Tile title="Sponsor Portal" description="Manage sponsors, tiers, and package selections" href="https://brmf-sponsor-portal.vercel.app/" color="bg-[#2a4270]" external />
+            <Tile title="Ticket Tracker" description="Live Eventbrite sales, revenue, and capacity" href="https://boulderrootstickettracker.vercel.app/" color="bg-[#1e3560]" external />
           </div>
         </div>
       </section>

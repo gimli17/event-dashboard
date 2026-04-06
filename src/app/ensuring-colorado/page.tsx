@@ -61,7 +61,7 @@ export default async function EnsuringColoradoPage() {
               </div>
             </Link>
             <a href="https://ensuring-colorado.vercel.app/" target="_blank" rel="noopener noreferrer" className="group">
-              <div className="bg-[#cc4444] text-white px-6 h-28 flex items-center justify-between">
+              <div className="bg-[#a83838] text-white px-6 h-28 flex items-center justify-between">
                 <h2 className="text-sm font-bold tracking-widest uppercase">Website</h2>
                 <span className="text-xs font-bold tracking-widest uppercase opacity-50">&nearr;</span>
               </div>

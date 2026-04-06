@@ -64,7 +64,7 @@ export default async function HubPage() {
           <div className="grid grid-cols-3 gap-0">
             {/* Boulder Roots */}
             <Link href="/brmf" className="group">
-              <div className="bg-[#4080c4] text-white h-full">
+              <div className="bg-[#2a4e80] text-white h-full">
                 <div className="px-7 pt-8 pb-6">
                   <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/50 mb-4">Music Fest</p>
                   <h2 className="text-3xl font-bold uppercase tracking-tight leading-[0.95] mb-6">
