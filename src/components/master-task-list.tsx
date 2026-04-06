@@ -900,7 +900,7 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
                               ) : (
                                 <div
                                   className="cursor-pointer hover:bg-cream-dark transition-colors rounded px-1 py-0.5 -mx-1"
-                                  onClick={() => startEditing(task.id, 'links', task.links)}
+                                  onClick={(e) => { if ((e.target as HTMLElement).tagName === 'A' || (e.target as HTMLElement).tagName === 'BUTTON') return; startEditing(task.id, 'links', task.links) }}
                                   title="Click to edit links"
                                 >
                                   {task.links ? (
@@ -911,12 +911,13 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
                                           href={link.trim().startsWith('http') ? link.trim() : `https://${link.trim()}`}
                                           target="_blank"
                                           rel="noopener noreferrer"
-                                          onClick={(e) => e.stopPropagation()}
+                                          onClick={(e) => { e.stopPropagation(); e.preventDefault(); window.open(link.trim().startsWith('http') ? link.trim() : `https://${link.trim()}`, '_blank') }}
                                           className="text-xs text-blue hover:text-red underline block truncate"
                                         >
                                           {link.trim()}
                                         </a>
                                       ))}
+                                      <button onClick={() => startEditing(task.id, 'links', task.links)} className="text-[9px] text-muted/40 hover:text-muted mt-1">edit links</button>
                                     </div>
                                   ) : (
                                     <p className="text-xs text-muted/40 italic">Click to add links...</p>
