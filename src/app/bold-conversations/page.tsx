@@ -10,7 +10,7 @@ export default function BoldConversationsPage() {
     <>
       <Navbar />
 
-      <section className="bg-[#4d9068] text-white py-6">
+      <section className="bg-[#509870] text-white py-6">
         <div className="max-w-5xl mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <BackLink />

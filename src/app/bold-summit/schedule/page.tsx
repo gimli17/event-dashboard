@@ -67,7 +67,7 @@ export default function BoldSummitSchedulePage() {
   return (
     <>
       <Navbar initiative="bold-summit" />
-      <section className="bg-[#4d9068] text-white py-6">
+      <section className="bg-[#d4a838] text-white py-6">
         <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <BackLink />
@@ -84,7 +84,7 @@ export default function BoldSummitSchedulePage() {
         <div className="max-w-5xl mx-auto px-6 py-10">
           {/* Option A badge */}
           <div className="flex items-center gap-3 mb-8">
-            <span className="bg-green text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5">Option A</span>
+            <span className="bg-[#d4a838] text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5">Option A</span>
             <span className="text-sm font-bold text-muted">Sunday Afternoon – Tuesday Afternoon</span>
           </div>
 
@@ -93,7 +93,7 @@ export default function BoldSummitSchedulePage() {
             {schedule.map((day) => (
               <div key={day.day} className="border-2 border-black/10 bg-white">
                 {/* Day header */}
-                <div className="bg-[#4d9068] text-white px-6 py-5">
+                <div className="bg-[#d4a838] text-white px-6 py-5">
                   <div className="flex items-center justify-between">
                     <h2 className="text-xl font-bold tracking-tight">{day.day}</h2>
                     <span className="text-xs font-bold tracking-wider opacity-60">{day.date}</span>
@@ -106,7 +106,7 @@ export default function BoldSummitSchedulePage() {
                   {day.sessions.map((session, i) => (
                     <div key={i} className="px-6 py-5">
                       <div className="flex items-start gap-4">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-green bg-green/10 px-2.5 py-1 shrink-0 mt-0.5">{session.time}</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-[#d4a838] bg-[#d4a838]/10 px-2.5 py-1 shrink-0 mt-0.5">{session.time}</span>
                         <div>
                           <h3 className="text-sm font-bold mb-2">{session.title}</h3>
                           <p className="text-sm text-muted leading-relaxed">{session.description}</p>
@@ -120,7 +120,7 @@ export default function BoldSummitSchedulePage() {
           </div>
 
           {/* Context note */}
-          <div className="mt-8 border-l-4 border-green pl-4">
+          <div className="mt-8 border-l-4 border-[#d4a838] pl-4">
             <p className="text-xs text-muted leading-relaxed">
               The Bold Summit begins the afternoon of Boulder Roots Music Fest&apos;s final day, creating a seamless transition from the festival experience into three days of curated conversations, activities, and connection.
             </p>

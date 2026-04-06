@@ -97,7 +97,7 @@ export function Dashboard({
   return (
     <>
       {/* Hero */}
-      <section className="bg-[#3f6ba8] text-white py-6">
+      <section className="bg-[#4478b8] text-white py-6">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link href="/" className="inline-flex items-center gap-1.5 bg-white/20 hover:bg-white/30 px-3 py-1.5 text-xs font-bold tracking-widest uppercase text-white transition-colors">

@@ -26,7 +26,7 @@ export default async function BoldSummitPage() {
     <>
       <Navbar initiative="bold-summit" />
 
-      <section className="bg-[#4d9068] text-white py-6">
+      <section className="bg-[#d4a838] text-white py-6">
         <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight leading-none uppercase">
@@ -43,7 +43,7 @@ export default async function BoldSummitPage() {
       <section className="bg-cream-dark border-b-2 border-black/10">
         <div className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-center gap-16">
           <div className="text-center">
-            <p className="text-3xl font-bold text-green">{activeCount}</p>
+            <p className="text-3xl font-bold text-[#d4a838]">{activeCount}</p>
             <p className="text-xs text-muted uppercase tracking-widest font-bold mt-1">Active Tasks</p>
           </div>
         </div>
@@ -53,7 +53,7 @@ export default async function BoldSummitPage() {
         <div className="max-w-6xl mx-auto px-6 py-12">
           <div className="grid grid-cols-3 gap-3">
             <Link href="/bold-summit/tasks" className="group">
-              <div className="bg-green text-white px-6 h-28 flex items-center">
+              <div className="bg-[#d4a838] text-white px-6 h-28 flex items-center">
                 <h2 className="text-sm font-bold tracking-widest uppercase">Tasks</h2>
               </div>
               <div className="border-l-2 border-r-2 border-b-2 border-black/10 px-6 h-20 flex items-center bg-white group-hover:bg-cream-dark transition-colors">
@@ -61,11 +61,19 @@ export default async function BoldSummitPage() {
               </div>
             </Link>
             <Link href="/bold-summit/schedule" className="group">
-              <div className="bg-purple text-white px-6 h-28 flex items-center">
+              <div className="bg-[#b89030] text-white px-6 h-28 flex items-center">
                 <h2 className="text-sm font-bold tracking-widest uppercase">Event Schedule</h2>
               </div>
               <div className="border-l-2 border-r-2 border-b-2 border-black/10 px-6 h-20 flex items-center bg-white group-hover:bg-cream-dark transition-colors">
                 <p className="text-xs text-muted leading-relaxed">3-day summit schedule — Sun Aug 30 to Tue Sep 1</p>
+              </div>
+            </Link>
+            <Link href="/bold-summit/events" className="group">
+              <div className="bg-[#a88028] text-white px-6 h-28 flex items-center">
+                <h2 className="text-sm font-bold tracking-widest uppercase">Events</h2>
+              </div>
+              <div className="border-l-2 border-r-2 border-b-2 border-black/10 px-6 h-20 flex items-center bg-white group-hover:bg-cream-dark transition-colors">
+                <p className="text-xs text-muted leading-relaxed">Manage activities and tasks per event</p>
               </div>
             </Link>
             <a href="https://creators-website-alpha.vercel.app/" target="_blank" rel="noopener noreferrer" className="group">

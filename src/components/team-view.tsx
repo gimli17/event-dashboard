@@ -697,7 +697,7 @@ export function TeamView() {
           {selectedPerson === null ? (
             <>
               {/* Dan's Dashboard */}
-              <div className="bg-[#7c55a8] text-white px-6 py-5 flex items-center justify-between">
+              <div className="bg-[#8860b5] text-white px-6 py-5 flex items-center justify-between">
                 <h2 className="text-lg font-bold tracking-widest uppercase">Dan&apos;s Dashboard</h2>
                 <div className="flex items-center gap-3">
                   <select value={filterInitiative} onChange={(e) => setFilterInitiative(e.target.value)}

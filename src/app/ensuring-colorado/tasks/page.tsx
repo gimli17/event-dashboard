@@ -9,7 +9,7 @@ export default function EnsuringColoradoTasksPage() {
   return (
     <>
       <Navbar initiative="ensuring-colorado" />
-      <section className="bg-[#b85555] text-white py-6">
+      <section className="bg-[#c45858] text-white py-6">
         <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <BackLink />

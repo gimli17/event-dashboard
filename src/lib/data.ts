@@ -61,6 +61,25 @@ export async function getEventTasks(eventId: string): Promise<EventTask[]> {
   return sampleTasks.filter((t) => t.event_id === eventId)
 }
 
+export async function getEventsByInitiative(initiative: string): Promise<Event[]> {
+  if (USE_SUPABASE) {
+    try {
+      const { supabase } = await import('./supabase')
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .eq('initiative', initiative)
+        .order('date', { ascending: true })
+      if (error) throw error
+      return data as Event[]
+    } catch (e) {
+      console.error('Supabase events by initiative fetch failed:', e)
+      return []
+    }
+  }
+  return []
+}
+
 export function getProgress(tasks: EventTask[]): number {
   if (tasks.length === 0) return 0
   const completed = tasks.filter((t) => t.status === 'complete').length

@@ -14,7 +14,7 @@ export default async function BrmfPage() {
     <>
       <Navbar initiative="brmf" />
 
-      <section className="bg-[#3f6ba8] text-white py-6">
+      <section className="bg-[#4478b8] text-white py-6">
         <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight leading-none uppercase">
