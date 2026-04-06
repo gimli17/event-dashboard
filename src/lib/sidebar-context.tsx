@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useCallback } from 'react'
 
-export type SidebarTab = 'chat' | 'add-task' | 'add-event' | 'pending'
+export type SidebarTab = 'chat' | 'add-task' | 'add-event' | 'add-milestone' | 'pending'
 
 interface SidebarState {
   isOpen: boolean

@@ -87,6 +87,15 @@ export function ChatSidebar() {
   const [taskPriority, setTaskPriority] = useState('medium')
   const [taskDeadline, setTaskDeadline] = useState('')
   const [taskInitiative, setTaskInitiative] = useState('brmf')
+  const [taskMilestone, setTaskMilestone] = useState('')
+  const [milestoneOptions, setMilestoneOptions] = useState<{ id: string; title: string; initiative: string }[]>([])
+
+  // Add milestone state
+  const [msTitle, setMsTitle] = useState('')
+  const [msInitiative, setMsInitiative] = useState('brmf')
+  const [msMonth, setMsMonth] = useState(() => String(new Date().getMonth() + 1).padStart(2, '0'))
+  const [addingMs, setAddingMs] = useState(false)
+  const [msSuccess, setMsSuccess] = useState('')
 
   // Add event state
   const [eventTitle, setEventTitle] = useState('')
@@ -130,6 +139,12 @@ export function ChatSidebar() {
       }
     }
     fetchEvents()
+
+    async function fetchMilestones() {
+      const { data } = await supabase.from('milestones').select('id, title, initiative').order('sort_order')
+      if (data) setMilestoneOptions(data as { id: string; title: string; initiative: string }[])
+    }
+    fetchMilestones()
   }, [isOpen, events.length])
 
   // Realtime subscription
@@ -259,6 +274,7 @@ export function ChatSidebar() {
       event_id: linkedEvent,
       week_of: null,
       initiative: taskInitiative,
+      milestone_id: taskMilestone || null,
     } as never)
 
     const eventName = linkedEvent ? events.find((ev) => ev.id === linkedEvent)?.title : null
@@ -276,6 +292,7 @@ export function ChatSidebar() {
     setTaskAssignee('')
     setTaskDeadline('')
     setTaskInitiative('brmf')
+    setTaskMilestone('')
     setSelectedEvent('')
     setTimeout(() => setTaskSuccess(''), 3000)
     setAddingTask(false)
@@ -360,7 +377,7 @@ export function ChatSidebar() {
         </div>
 
         {/* Tabs — only show action tabs when in action mode */}
-        {(tab === 'add-task' || tab === 'add-event') && (
+        {(tab === 'add-task' || tab === 'add-event' || tab === 'add-milestone') && (
           <div className="flex border-b-2 border-black">
             <button
               onClick={() => sidebar.setTab('add-task')}
@@ -377,6 +394,14 @@ export function ChatSidebar() {
               }`}
             >
               + Event
+            </button>
+            <button
+              onClick={() => sidebar.setTab('add-milestone')}
+              className={`flex-1 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-colors border-l border-black/20 ${
+                tab === 'add-milestone' ? 'bg-gold text-white' : 'bg-cream-dark text-muted hover:text-black'
+              }`}
+            >
+              + Milestone
             </button>
           </div>
         )}
@@ -418,6 +443,17 @@ export function ChatSidebar() {
               <select value={taskInitiative} onChange={(e) => setTaskInitiative(e.target.value)}
                 className="w-full border-2 border-black/20 bg-white px-2 py-2 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black">
                 {ALL_INITIATIVE_KEYS.map((k) => <option key={k} value={k}>{INITIATIVES[k].shortLabel}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Milestone (optional)</label>
+              <select value={taskMilestone} onChange={(e) => setTaskMilestone(e.target.value)}
+                className="w-full border-2 border-black/20 bg-white px-2 py-2 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black">
+                <option value="">No milestone</option>
+                {milestoneOptions.filter(ms => ms.initiative === taskInitiative).map(ms => (
+                  <option key={ms.id} value={ms.id}>{ms.title}</option>
+                ))}
               </select>
             </div>
 
@@ -499,6 +535,62 @@ export function ChatSidebar() {
             {eventSuccess && <div className="bg-green text-white px-4 py-3 text-xs font-bold uppercase tracking-widest text-center">{eventSuccess}</div>}
             <button type="submit" disabled={!eventTitle.trim() || !eventStartTime || !eventEndTime || !displayName || addingEvent} className="w-full bg-green text-white py-3 text-xs font-bold uppercase tracking-widest hover:bg-green-light transition-colors disabled:opacity-40">
               {addingEvent ? 'Creating...' : 'Create Event'}
+            </button>
+          </form>
+        )}
+
+        {/* ── ADD MILESTONE TAB ── */}
+        {tab === 'add-milestone' && (
+          <form onSubmit={async (e) => {
+            e.preventDefault()
+            if (!msTitle.trim() || addingMs) return
+            setAddingMs(true)
+            setMsSuccess('')
+            const id = `ms-${msInitiative}-${Date.now()}`
+            await supabase.from('milestones').insert({
+              id,
+              title: msTitle.trim(),
+              description: null,
+              initiative: msInitiative,
+              sort_order: 999,
+              target_date: `2026-${msMonth}-28`,
+            } as never)
+            setMsSuccess('Milestone created')
+            setMsTitle('')
+            setMilestoneOptions(prev => [...prev, { id, title: msTitle.trim(), initiative: msInitiative }])
+            setTimeout(() => setMsSuccess(''), 3000)
+            setAddingMs(false)
+          }} className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Milestone Title</label>
+              <input type="text" value={msTitle} onChange={(e) => setMsTitle(e.target.value)} placeholder="E.G., 500 GA TICKETS SOLD" className="w-full border-2 border-black bg-white px-3 py-2.5 text-xs font-bold text-black placeholder:text-muted/50 focus:outline-none focus:border-blue" />
+            </div>
+
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Initiative</label>
+                <select value={msInitiative} onChange={(e) => setMsInitiative(e.target.value)}
+                  className="w-full border-2 border-black/20 bg-white px-2 py-2 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black">
+                  {ALL_INITIATIVE_KEYS.map((k) => <option key={k} value={k}>{INITIATIVES[k].shortLabel}</option>)}
+                </select>
+              </div>
+              <div className="flex-1">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Month</label>
+                <select value={msMonth} onChange={(e) => setMsMonth(e.target.value)}
+                  className="w-full border-2 border-black/20 bg-white px-2 py-2 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black">
+                  <option value="04">April</option>
+                  <option value="05">May</option>
+                  <option value="06">June</option>
+                  <option value="07">July</option>
+                  <option value="08">August</option>
+                </select>
+              </div>
+            </div>
+
+            {msSuccess && <div className="bg-green text-white px-4 py-3 text-xs font-bold uppercase tracking-widest text-center">{msSuccess}</div>}
+            <button type="submit" disabled={!msTitle.trim() || addingMs}
+              className="w-full bg-gold text-white py-3 text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-opacity disabled:opacity-40">
+              {addingMs ? 'Creating...' : 'Create Milestone'}
             </button>
           </form>
         )}

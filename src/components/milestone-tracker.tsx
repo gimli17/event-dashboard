@@ -37,8 +37,6 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
   const [loading, setLoading] = useState(true)
   const [activeMonth, setActiveMonth] = useState<string>('04')
   const [expandedMilestone, setExpandedMilestone] = useState<string | null>(null)
-  const [showAddForm, setShowAddForm] = useState(false)
-  const [newTitle, setNewTitle] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
 
@@ -66,26 +64,6 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
     }
     fetch()
   }, [initiative])
-
-  const handleAddMilestone = async () => {
-    if (!newTitle.trim()) return
-    const monthNum = activeMonth
-    const year = '2026'
-    const targetDate = `${year}-${monthNum}-28`
-    const id = `ms-${initiative}-${Date.now()}`
-    const ms: Milestone = {
-      id,
-      title: newTitle.trim(),
-      description: null,
-      initiative,
-      sort_order: milestones.length + 1,
-      target_date: targetDate,
-    }
-    setMilestones(prev => [...prev, ms])
-    setNewTitle('')
-    setShowAddForm(false)
-    await supabase.from('milestones').insert(ms as never)
-  }
 
   const handleEditSave = async (msId: string) => {
     if (!editTitle.trim()) { setEditingId(null); return }
@@ -125,7 +103,7 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
         {monthsWithContent.map(month => (
           <button
             key={month.key}
-            onClick={() => { setActiveMonth(month.key); setExpandedMilestone(null); setShowAddForm(false) }}
+            onClick={() => { setActiveMonth(month.key); setExpandedMilestone(null) }}
             className={`flex-1 py-4 text-center transition-colors ${
               activeMonth === month.key
                 ? `${config.color} text-white`
@@ -242,7 +220,7 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
       ) : (
         <>
           {/* Tile grid */}
-          {monthMilestones.length === 0 && !showAddForm ? (
+          {monthMilestones.length === 0 ? (
             <div className="text-center py-16 border-2 border-black/10 bg-white">
               <p className="text-muted uppercase tracking-widest text-xs font-bold">No milestones for {MONTHS.find(m => m.key === activeMonth)?.label}</p>
             </div>
@@ -288,44 +266,6 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
             </div>
           )}
 
-          {/* Add milestone */}
-          <div className="mt-6">
-            {showAddForm ? (
-              <div className="border-2 border-black/10 bg-white px-5 py-4 space-y-3">
-                <input
-                  type="text"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleAddMilestone(); if (e.key === 'Escape') setShowAddForm(false) }}
-                  placeholder="Milestone title..."
-                  className="w-full border-2 border-black bg-white px-3 py-2 text-sm font-bold text-black placeholder:text-muted/40 focus:outline-none focus:border-blue"
-                  autoFocus
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleAddMilestone}
-                    disabled={!newTitle.trim()}
-                    className="bg-black text-white px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-blue transition-colors disabled:opacity-40"
-                  >
-                    Add to {MONTHS.find(m => m.key === activeMonth)?.label}
-                  </button>
-                  <button
-                    onClick={() => { setShowAddForm(false); setNewTitle('') }}
-                    className="text-[10px] font-bold uppercase tracking-widest text-muted hover:text-black px-4 py-1.5"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => setShowAddForm(true)}
-                className={`${config.color} text-white px-5 py-3 text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-opacity flex items-center gap-2`}
-              >
-                <span className="text-base">+</span> Add Milestone to {MONTHS.find(m => m.key === activeMonth)?.label}
-              </button>
-            )}
-          </div>
         </>
       )}
     </div>
