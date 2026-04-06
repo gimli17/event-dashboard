@@ -320,9 +320,9 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
             ) : (
               <button
                 onClick={() => setShowAddForm(true)}
-                className="text-[10px] font-bold uppercase tracking-widest text-muted hover:text-black transition-colors flex items-center gap-2"
+                className={`${config.color} text-white px-5 py-3 text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-opacity flex items-center gap-2`}
               >
-                <span className="text-sm">+</span> Add Milestone to {MONTHS.find(m => m.key === activeMonth)?.label}
+                <span className="text-base">+</span> Add Milestone to {MONTHS.find(m => m.key === activeMonth)?.label}
               </button>
             )}
           </div>
