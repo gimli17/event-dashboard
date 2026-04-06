@@ -37,6 +37,10 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
   const [loading, setLoading] = useState(true)
   const [activeMonth, setActiveMonth] = useState<string>('04')
   const [expandedMilestone, setExpandedMilestone] = useState<string | null>(null)
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newTitle, setNewTitle] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editTitle, setEditTitle] = useState('')
 
   const config = INITIATIVES[initiative]
 
@@ -63,6 +67,42 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
     fetch()
   }, [initiative])
 
+  const handleAddMilestone = async () => {
+    if (!newTitle.trim()) return
+    const monthNum = activeMonth
+    const year = '2026'
+    const targetDate = `${year}-${monthNum}-28`
+    const id = `ms-${initiative}-${Date.now()}`
+    const ms: Milestone = {
+      id,
+      title: newTitle.trim(),
+      description: null,
+      initiative,
+      sort_order: milestones.length + 1,
+      target_date: targetDate,
+    }
+    setMilestones(prev => [...prev, ms])
+    setNewTitle('')
+    setShowAddForm(false)
+    await supabase.from('milestones').insert(ms as never)
+  }
+
+  const handleEditSave = async (msId: string) => {
+    if (!editTitle.trim()) { setEditingId(null); return }
+    setMilestones(prev => prev.map(m => m.id === msId ? { ...m, title: editTitle.trim() } : m))
+    setEditingId(null)
+    await supabase.from('milestones').update({ title: editTitle.trim() } as never).eq('id', msId)
+  }
+
+  const handleDelete = async (msId: string) => {
+    if (!confirm('Delete this milestone? Tasks linked to it will be unlinked.')) return
+    setMilestones(prev => prev.filter(m => m.id !== msId))
+    setTasks(prev => prev.map(t => t.milestone_id === msId ? { ...t, milestone_id: null } : t))
+    setExpandedMilestone(null)
+    await supabase.from('master_tasks').update({ milestone_id: null } as never).eq('milestone_id', msId)
+    await supabase.from('milestones').delete().eq('id', msId)
+  }
+
   if (loading) {
     return <div className="max-w-5xl mx-auto px-6 py-16 text-center"><p className="text-muted uppercase tracking-widest text-xs font-bold">Loading milestones...</p></div>
   }
@@ -85,7 +125,7 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
         {monthsWithContent.map(month => (
           <button
             key={month.key}
-            onClick={() => { setActiveMonth(month.key); setExpandedMilestone(null) }}
+            onClick={() => { setActiveMonth(month.key); setExpandedMilestone(null); setShowAddForm(false) }}
             className={`flex-1 py-4 text-center transition-colors ${
               activeMonth === month.key
                 ? `${config.color} text-white`
@@ -101,11 +141,7 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
       </div>
 
       {/* Content */}
-      {monthMilestones.length === 0 ? (
-        <div className="text-center py-16 border-2 border-black/10 bg-white">
-          <p className="text-muted uppercase tracking-widest text-xs font-bold">No milestones for {MONTHS.find(m => m.key === activeMonth)?.label}</p>
-        </div>
-      ) : expandedMilestone ? (
+      {expandedMilestone ? (
         (() => {
           const ms = milestones.find(m => m.id === expandedMilestone)
           if (!ms) return null
@@ -132,8 +168,28 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
-                      <h3 className={`text-lg font-bold ${isComplete ? 'text-green' : ''}`}>{ms.title}</h3>
-                      {isComplete && <span className="text-lg">🎉</span>}
+                      {editingId === ms.id ? (
+                        <input
+                          type="text"
+                          value={editTitle}
+                          onChange={(e) => setEditTitle(e.target.value)}
+                          onBlur={() => handleEditSave(ms.id)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleEditSave(ms.id); if (e.key === 'Escape') setEditingId(null) }}
+                          className="text-lg font-bold border-2 border-black bg-white px-2 py-1 focus:outline-none focus:border-blue flex-1"
+                          autoFocus
+                        />
+                      ) : (
+                        <>
+                          <h3
+                            className={`text-lg font-bold cursor-pointer hover:text-blue transition-colors ${isComplete ? 'text-green' : ''}`}
+                            onClick={() => { setEditingId(ms.id); setEditTitle(ms.title) }}
+                            title="Click to edit"
+                          >
+                            {ms.title}
+                          </h3>
+                          {isComplete && <span className="text-lg">🎉</span>}
+                        </>
+                      )}
                     </div>
                     {totalCount > 0 && (
                       <div className="mt-2 flex items-center gap-3">
@@ -144,13 +200,19 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
                       </div>
                     )}
                   </div>
+                  <button
+                    onClick={() => handleDelete(ms.id)}
+                    className="text-[10px] font-bold uppercase tracking-widest text-muted hover:text-red hover:bg-red/10 px-3 py-1.5 transition-colors shrink-0"
+                  >
+                    Delete
+                  </button>
                 </div>
 
-                {/* Task list — read only, links to master task list */}
+                {/* Task list */}
                 <div className="border-t-2 border-black/10 divide-y divide-black/5">
                   {msTasks.length === 0 ? (
                     <div className="px-6 py-6 text-center">
-                      <p className="text-xs text-muted">No tasks linked to this milestone yet.</p>
+                      <p className="text-xs text-muted">No tasks linked to this milestone yet. Assign tasks from the master task list.</p>
                     </div>
                   ) : (
                     msTasks.map(task => (
@@ -178,46 +240,93 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
           )
         })()
       ) : (
-        // Tile grid
-        <div className="grid grid-cols-2 gap-4">
-          {monthMilestones.map(ms => {
-            const msTasks = tasks.filter(t => t.milestone_id === ms.id)
-            const doneCount = msTasks.filter(t => t.status === 'complete').length
-            const totalCount = msTasks.length
-            const progress = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0
-            const isComplete = totalCount > 0 && doneCount === totalCount
+        <>
+          {/* Tile grid */}
+          {monthMilestones.length === 0 && !showAddForm ? (
+            <div className="text-center py-16 border-2 border-black/10 bg-white">
+              <p className="text-muted uppercase tracking-widest text-xs font-bold">No milestones for {MONTHS.find(m => m.key === activeMonth)?.label}</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              {monthMilestones.map(ms => {
+                const msTasks = tasks.filter(t => t.milestone_id === ms.id)
+                const doneCount = msTasks.filter(t => t.status === 'complete').length
+                const totalCount = msTasks.length
+                const progress = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0
+                const isComplete = totalCount > 0 && doneCount === totalCount
 
-            return (
-              <button
-                key={ms.id}
-                onClick={() => setExpandedMilestone(ms.id)}
-                className={`text-left border-2 ${isComplete ? 'border-green/30' : 'border-black/10'} bg-white hover:bg-cream-dark transition-colors group`}
-              >
-                <div className={`px-5 py-4 ${isComplete ? 'bg-green/5' : ''}`}>
-                  <div className="flex items-start justify-between gap-3">
-                    <h3 className={`text-sm font-bold leading-tight ${isComplete ? 'text-green' : ''}`}>
-                      {isComplete && <span className="mr-1.5">★</span>}
-                      {ms.title}
-                      {isComplete && <span className="ml-1.5">🎉</span>}
-                    </h3>
-                    <span className="text-xs text-muted shrink-0 group-hover:text-black transition-colors">&rarr;</span>
-                  </div>
-
-                  {totalCount > 0 && (
-                    <div className="mt-3 flex items-center gap-3">
-                      <div className="flex-1 h-1.5 bg-black/5">
-                        <div className={`h-1.5 transition-all duration-500 ${isComplete ? 'bg-green' : 'bg-[#2a4e80]'}`} style={{ width: `${progress}%` }} />
+                return (
+                  <button
+                    key={ms.id}
+                    onClick={() => setExpandedMilestone(ms.id)}
+                    className={`text-left border-2 ${isComplete ? 'border-green/30' : 'border-black/10'} bg-white hover:bg-cream-dark transition-colors group`}
+                  >
+                    <div className={`px-5 py-4 ${isComplete ? 'bg-green/5' : ''}`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <h3 className={`text-sm font-bold leading-tight ${isComplete ? 'text-green' : ''}`}>
+                          {isComplete && <span className="mr-1.5">★</span>}
+                          {ms.title}
+                          {isComplete && <span className="ml-1.5">🎉</span>}
+                        </h3>
+                        <span className="text-xs text-muted shrink-0 group-hover:text-black transition-colors">&rarr;</span>
                       </div>
-                      <span className={`text-[10px] font-bold shrink-0 ${isComplete ? 'text-green' : 'text-muted'}`}>
-                        {doneCount}/{totalCount}
-                      </span>
+
+                      {totalCount > 0 && (
+                        <div className="mt-3 flex items-center gap-3">
+                          <div className="flex-1 h-1.5 bg-black/5">
+                            <div className={`h-1.5 transition-all duration-500 ${isComplete ? 'bg-green' : 'bg-[#2a4e80]'}`} style={{ width: `${progress}%` }} />
+                          </div>
+                          <span className={`text-[10px] font-bold shrink-0 ${isComplete ? 'text-green' : 'text-muted'}`}>
+                            {doneCount}/{totalCount}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Add milestone */}
+          <div className="mt-6">
+            {showAddForm ? (
+              <div className="border-2 border-black/10 bg-white px-5 py-4 space-y-3">
+                <input
+                  type="text"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleAddMilestone(); if (e.key === 'Escape') setShowAddForm(false) }}
+                  placeholder="Milestone title..."
+                  className="w-full border-2 border-black bg-white px-3 py-2 text-sm font-bold text-black placeholder:text-muted/40 focus:outline-none focus:border-blue"
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleAddMilestone}
+                    disabled={!newTitle.trim()}
+                    className="bg-black text-white px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-blue transition-colors disabled:opacity-40"
+                  >
+                    Add to {MONTHS.find(m => m.key === activeMonth)?.label}
+                  </button>
+                  <button
+                    onClick={() => { setShowAddForm(false); setNewTitle('') }}
+                    className="text-[10px] font-bold uppercase tracking-widest text-muted hover:text-black px-4 py-1.5"
+                  >
+                    Cancel
+                  </button>
                 </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="text-[10px] font-bold uppercase tracking-widest text-muted hover:text-black transition-colors flex items-center gap-2"
+              >
+                <span className="text-sm">+</span> Add Milestone to {MONTHS.find(m => m.key === activeMonth)?.label}
               </button>
-            )
-          })}
-        </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   )
