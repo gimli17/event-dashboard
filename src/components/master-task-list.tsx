@@ -901,8 +901,11 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
                                 <div>
                                   {task.links ? (
                                     <div className="space-y-1">
-                                      {task.links.split('\n').filter(Boolean).map((link, li) => {
-                                        const url = link.trim().startsWith('http') ? link.trim() : `https://${link.trim()}`
+                                      {task.links.split('\n').filter(Boolean).map((line, li) => {
+                                        const trimmed = line.trim()
+                                        // Extract URL from line — handle "Label: https://..." format
+                                        const urlMatch = trimmed.match(/(https?:\/\/[^\s]+)/)
+                                        const url = urlMatch ? urlMatch[1] : (trimmed.startsWith('http') ? trimmed : `https://${trimmed}`)
                                         return (
                                           <a
                                             key={li}
@@ -911,7 +914,7 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
                                             rel="noopener noreferrer"
                                             className="text-xs text-blue hover:text-red underline block truncate"
                                           >
-                                            {link.trim()}
+                                            {trimmed}
                                           </a>
                                         )
                                       })}
