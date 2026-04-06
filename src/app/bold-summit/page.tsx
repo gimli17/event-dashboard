@@ -69,7 +69,7 @@ export default async function BoldSummitPage() {
               </div>
             </Link>
             <a href="https://creators-website-alpha.vercel.app/" target="_blank" rel="noopener noreferrer" className="group">
-              <div className="bg-black text-white px-6 h-28 flex items-center justify-between">
+              <div className="bg-[#b88818] text-white px-6 h-28 flex items-center justify-between">
                 <h2 className="text-sm font-bold tracking-widest uppercase">Website</h2>
                 <span className="text-xs font-bold tracking-widest uppercase opacity-50">&nearr;</span>
               </div>
