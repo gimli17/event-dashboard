@@ -67,7 +67,7 @@ export default function BoldSummitSchedulePage() {
   return (
     <>
       <Navbar initiative="bold-summit" />
-      <section className="bg-green text-white py-6">
+      <section className="bg-[#4d9068] text-white py-6">
         <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <BackLink />
@@ -93,7 +93,7 @@ export default function BoldSummitSchedulePage() {
             {schedule.map((day) => (
               <div key={day.day} className="border-2 border-black/10 bg-white">
                 {/* Day header */}
-                <div className="bg-green text-white px-6 py-5">
+                <div className="bg-[#4d9068] text-white px-6 py-5">
                   <div className="flex items-center justify-between">
                     <h2 className="text-xl font-bold tracking-tight">{day.day}</h2>
                     <span className="text-xs font-bold tracking-wider opacity-60">{day.date}</span>

@@ -26,7 +26,7 @@ export default async function EnsuringColoradoPage() {
     <>
       <Navbar initiative="ensuring-colorado" />
 
-      <section className="bg-red text-white py-6">
+      <section className="bg-[#b85555] text-white py-6">
         <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight leading-none uppercase">

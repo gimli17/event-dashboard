@@ -40,7 +40,7 @@ export default async function EventPage({
       <Navbar />
 
       {/* Hero */}
-      <section className="bg-blue text-white py-6">
+      <section className="bg-[#3f6ba8] text-white py-6">
         <div className="max-w-5xl mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link

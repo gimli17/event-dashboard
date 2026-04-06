@@ -9,7 +9,7 @@ export default function BoldSummitTasksPage() {
   return (
     <>
       <Navbar initiative="bold-summit" />
-      <section className="bg-green text-white py-6">
+      <section className="bg-[#4d9068] text-white py-6">
         <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <BackLink />

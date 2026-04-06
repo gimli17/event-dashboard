@@ -42,7 +42,7 @@ export default async function PrivatePartiesPage() {
     <>
       <Navbar />
 
-      <section className="bg-gold text-white py-6">
+      <section className="bg-[#c4a040] text-white py-6">
         <div className="max-w-5xl mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <BackLink />
