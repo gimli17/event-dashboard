@@ -58,7 +58,7 @@ export default async function BrmfPage() {
         <div className="max-w-6xl mx-auto px-6 py-12">
           <div className="grid grid-cols-3 gap-3">
             <Tile title="Boulder Roots Tasks" description="All Boulder Roots priorities with owners and Dan's comments" href="/tasks?initiative=brmf" color="bg-blue" />
-            <Tile title="Event Schedule" description="Full festival timeline with task tracking per event" href="/schedule" color="bg-blue" />
+            <Tile title="Event Schedule" description="Full festival timeline with task tracking per event" href="/schedule" color="bg-purple" />
             <Tile title="Bold Conversations" description="18 topics across 3 tracks with founder interest" href="/bold-conversations" color="bg-green" />
             <Tile title="Private Parties" description="9 sponsor event slots — claimed vs. open" href="/private-parties" color="bg-gold" />
             <Tile title="Sponsor Portal" description="Manage sponsors, tiers, and package selections" href="https://brmf-sponsor-portal.vercel.app/" color="bg-orange" external />
