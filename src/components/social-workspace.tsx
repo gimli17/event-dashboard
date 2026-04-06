@@ -80,9 +80,10 @@ export function SocialWorkspace() {
   const [aiRecommendations, setAiRecommendations] = useState<{
     timing?: string; audience?: string; boosting?: string; creative_direction?: string; variations?: string
   } | null>(null)
-  const [connectedPlatforms, setConnectedPlatforms] = useState<Record<string, { name: string; connected: boolean }>>({})
+  const [connectedPlatforms, setConnectedPlatforms] = useState<Record<string, { name: string; connected: boolean; organizations?: { id: string; name: string }[] }>>({})
   const [publishing, setPublishing] = useState(false)
   const [publishResult, setPublishResult] = useState<string | null>(null)
+  const [linkedinPostAs, setLinkedinPostAs] = useState<string>('personal')
 
   useEffect(() => {
     async function fetchData() {
@@ -91,11 +92,13 @@ export function SocialWorkspace() {
       setLoading(false)
 
       // Check connected platforms
-      const { data: tokens } = await supabase.from('social_tokens').select('platform, profile_name, expires_at')
+      const { data: tokens } = await supabase.from('social_tokens').select('platform, profile_name, expires_at, organizations')
       if (tokens) {
-        const platforms: Record<string, { name: string; connected: boolean }> = {}
-        for (const t of tokens as { platform: string; profile_name: string; expires_at: string }[]) {
-          platforms[t.platform] = { name: t.profile_name, connected: new Date(t.expires_at) > new Date() }
+        const platforms: Record<string, { name: string; connected: boolean; organizations?: { id: string; name: string }[] }> = {}
+        for (const t of tokens as { platform: string; profile_name: string; expires_at: string; organizations?: string }[]) {
+          let orgs: { id: string; name: string }[] = []
+          try { if (t.organizations) orgs = JSON.parse(t.organizations) } catch {}
+          platforms[t.platform] = { name: t.profile_name, connected: new Date(t.expires_at) > new Date(), organizations: orgs }
         }
         setConnectedPlatforms(platforms)
       }
@@ -160,10 +163,11 @@ export function SocialWorkspace() {
     setPublishing(true)
     setPublishResult(null)
     try {
+      const orgId = linkedinPostAs !== 'personal' ? linkedinPostAs : undefined
       const res = await fetch('/api/publish/linkedin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, organizationId: orgId }),
       })
       const data = await res.json()
       if (data.success) {
@@ -459,13 +463,27 @@ export function SocialWorkspace() {
                   {saving ? 'Saving...' : 'Save as Draft'}
                 </button>
                 {connectedPlatforms.linkedin?.connected ? (
-                  <button
-                    onClick={() => handlePublishLinkedIn(compCopy.trim() + (compHashtags ? '\n\n' + compHashtags : ''))}
-                    disabled={!compCopy.trim() || publishing}
-                    className="bg-blue text-white px-8 py-3 text-sm font-bold uppercase tracking-widest hover:opacity-90 transition-opacity disabled:opacity-40"
-                  >
-                    {publishing ? 'Publishing...' : 'Publish to LinkedIn'}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {(connectedPlatforms.linkedin.organizations?.length ?? 0) > 0 && (
+                      <select
+                        value={linkedinPostAs}
+                        onChange={(e) => setLinkedinPostAs(e.target.value)}
+                        className="border-2 border-blue bg-white px-2 py-3 text-[10px] font-bold uppercase tracking-widest focus:outline-none"
+                      >
+                        <option value="personal">{connectedPlatforms.linkedin.name} (Personal)</option>
+                        {connectedPlatforms.linkedin.organizations?.map(org => (
+                          <option key={org.id} value={org.id}>{org.name} (Company)</option>
+                        ))}
+                      </select>
+                    )}
+                    <button
+                      onClick={() => handlePublishLinkedIn(compCopy.trim() + (compHashtags ? '\n\n' + compHashtags : ''))}
+                      disabled={!compCopy.trim() || publishing}
+                      className="bg-blue text-white px-8 py-3 text-sm font-bold uppercase tracking-widest hover:opacity-90 transition-opacity disabled:opacity-40"
+                    >
+                      {publishing ? 'Publishing...' : 'Publish to LinkedIn'}
+                    </button>
+                  </div>
                 ) : (
                   <a href="/api/auth/linkedin"
                     className="bg-blue text-white px-8 py-3 text-sm font-bold uppercase tracking-widest hover:opacity-90 transition-opacity inline-flex items-center">

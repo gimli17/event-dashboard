@@ -8,7 +8,7 @@ const supabase = createClient(
 
 export async function POST(req: Request) {
   try {
-    const { text } = await req.json()
+    const { text, organizationId } = await req.json()
 
     if (!text) {
       return NextResponse.json({ error: 'No text provided' }, { status: 400 })
@@ -25,14 +25,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'LinkedIn not connected. Go to /api/auth/linkedin to connect.' }, { status: 401 })
     }
 
-    const token = tokens[0] as { access_token: string; profile_id: string; expires_at: string }
+    const token = tokens[0] as { access_token: string; profile_id: string; expires_at: string; organizations: string | null }
 
     // Check if token is expired
     if (new Date(token.expires_at) < new Date()) {
       return NextResponse.json({ error: 'LinkedIn token expired. Please reconnect at /api/auth/linkedin.' }, { status: 401 })
     }
 
-    // Post to LinkedIn using the User Posts API
+    // Determine author — personal or organization
+    const author = organizationId
+      ? `urn:li:organization:${organizationId}`
+      : `urn:li:person:${token.profile_id}`
+
+    // Post to LinkedIn
     const postRes = await fetch('https://api.linkedin.com/rest/posts', {
       method: 'POST',
       headers: {
@@ -42,7 +47,7 @@ export async function POST(req: Request) {
         'X-Restli-Protocol-Version': '2.0.0',
       },
       body: JSON.stringify({
-        author: `urn:li:person:${token.profile_id}`,
+        author,
         commentary: text,
         visibility: 'PUBLIC',
         distribution: {

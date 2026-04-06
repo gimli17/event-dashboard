@@ -44,6 +44,28 @@ export async function GET(req: Request) {
     })
     const profile = await profileRes.json()
 
+    // Try to fetch administered organizations
+    let organizations: { id: string; name: string }[] = []
+    try {
+      const orgRes = await fetch('https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&role=ADMINISTRATOR&projection=(elements*(organization~(localizedName)))', {
+        headers: {
+          Authorization: `Bearer ${tokenData.access_token}`,
+          'LinkedIn-Version': '202401',
+        },
+      })
+      if (orgRes.ok) {
+        const orgData = await orgRes.json()
+        if (orgData.elements) {
+          organizations = orgData.elements.map((el: { organization: string; 'organization~'?: { localizedName: string } }) => ({
+            id: el.organization.replace('urn:li:organization:', ''),
+            name: el['organization~']?.localizedName || 'Organization',
+          }))
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch orgs:', e)
+    }
+
     // Store token in Supabase
     const tokenRecord = {
       platform: 'linkedin',
@@ -52,6 +74,7 @@ export async function GET(req: Request) {
       expires_at: new Date(Date.now() + tokenData.expires_in * 1000).toISOString(),
       profile_id: profile.sub,
       profile_name: profile.name || profile.email || 'LinkedIn User',
+      organizations: JSON.stringify(organizations),
       created_at: new Date().toISOString(),
     }
 

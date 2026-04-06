@@ -9,7 +9,7 @@ export async function GET() {
     return NextResponse.json({ error: 'LinkedIn not configured' })
   }
 
-  const scopes = 'openid profile w_member_social'
+  const scopes = 'openid profile w_member_social w_organization_social r_organization_social'
   const state = Math.random().toString(36).slice(2)
 
   const url = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&state=${state}`
