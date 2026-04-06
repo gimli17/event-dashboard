@@ -41,6 +41,8 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
   const [expandedMilestone, setExpandedMilestone] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
+  const [editingDate, setEditingDate] = useState<string | null>(null)
+  const [editDate, setEditDate] = useState('')
 
   const config = INITIATIVES[initiative]
 
@@ -114,6 +116,13 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
     await supabase.from('milestones').update({ title: editTitle.trim() } as never).eq('id', msId)
   }
 
+  const handleDateSave = async (msId: string) => {
+    const newDate = editDate || null
+    setMilestones(prev => prev.map(m => m.id === msId ? { ...m, target_date: newDate } : m))
+    setEditingDate(null)
+    await supabase.from('milestones').update({ target_date: newDate } as never).eq('id', msId)
+  }
+
   const handleDelete = async (msId: string) => {
     if (!confirm('Delete this milestone? Tasks linked to it will be unlinked.')) return
     setMilestones(prev => prev.filter(m => m.id !== msId))
@@ -127,7 +136,9 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
     return <div className="max-w-5xl mx-auto px-6 py-16 text-center"><p className="text-muted uppercase tracking-widest text-xs font-bold">Loading milestones...</p></div>
   }
 
-  const monthMilestones = milestones.filter(ms => ms.target_date?.slice(5, 7) === activeMonth)
+  const monthMilestones = milestones
+    .filter(ms => ms.target_date?.slice(5, 7) === activeMonth)
+    .sort((a, b) => (a.target_date || '').localeCompare(b.target_date || ''))
 
   const monthsWithContent = MONTHS.map(m => {
     const msList = milestones.filter(ms => ms.target_date?.slice(5, 7) === m.key)
@@ -211,6 +222,30 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
                         </>
                       )}
                     </div>
+                    {/* Editable date */}
+                    <div className="mt-1">
+                      {editingDate === ms.id ? (
+                        <input
+                          type="date"
+                          value={editDate}
+                          onChange={(e) => setEditDate(e.target.value)}
+                          onBlur={() => handleDateSave(ms.id)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleDateSave(ms.id); if (e.key === 'Escape') setEditingDate(null) }}
+                          className="border-2 border-black bg-white px-2 py-1 text-[10px] font-bold focus:outline-none focus:border-blue"
+                          autoFocus
+                        />
+                      ) : (
+                        <button
+                          onClick={() => { setEditingDate(ms.id); setEditDate(ms.target_date || '') }}
+                          className="text-[10px] font-bold uppercase tracking-widest text-muted hover:text-blue transition-colors"
+                        >
+                          {ms.target_date
+                            ? `Due ${new Date(ms.target_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
+                            : 'Set target date'
+                          }
+                        </button>
+                      )}
+                    </div>
                     {totalCount > 0 && (
                       <div className="mt-2 flex items-center gap-3">
                         <div className="flex-1 h-2 bg-black/5">
@@ -283,11 +318,18 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
                   >
                     <div className={`px-5 py-4 ${isComplete ? 'bg-green/5' : ''}`}>
                       <div className="flex items-start justify-between gap-3">
-                        <h3 className={`text-sm font-bold leading-tight ${isComplete ? 'text-green' : ''}`}>
-                          {isComplete && <span className="mr-1.5">★</span>}
-                          {ms.title}
-                          {isComplete && <span className="ml-1.5">🎉</span>}
-                        </h3>
+                        <div className="min-w-0">
+                          {ms.target_date && (
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">
+                              {new Date(ms.target_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </p>
+                          )}
+                          <h3 className={`text-sm font-bold leading-tight ${isComplete ? 'text-green' : ''}`}>
+                            {isComplete && <span className="mr-1.5">★</span>}
+                            {ms.title}
+                            {isComplete && <span className="ml-1.5">🎉</span>}
+                          </h3>
+                        </div>
                         <span className="text-xs text-muted shrink-0 group-hover:text-black transition-colors">&rarr;</span>
                       </div>
 
