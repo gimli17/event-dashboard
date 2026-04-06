@@ -4,6 +4,7 @@ import "./globals.css";
 import { UserProvider } from "@/components/user-provider";
 import { SidebarProvider } from "@/lib/sidebar-context";
 import { ChatSidebar } from "@/components/chat-sidebar";
+import { CommandBar } from "@/components/command-bar";
 
 const dmSans = DM_Sans({
   variable: "--font-body",
@@ -28,6 +29,7 @@ export default function RootLayout({
           <SidebarProvider>
             {children}
             <ChatSidebar />
+            <CommandBar />
           </SidebarProvider>
         </UserProvider>
       </body>
