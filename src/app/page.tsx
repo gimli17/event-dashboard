@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Navbar } from '@/components/navbar'
+import { SidebarButtons } from '@/components/sidebar-buttons'
 import { createClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
@@ -38,66 +39,71 @@ export default async function HubPage() {
     <>
       <Navbar />
 
-      <div className="min-h-screen bg-[#1a1a1a]">
-        {/* Header */}
-        <div className="max-w-6xl mx-auto px-8 pt-14 pb-10">
-          <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/30 mb-3">Operations Hub</p>
-          <h1 className="text-5xl font-bold text-white tracking-tight">
-            Caruso Ventures
-          </h1>
-          <p className="text-sm text-white/40 mt-3">{totalActive} active tasks across all initiatives</p>
+      <section className="bg-purple-dark text-white py-10">
+        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-bold tracking-tight leading-none uppercase">
+              Caruso Ventures
+            </h1>
+            <p className="text-sm text-white/50 mt-2 tracking-wide">
+              Operations Hub &middot; {totalActive} active tasks across all initiatives
+            </p>
+          </div>
+          <SidebarButtons />
         </div>
+      </section>
 
-        {/* Initiative cards */}
-        <div className="max-w-6xl mx-auto px-8 pb-10">
-          <div className="grid grid-cols-3 gap-5">
+      <section className="bg-cream flex-1">
+        <div className="max-w-6xl mx-auto px-6 py-12">
+          {/* Initiative cards */}
+          <div className="grid grid-cols-3 gap-4 mb-12">
             <InitiativeCard
+              title="Boulder Roots Music Fest"
               shortTitle="Boulder Roots"
-              tag="Music Fest"
-              description="The Founders Experience — August 26–30, 2026"
+              description="The Founders Experience — August 26-30, 2026"
               href="/brmf"
-              bgColor="bg-[#c4cfe0]"
-              btnColor="bg-[#1e3a5f]"
+              color="bg-[#1e3a5f]"
+              borderColor="border-[#1e3a5f]"
               activeTasks={counts['brmf']?.active || 0}
               totalTasks={counts['brmf']?.total || 0}
             />
             <InitiativeCard
+              title="Bold Summit"
               shortTitle="Bold Summit"
-              tag="3-Day Summit"
-              description="Bold conversations shaping the future"
+              description="3-day summit for bold conversations"
               href="/bold-summit"
-              bgColor="bg-[#b8ccb0]"
-              btnColor="bg-[#1a4d3a]"
+              color="bg-[#1a4d3a]"
+              borderColor="border-[#1a4d3a]"
               activeTasks={counts['bold-summit']?.active || 0}
               totalTasks={counts['bold-summit']?.total || 0}
             />
             <InitiativeCard
-              shortTitle="Ensuring Colorado"
-              tag="Community"
+              title="Ensuring Colorado"
+              shortTitle="Ensuring CO"
               description="Building a stronger Colorado community"
               href="/ensuring-colorado"
-              bgColor="bg-[#e0b8b0]"
-              btnColor="bg-[#8b2a2a]"
+              color="bg-[#6b2a2a]"
+              borderColor="border-[#6b2a2a]"
               activeTasks={counts['ensuring-colorado']?.active || 0}
               totalTasks={counts['ensuring-colorado']?.total || 0}
             />
           </div>
-        </div>
 
-        {/* Hub tools */}
-        <div className="max-w-6xl mx-auto px-8 pb-16">
-          <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/30 mb-4">Hub Tools</p>
-          <div className="grid grid-cols-4 gap-4">
-            <HubTile title="All Tasks" detail={`${totalActive} active`} href="/tasks" bgColor="bg-[#d4c5a0]" />
-            <HubTile title="Team Workspace" detail="Reviews & team" href="/team" bgColor="bg-[#c4b8d8]" />
-            <HubTile title="Board" detail="Team notes" href="/board" bgColor="bg-[#a8bfb0]" />
-            <HubTile title="Social" detail="Content library" href="/social" bgColor="bg-[#d8b8a8]" />
+          {/* Hub-level tools */}
+          <div className="border-t-2 border-black/20 pt-3 mb-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted">Hub Tools</p>
+          </div>
+          <div className="grid grid-cols-4 gap-3 items-stretch">
+            <HubTile title="All Tasks" description="Unified task list across all initiatives" href="/tasks" color="bg-purple-dark" />
+            <HubTile title="Team Workspace" description="Dan's dashboard, review queue, and team views" href="/team" color="bg-purple-dark" />
+            <HubTile title="Board" description="Bulletin board for team notes and collaboration" href="/board" color="bg-purple-dark" />
+            <HubTile title="Social" description="Social media workspace and content library" href="/social" color="bg-purple-dark" />
           </div>
         </div>
-      </div>
+      </section>
 
-      <footer className="bg-[#111] text-white/20 text-center py-8">
-        <p className="text-[10px] font-bold tracking-[0.4em] uppercase">
+      <footer className="bg-black text-white/40 text-center py-8">
+        <p className="text-xs font-bold tracking-widest uppercase">
           Caruso Ventures &middot; 2026
         </p>
       </footer>
@@ -105,55 +111,54 @@ export default async function HubPage() {
   )
 }
 
-function InitiativeCard({ shortTitle, tag, description, href, bgColor, btnColor, activeTasks, totalTasks }: {
+function InitiativeCard({ title, shortTitle, description, href, color, borderColor, activeTasks, totalTasks }: {
+  title: string
   shortTitle: string
-  tag: string
   description: string
   href: string
-  bgColor: string
-  btnColor: string
+  color: string
+  borderColor: string
   activeTasks: number
   totalTasks: number
 }) {
   return (
     <Link href={href} className="group">
-      <div className={`${bgColor} rounded-2xl p-7 flex flex-col h-full transition-transform duration-200 hover:-translate-y-1`}>
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/40 mb-5">{tag}</p>
-
-        <h2 className="text-2xl font-bold text-[#1a1a1a] leading-tight mb-3">
-          {shortTitle}
-        </h2>
-
-        <p className="text-sm text-black/50 leading-relaxed mb-8 flex-1">{description}</p>
-
-        <p className="text-sm font-bold text-[#1a1a1a] mb-6">
-          {activeTasks} active &middot; {totalTasks} total
-        </p>
-
-        <div className="flex items-center gap-3">
-          <span className={`${btnColor} text-white text-xs font-bold px-5 py-2.5 rounded-full`}>
-            View dashboard
-          </span>
-          <span className="text-xs font-bold text-black/40 group-hover:text-black/70 transition-colors">
-            Read more
-          </span>
+      <div className={`border-2 ${borderColor} bg-white hover:bg-cream-dark transition-colors`}>
+        <div className={`${color} text-white px-6 py-6`}>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold tracking-widest uppercase">{shortTitle}</h2>
+            <span className="text-2xl font-bold">{activeTasks}</span>
+          </div>
+          <p className="text-[10px] uppercase tracking-widest opacity-60 mt-1">active tasks</p>
+        </div>
+        <div className="px-6 py-5">
+          <h3 className="text-sm font-bold tracking-wider uppercase mb-1">{title}</h3>
+          <p className="text-xs text-muted leading-relaxed">{description}</p>
+          <div className="flex items-center justify-between mt-4">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted">{totalTasks} total tasks</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-blue group-hover:text-red transition-colors">View Dashboard &rarr;</span>
+          </div>
         </div>
       </div>
     </Link>
   )
 }
 
-function HubTile({ title, detail, href, bgColor }: {
+function HubTile({ title, description, href, color }: {
   title: string
-  detail: string
+  description: string
   href: string
-  bgColor: string
+  color: string
 }) {
   return (
-    <Link href={href} className="group">
-      <div className={`${bgColor} rounded-xl px-6 py-5 transition-transform duration-200 hover:-translate-y-1`}>
-        <h3 className="text-base font-bold text-[#1a1a1a]">{title}</h3>
-        <p className="text-xs text-black/40 mt-1">{detail}</p>
+    <Link href={href} className="group h-full">
+      <div className="h-full flex flex-col">
+        <div className={`${color} text-white px-5 py-4 flex items-center justify-between`}>
+          <h2 className="text-xs font-bold tracking-widest uppercase">{title}</h2>
+        </div>
+        <div className="border-l-2 border-r-2 border-b-2 border-black/10 px-5 py-4 bg-white group-hover:bg-cream-dark transition-colors flex-1 flex items-center">
+          <p className="text-xs text-muted leading-relaxed">{description}</p>
+        </div>
       </div>
     </Link>
   )
