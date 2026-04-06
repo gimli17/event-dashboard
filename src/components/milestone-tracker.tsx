@@ -320,8 +320,8 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           {ms.target_date && (
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">
-                              {new Date(ms.target_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            <p className={`text-xs font-bold uppercase tracking-widest mb-1.5 ${isComplete ? 'text-green' : 'text-red'}`}>
+                              {new Date(ms.target_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
                             </p>
                           )}
                           <h3 className={`text-sm font-bold leading-tight ${isComplete ? 'text-green' : ''}`}>
