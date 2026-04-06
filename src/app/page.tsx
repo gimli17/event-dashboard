@@ -93,7 +93,7 @@ export default async function HubPage() {
           <div className="border-t-2 border-black/20 pt-3 mb-4">
             <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted">Hub Tools</p>
           </div>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-4 gap-3 items-stretch">
             <HubTile title="All Tasks" description="Unified task list across all initiatives" href="/tasks" color="bg-black" />
             <HubTile title="Team Workspace" description="Dan's dashboard, review queue, and team views" href="/team" color="bg-purple" />
             <HubTile title="Board" description="Bulletin board for team notes and collaboration" href="/board" color="bg-gold" />
@@ -151,12 +151,14 @@ function HubTile({ title, description, href, color }: {
   color: string
 }) {
   return (
-    <Link href={href} className="group">
-      <div className={`${color} text-white px-5 py-4 flex items-center justify-between`}>
-        <h2 className="text-xs font-bold tracking-widest uppercase">{title}</h2>
-      </div>
-      <div className="border-l-2 border-r-2 border-b-2 border-black/10 px-5 py-4 bg-white group-hover:bg-cream-dark transition-colors">
-        <p className="text-xs text-muted leading-relaxed">{description}</p>
+    <Link href={href} className="group h-full">
+      <div className="h-full flex flex-col">
+        <div className={`${color} text-white px-5 py-4 flex items-center justify-between`}>
+          <h2 className="text-xs font-bold tracking-widest uppercase">{title}</h2>
+        </div>
+        <div className="border-l-2 border-r-2 border-b-2 border-black/10 px-5 py-4 bg-white group-hover:bg-cream-dark transition-colors flex-1 flex items-center">
+          <p className="text-xs text-muted leading-relaxed">{description}</p>
+        </div>
       </div>
     </Link>
   )
