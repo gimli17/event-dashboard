@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useUser } from './user-provider'
 import { useSidebar, type SidebarTab } from '@/lib/sidebar-context'
 import type { Comment, EventTask, AccessLevel } from '@/lib/types'
+import { INITIATIVES, ALL_INITIATIVE_KEYS } from '@/lib/initiatives'
 
 interface EventOption {
   id: string
@@ -85,6 +86,7 @@ export function ChatSidebar() {
   const [taskAssignee, setTaskAssignee] = useState('')
   const [taskPriority, setTaskPriority] = useState('medium')
   const [taskDeadline, setTaskDeadline] = useState('')
+  const [taskInitiative, setTaskInitiative] = useState('brmf')
 
   // Add event state
   const [eventTitle, setEventTitle] = useState('')
@@ -256,6 +258,7 @@ export function ChatSidebar() {
       sort_order: 999,
       event_id: linkedEvent,
       week_of: null,
+      initiative: taskInitiative,
     } as never)
 
     const eventName = linkedEvent ? events.find((ev) => ev.id === linkedEvent)?.title : null
@@ -272,6 +275,7 @@ export function ChatSidebar() {
     setTaskNotes('')
     setTaskAssignee('')
     setTaskDeadline('')
+    setTaskInitiative('brmf')
     setSelectedEvent('')
     setTimeout(() => setTaskSuccess(''), 3000)
     setAddingTask(false)
@@ -407,6 +411,14 @@ export function ChatSidebar() {
                   <option value="backlog">Backlog</option>
                 </select>
               </div>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Initiative</label>
+              <select value={taskInitiative} onChange={(e) => setTaskInitiative(e.target.value)}
+                className="w-full border-2 border-black/20 bg-white px-2 py-2 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black">
+                {ALL_INITIATIVE_KEYS.map((k) => <option key={k} value={k}>{INITIATIVES[k].shortLabel}</option>)}
+              </select>
             </div>
 
             <div>
