@@ -38,127 +38,128 @@ export default async function HubPage() {
     <>
       <Navbar />
 
-      <div className="min-h-screen bg-[#f0ede8]">
-        {/* Header */}
-        <div className="max-w-6xl mx-auto px-6 pt-12 pb-8">
-          <h1 className="text-5xl font-bold tracking-tight text-[#1a1a1a]">
-            Caruso Ventures
-          </h1>
-          <p className="text-base text-[#8b7e6a] mt-2">
-            {totalActive} active tasks across all initiatives
-          </p>
-        </div>
-
-        {/* Initiative cards */}
-        <div className="max-w-6xl mx-auto px-6 pb-10">
-          <div className="grid grid-cols-3 gap-5">
-            <InitiativeCard
-              title="Boulder Roots Music Fest"
-              shortTitle="Boulder Roots"
-              tag="MUSIC FEST"
-              description="The Founders Experience — August 26-30, 2026"
-              href="/brmf"
-              bgColor="bg-[#c8d5e2]"
-              activeTasks={counts['brmf']?.active || 0}
-              totalTasks={counts['brmf']?.total || 0}
-            />
-            <InitiativeCard
-              title="Bold Summit"
-              shortTitle="Bold Summit"
-              tag="3-DAY SUMMIT"
-              description="Bold conversations shaping the future"
-              href="/bold-summit"
-              bgColor="bg-[#cddcc5]"
-              activeTasks={counts['bold-summit']?.active || 0}
-              totalTasks={counts['bold-summit']?.total || 0}
-            />
-            <InitiativeCard
-              title="Ensuring Colorado"
-              shortTitle="Ensuring Colorado"
-              tag="COMMUNITY"
-              description="Building a stronger Colorado community"
-              href="/ensuring-colorado"
-              bgColor="bg-[#e8cfc4]"
-              activeTasks={counts['ensuring-colorado']?.active || 0}
-              totalTasks={counts['ensuring-colorado']?.total || 0}
-            />
+      <div className="min-h-screen bg-cream">
+        {/* Hero — bold graphic header */}
+        <div className="bg-purple-dark text-white">
+          <div className="max-w-7xl mx-auto px-8 py-14 flex items-end justify-between">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.4em] text-white/40 mb-3">Operations Hub</p>
+              <h1 className="text-6xl font-bold uppercase tracking-tight leading-[0.9]">
+                Caruso<br />Ventures
+              </h1>
+            </div>
+            <div className="text-right">
+              <p className="text-5xl font-bold">{totalActive}</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 mt-1">Active Tasks</p>
+            </div>
           </div>
         </div>
 
-        {/* Hub tools */}
-        <div className="max-w-6xl mx-auto px-6 pb-16">
-          <p className="text-xs font-bold uppercase tracking-[0.25em] text-[#8b7e6a] mb-4">Hub Tools</p>
-          <div className="grid grid-cols-4 gap-4">
-            <HubTile title="All Tasks" count={totalActive} href="/tasks" />
-            <HubTile title="Team Workspace" subtitle="Review queue" href="/team" />
-            <HubTile title="Board" subtitle="Team notes" href="/board" />
-            <HubTile title="Social" subtitle="Content" href="/social" />
+        {/* Initiative cards — bold color blocks */}
+        <div className="max-w-7xl mx-auto px-8 py-10">
+          <div className="grid grid-cols-3 gap-0">
+            {/* Boulder Roots */}
+            <Link href="/brmf" className="group">
+              <div className="bg-blue text-white h-full">
+                <div className="px-7 pt-8 pb-6">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/50 mb-4">Music Fest</p>
+                  <h2 className="text-3xl font-bold uppercase tracking-tight leading-[0.95] mb-6">
+                    Boulder<br />Roots
+                  </h2>
+                  <p className="text-xs text-white/60 leading-relaxed">The Founders Experience<br />August 26–30, 2026</p>
+                </div>
+                <div className="px-7 py-4 border-t border-white/20 flex items-center justify-between">
+                  <span className="text-xs font-bold">{counts['brmf']?.active || 0} tasks</span>
+                  <span className="text-xs font-bold opacity-50 group-hover:opacity-100 transition-opacity">&rarr;</span>
+                </div>
+              </div>
+            </Link>
+
+            {/* Bold Summit */}
+            <Link href="/bold-summit" className="group">
+              <div className="bg-green text-white h-full">
+                <div className="px-7 pt-8 pb-6">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/50 mb-4">3-Day Summit</p>
+                  <h2 className="text-3xl font-bold uppercase tracking-tight leading-[0.95] mb-6">
+                    Bold<br />Summit
+                  </h2>
+                  <p className="text-xs text-white/60 leading-relaxed">Bold conversations<br />shaping the future</p>
+                </div>
+                <div className="px-7 py-4 border-t border-white/20 flex items-center justify-between">
+                  <span className="text-xs font-bold">{counts['bold-summit']?.active || 0} tasks</span>
+                  <span className="text-xs font-bold opacity-50 group-hover:opacity-100 transition-opacity">&rarr;</span>
+                </div>
+              </div>
+            </Link>
+
+            {/* Ensuring Colorado */}
+            <Link href="/ensuring-colorado" className="group">
+              <div className="bg-red text-white h-full">
+                <div className="px-7 pt-8 pb-6">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/50 mb-4">Community</p>
+                  <h2 className="text-3xl font-bold uppercase tracking-tight leading-[0.95] mb-6">
+                    Ensuring<br />Colorado
+                  </h2>
+                  <p className="text-xs text-white/60 leading-relaxed">Building a stronger<br />Colorado community</p>
+                </div>
+                <div className="px-7 py-4 border-t border-white/20 flex items-center justify-between">
+                  <span className="text-xs font-bold">{counts['ensuring-colorado']?.active || 0} tasks</span>
+                  <span className="text-xs font-bold opacity-50 group-hover:opacity-100 transition-opacity">&rarr;</span>
+                </div>
+              </div>
+            </Link>
+          </div>
+        </div>
+
+        {/* Hub tools — graphic grid */}
+        <div className="max-w-7xl mx-auto px-8 pb-16">
+          <div className="grid grid-cols-4 gap-0 border-2 border-black">
+            <Link href="/tasks" className="group border-r-2 border-black">
+              <div className="bg-gold text-white px-6 py-5">
+                <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/60">Hub</p>
+                <h3 className="text-lg font-bold uppercase tracking-tight mt-1">All Tasks</h3>
+              </div>
+              <div className="bg-white px-6 py-4 group-hover:bg-cream-dark transition-colors">
+                <p className="text-xl font-bold">{totalActive}</p>
+                <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-muted mt-0.5">across initiatives</p>
+              </div>
+            </Link>
+            <Link href="/team" className="group border-r-2 border-black">
+              <div className="bg-purple text-white px-6 py-5">
+                <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/60">Hub</p>
+                <h3 className="text-lg font-bold uppercase tracking-tight mt-1">Team</h3>
+              </div>
+              <div className="bg-white px-6 py-4 group-hover:bg-cream-dark transition-colors">
+                <p className="text-xs font-bold text-muted leading-relaxed">Dan&apos;s dashboard,<br />review queue &amp; team</p>
+              </div>
+            </Link>
+            <Link href="/board" className="group border-r-2 border-black">
+              <div className="bg-orange text-white px-6 py-5">
+                <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/60">Hub</p>
+                <h3 className="text-lg font-bold uppercase tracking-tight mt-1">Board</h3>
+              </div>
+              <div className="bg-white px-6 py-4 group-hover:bg-cream-dark transition-colors">
+                <p className="text-xs font-bold text-muted leading-relaxed">Team notes &amp;<br />collaboration</p>
+              </div>
+            </Link>
+            <Link href="/social" className="group">
+              <div className="bg-black text-white px-6 py-5">
+                <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/60">Hub</p>
+                <h3 className="text-lg font-bold uppercase tracking-tight mt-1">Social</h3>
+              </div>
+              <div className="bg-white px-6 py-4 group-hover:bg-cream-dark transition-colors">
+                <p className="text-xs font-bold text-muted leading-relaxed">Media workspace<br />&amp; content library</p>
+              </div>
+            </Link>
           </div>
         </div>
       </div>
 
-      <footer className="bg-[#1a1a1a] text-white/30 text-center py-8">
-        <p className="text-xs font-bold tracking-widest uppercase">
+      <footer className="bg-black text-white/30 text-center py-8">
+        <p className="text-[10px] font-bold tracking-[0.4em] uppercase">
           Caruso Ventures &middot; 2026
         </p>
       </footer>
     </>
-  )
-}
-
-function InitiativeCard({ title, shortTitle, tag, description, href, bgColor, activeTasks, totalTasks }: {
-  title: string
-  shortTitle: string
-  tag: string
-  description: string
-  href: string
-  bgColor: string
-  activeTasks: number
-  totalTasks: number
-}) {
-  return (
-    <Link href={href} className="group">
-      <div className={`${bgColor} rounded-2xl overflow-hidden transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5`}>
-        {/* Top section with large number */}
-        <div className="px-7 pt-7 pb-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/40 mb-2">{tag}</p>
-              <h2 className="text-2xl font-bold text-[#1a1a1a] leading-tight">{shortTitle}</h2>
-            </div>
-            <span className="text-4xl font-bold text-black/20">{activeTasks}</span>
-          </div>
-        </div>
-        {/* Bottom section */}
-        <div className="px-7 pb-7">
-          <p className="text-sm text-black/50 leading-relaxed mb-5">{description}</p>
-          <div className="flex items-center justify-between border-t border-black/10 pt-4">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-black/30">{totalTasks} tasks</span>
-            <span className="text-xs font-bold text-black/40 group-hover:text-black transition-colors">View &rarr;</span>
-          </div>
-        </div>
-      </div>
-    </Link>
-  )
-}
-
-function HubTile({ title, count, subtitle, href }: {
-  title: string
-  count?: number
-  subtitle?: string
-  href: string
-}) {
-  return (
-    <Link href={href} className="group">
-      <div className="bg-white rounded-xl px-5 py-5 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
-        <h3 className="text-sm font-bold text-[#1a1a1a] tracking-wide">{title}</h3>
-        {count !== undefined && (
-          <p className="text-2xl font-bold text-purple mt-2">{count}</p>
-        )}
-        {subtitle && (
-          <p className="text-xs text-[#8b7e6a] mt-1">{subtitle}</p>
-        )}
-      </div>
-    </Link>
   )
 }
