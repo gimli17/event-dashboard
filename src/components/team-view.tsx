@@ -354,8 +354,49 @@ export function TeamView() {
           </div>
         )}
 
+        {/* Current Status + Action Items from master task list */}
+        {(task.current_status || task.action_items) && (
+          <div className="pt-6 mb-6 grid gap-4 sm:grid-cols-2">
+            {task.current_status && (
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Current Status</p>
+                <div className="text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: task.current_status }} />
+              </div>
+            )}
+            {task.action_items && (
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Action Items</p>
+                <div className="space-y-1.5">
+                  {task.action_items.split('\n').filter(Boolean).map((item, ai) => {
+                    const trimmed = item.replace(/^[-•*]\s*/, '').replace(/^\[[ x]\]\s*/i, '').trim()
+                    const isChecked = item.match(/^\[x\]/i) !== null
+                    return (
+                      <div key={ai} className="flex items-start gap-2">
+                        <span className={`mt-0.5 w-4 h-4 flex items-center justify-center shrink-0 border-2 ${
+                          isChecked ? 'bg-green border-green text-white' : 'border-black/20'
+                        }`}>
+                          {isChecked && <span className="text-[9px]">✓</span>}
+                        </span>
+                        <span className={`text-xs ${isChecked ? 'line-through text-muted' : ''}`}>{trimmed}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Overview if present */}
+        {task.overview && (
+          <div className="mb-6">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Overview</p>
+            <div className="text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: task.overview }} />
+          </div>
+        )}
+
         {/* Update to Dan */}
-        <div className="pt-6 mb-6">
+        <div className="pt-2 mb-6">
           <p className="text-sm font-bold uppercase tracking-widest text-purple mb-3">
             {isDanView ? `Update from ${task.assignee || 'Team'}` : 'Your Update for Dan'}
           </p>
