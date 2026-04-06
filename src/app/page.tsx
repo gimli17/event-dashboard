@@ -44,8 +44,8 @@ export default async function HubPage() {
           <div className="max-w-7xl mx-auto px-8 py-14 flex items-end justify-between">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.4em] text-white/40 mb-3">Operations Hub</p>
-              <h1 className="text-6xl font-bold uppercase tracking-tight leading-[0.9]">
-                Caruso<br />Ventures
+              <h1 className="text-6xl font-bold uppercase tracking-tight">
+                Caruso Ventures
               </h1>
             </div>
             <div className="text-right">
