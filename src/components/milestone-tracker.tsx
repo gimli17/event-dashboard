@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { INITIATIVES, type InitiativeKey } from '@/lib/initiatives'
 
@@ -13,12 +14,13 @@ interface Milestone {
   target_date: string | null
 }
 
-interface MilestoneItem {
+interface MilestoneTask {
   id: string
-  milestone_id: string
-  text: string
-  completed: boolean
-  sort_order: number
+  title: string
+  assignee: string | null
+  status: string
+  priority: string
+  milestone_id: string | null
 }
 
 const MONTHS = [
@@ -29,18 +31,9 @@ const MONTHS = [
   { key: '08', label: 'August' },
 ]
 
-interface LinkedTask {
-  id: string
-  title: string
-  assignee: string | null
-  status: string
-  milestone_id: string | null
-}
-
 export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) {
   const [milestones, setMilestones] = useState<Milestone[]>([])
-  const [items, setItems] = useState<MilestoneItem[]>([])
-  const [linkedTasks, setLinkedTasks] = useState<LinkedTask[]>([])
+  const [tasks, setTasks] = useState<MilestoneTask[]>([])
   const [loading, setLoading] = useState(true)
   const [activeMonth, setActiveMonth] = useState<string>('04')
   const [expandedMilestone, setExpandedMilestone] = useState<string | null>(null)
@@ -49,18 +42,16 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
 
   useEffect(() => {
     async function fetch() {
-      const [msRes, itemsRes, taskRes] = await Promise.all([
+      const [msRes, taskRes] = await Promise.all([
         supabase.from('milestones').select('*').eq('initiative', initiative).order('sort_order'),
-        supabase.from('milestone_items').select('*').order('sort_order'),
         supabase.from('master_tasks')
-          .select('id, title, assignee, status, milestone_id')
+          .select('id, title, assignee, status, priority, milestone_id')
           .eq('initiative', initiative)
           .is('deleted_at', null)
           .not('milestone_id', 'is', null),
       ])
       if (msRes.data) setMilestones(msRes.data as Milestone[])
-      if (itemsRes.data) setItems(itemsRes.data as MilestoneItem[])
-      if (taskRes.data) setLinkedTasks(taskRes.data as LinkedTask[])
+      if (taskRes.data) setTasks(taskRes.data as MilestoneTask[])
 
       const now = new Date()
       const currentMonth = String(now.getMonth() + 1).padStart(2, '0')
@@ -72,31 +63,17 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
     fetch()
   }, [initiative])
 
-  const toggleItem = async (itemId: string) => {
-    const item = items.find(i => i.id === itemId)
-    if (!item) return
-    const newVal = !item.completed
-    setItems(prev => prev.map(i => i.id === itemId ? { ...i, completed: newVal } : i))
-    await supabase.from('milestone_items').update({ completed: newVal } as never).eq('id', itemId)
-  }
-
   if (loading) {
     return <div className="max-w-5xl mx-auto px-6 py-16 text-center"><p className="text-muted uppercase tracking-widest text-xs font-bold">Loading milestones...</p></div>
   }
 
-  const monthMilestones = milestones.filter(ms => {
-    if (!ms.target_date) return false
-    return ms.target_date.slice(5, 7) === activeMonth
-  })
+  const monthMilestones = milestones.filter(ms => ms.target_date?.slice(5, 7) === activeMonth)
 
   const monthsWithContent = MONTHS.map(m => {
     const msList = milestones.filter(ms => ms.target_date?.slice(5, 7) === m.key)
     const allComplete = msList.length > 0 && msList.every(ms => {
-      const msItems = items.filter(i => i.milestone_id === ms.id)
-      const msTasks = linkedTasks.filter(t => t.milestone_id === ms.id)
-      const totalAll = msItems.length + msTasks.length
-      const doneAll = msItems.filter(i => i.completed).length + msTasks.filter(t => t.status === 'complete').length
-      return totalAll > 0 && doneAll === totalAll
+      const msTasks = tasks.filter(t => t.milestone_id === ms.id)
+      return msTasks.length > 0 && msTasks.every(t => t.status === 'complete')
     })
     return { ...m, count: msList.length, allComplete }
   })
@@ -123,24 +100,20 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
         ))}
       </div>
 
-      {/* Milestone tiles for active month */}
+      {/* Content */}
       {monthMilestones.length === 0 ? (
         <div className="text-center py-16 border-2 border-black/10 bg-white">
           <p className="text-muted uppercase tracking-widest text-xs font-bold">No milestones for {MONTHS.find(m => m.key === activeMonth)?.label}</p>
         </div>
       ) : expandedMilestone ? (
-        // Expanded single milestone view
         (() => {
           const ms = milestones.find(m => m.id === expandedMilestone)
           if (!ms) return null
-          const msItems = items.filter(i => i.milestone_id === ms.id)
-          const msTasks = linkedTasks.filter(t => t.milestone_id === ms.id)
-          const doneItems = msItems.filter(i => i.completed).length
-          const doneTasks = msTasks.filter(t => t.status === 'complete').length
-          const totalAll = msItems.length + msTasks.length
-          const doneAll = doneItems + doneTasks
-          const progress = totalAll > 0 ? Math.round((doneAll / totalAll) * 100) : 0
-          const isComplete = totalAll > 0 && doneAll === totalAll
+          const msTasks = tasks.filter(t => t.milestone_id === ms.id)
+          const doneCount = msTasks.filter(t => t.status === 'complete').length
+          const totalCount = msTasks.length
+          const progress = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0
+          const isComplete = totalCount > 0 && doneCount === totalCount
 
           return (
             <div>
@@ -152,6 +125,7 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
               </button>
 
               <div className={`border-2 ${isComplete ? 'border-green/30' : 'border-black/10'} bg-white`}>
+                {/* Header */}
                 <div className={`px-6 py-5 flex items-center gap-4 ${isComplete ? 'bg-green/5' : ''}`}>
                   <div className={`w-12 h-12 flex items-center justify-center shrink-0 text-white font-bold ${isComplete ? 'bg-green' : config.color}`}>
                     {isComplete ? '★' : `${progress}%`}
@@ -161,61 +135,42 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
                       <h3 className={`text-lg font-bold ${isComplete ? 'text-green' : ''}`}>{ms.title}</h3>
                       {isComplete && <span className="text-lg">🎉</span>}
                     </div>
-                    {totalAll > 0 && (
+                    {totalCount > 0 && (
                       <div className="mt-2 flex items-center gap-3">
                         <div className="flex-1 h-2 bg-black/5">
                           <div className={`h-2 transition-all duration-500 ${isComplete ? 'bg-green' : 'bg-[#2a4e80]'}`} style={{ width: `${progress}%` }} />
                         </div>
-                        <span className={`text-[10px] font-bold ${isComplete ? 'text-green' : 'text-muted'}`}>{doneAll}/{totalAll}</span>
+                        <span className={`text-[10px] font-bold ${isComplete ? 'text-green' : 'text-muted'}`}>{doneCount}/{totalCount}</span>
                       </div>
                     )}
                   </div>
                 </div>
 
+                {/* Task list — read only, links to master task list */}
                 <div className="border-t-2 border-black/10 divide-y divide-black/5">
-                  {/* Checklist goals */}
-                  {msItems.map(item => (
-                    <div key={item.id} className="px-6 py-3.5 flex items-start gap-3">
-                      <button
-                        onClick={() => toggleItem(item.id)}
-                        className={`mt-0.5 w-5 h-5 flex items-center justify-center shrink-0 border-2 transition-colors ${
-                          item.completed ? 'bg-green border-green text-white' : 'border-black/20 hover:border-black/40'
-                        }`}
-                      >
-                        {item.completed && <span className="text-xs">✓</span>}
-                      </button>
-                      <span className={`text-sm leading-relaxed ${item.completed ? 'line-through text-muted' : ''}`}>
-                        {item.text}
-                      </span>
-                    </div>
-                  ))}
-
-                  {/* Linked master tasks */}
-                  {msTasks.length > 0 && (
-                    <>
-                      {msItems.length > 0 && (
-                        <div className="px-6 py-2.5 bg-cream-dark">
-                          <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-muted">Linked Tasks</p>
-                        </div>
-                      )}
-                      {msTasks.map(task => (
-                        <div key={task.id} className="px-6 py-3.5 flex items-center gap-3">
-                          <span className={`w-5 h-5 flex items-center justify-center shrink-0 border-2 ${
-                            task.status === 'complete' ? 'bg-green border-green text-white' : 'border-black/20'
-                          }`}>
-                            {task.status === 'complete' && <span className="text-xs">✓</span>}
-                          </span>
-                          <span className={`text-sm flex-1 ${task.status === 'complete' ? 'line-through text-muted' : ''}`}>{task.title}</span>
-                          {task.assignee && <span className="text-[10px] font-bold text-blue uppercase tracking-wider shrink-0">{task.assignee}</span>}
-                        </div>
-                      ))}
-                    </>
-                  )}
-
-                  {msItems.length === 0 && msTasks.length === 0 && (
+                  {msTasks.length === 0 ? (
                     <div className="px-6 py-6 text-center">
-                      <p className="text-xs text-muted">No items or tasks linked to this milestone yet.</p>
+                      <p className="text-xs text-muted">No tasks linked to this milestone yet.</p>
                     </div>
+                  ) : (
+                    msTasks.map(task => (
+                      <div key={task.id} className="px-6 py-3.5 flex items-center gap-3">
+                        <span className={`w-5 h-5 flex items-center justify-center shrink-0 border-2 ${
+                          task.status === 'complete' ? 'bg-green border-green text-white' : 'border-black/20'
+                        }`}>
+                          {task.status === 'complete' && <span className="text-xs">✓</span>}
+                        </span>
+                        <Link
+                          href={`/tasks#${task.id}`}
+                          className={`text-sm flex-1 hover:underline transition-colors ${
+                            task.status === 'complete' ? 'line-through text-muted' : 'text-blue hover:text-black'
+                          }`}
+                        >
+                          {task.title}
+                        </Link>
+                        {task.assignee && <span className="text-[10px] font-bold text-blue uppercase tracking-wider shrink-0">{task.assignee}</span>}
+                      </div>
+                    ))
                   )}
                 </div>
               </div>
@@ -223,13 +178,12 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
           )
         })()
       ) : (
-        // Tile grid view
+        // Tile grid
         <div className="grid grid-cols-2 gap-4">
           {monthMilestones.map(ms => {
-            const msItems = items.filter(i => i.milestone_id === ms.id)
-            const msTasks = linkedTasks.filter(t => t.milestone_id === ms.id)
-            const doneCount = msItems.filter(i => i.completed).length + msTasks.filter(t => t.status === 'complete').length
-            const totalCount = msItems.length + msTasks.length
+            const msTasks = tasks.filter(t => t.milestone_id === ms.id)
+            const doneCount = msTasks.filter(t => t.status === 'complete').length
+            const totalCount = msTasks.length
             const progress = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0
             const isComplete = totalCount > 0 && doneCount === totalCount
 
@@ -250,16 +204,14 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
                   </div>
 
                   {totalCount > 0 && (
-                    <>
-                      <div className="mt-3 flex items-center gap-3">
-                        <div className="flex-1 h-1.5 bg-black/5">
-                          <div className={`h-1.5 transition-all duration-500 ${isComplete ? 'bg-green' : 'bg-[#2a4e80]'}`} style={{ width: `${progress}%` }} />
-                        </div>
-                        <span className={`text-[10px] font-bold shrink-0 ${isComplete ? 'text-green' : 'text-muted'}`}>
-                          {doneCount}/{totalCount}
-                        </span>
+                    <div className="mt-3 flex items-center gap-3">
+                      <div className="flex-1 h-1.5 bg-black/5">
+                        <div className={`h-1.5 transition-all duration-500 ${isComplete ? 'bg-green' : 'bg-[#2a4e80]'}`} style={{ width: `${progress}%` }} />
                       </div>
-                    </>
+                      <span className={`text-[10px] font-bold shrink-0 ${isComplete ? 'text-green' : 'text-muted'}`}>
+                        {doneCount}/{totalCount}
+                      </span>
+                    </div>
                   )}
                 </div>
               </button>
