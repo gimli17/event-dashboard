@@ -56,13 +56,31 @@ export default async function BrmfPage() {
 
       <section className="bg-cream flex-1">
         <div className="max-w-6xl mx-auto px-6 py-12">
+          {/* Project Management */}
+          <div className="border-t-2 border-black/20 pt-2 mb-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted">Project Management</p>
+          </div>
+          <div className="grid grid-cols-3 gap-3 mb-10">
+            <Tile title="Tasks" description="All Boulder Roots priorities with owners and Dan's comments" href="/tasks?initiative=brmf" color="bg-[#4080c4]" />
+            <Tile title="Milestones" description="Track key milestones and progress toward launch" href="/brmf/milestones" color="bg-[#335a90]" />
+            <Tile title="Event Schedule" description="Full festival timeline with task tracking per event" href="/schedule" color="bg-[#2a4e80]" />
+          </div>
+
+          {/* Sub-Pages */}
+          <div className="border-t-2 border-black/20 pt-2 mb-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted">Sub-Pages</p>
+          </div>
+          <div className="grid grid-cols-3 gap-3 mb-10">
+            <Tile title="Bold Conversations" description="18 topics across 3 tracks with founder interest" href="/bold-conversations" color="bg-[#3568a0]" />
+            <Tile title="Private Parties" description="9 sponsor event slots — claimed vs. open" href="/private-parties" color="bg-[#2a4270]" />
+          </div>
+
+          {/* External Links */}
+          <div className="border-t-2 border-black/20 pt-2 mb-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted">External Links</p>
+          </div>
           <div className="grid grid-cols-3 gap-3">
-            <Tile title="Boulder Roots Tasks" description="All Boulder Roots priorities with owners and Dan's comments" href="/tasks?initiative=brmf" color="bg-[#4080c4]" />
-            <Tile title="Milestones" description="Track key milestones and progress toward launch" href="/brmf/milestones" color="bg-[#1e3a66]" />
-            <Tile title="Event Schedule" description="Full festival timeline with task tracking per event" href="/schedule" color="bg-[#335a90]" />
-            <Tile title="Bold Conversations" description="18 topics across 3 tracks with founder interest" href="/bold-conversations" color="bg-[#2a4e80]" />
-            <Tile title="Private Parties" description="9 sponsor event slots — claimed vs. open" href="/private-parties" color="bg-[#3568a0]" />
-            <Tile title="Sponsor Portal" description="Manage sponsors, tiers, and package selections" href="https://brmf-sponsor-portal.vercel.app/" color="bg-[#2a4270]" external />
+            <Tile title="Sponsor Portal" description="Manage sponsors, tiers, and package selections" href="https://brmf-sponsor-portal.vercel.app/" color="bg-[#1e3a66]" external />
             <Tile title="Ticket Tracker" description="Live Eventbrite sales, revenue, and capacity" href="https://boulderrootstickettracker.vercel.app/" color="bg-[#1e3560]" external />
           </div>
         </div>
