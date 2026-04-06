@@ -20,6 +20,8 @@ interface MilestoneTask {
   assignee: string | null
   status: string
   priority: string
+  deadline: string | null
+  sort_order: number
   milestone_id: string | null
 }
 
@@ -42,12 +44,25 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
 
   const config = INITIATIVES[initiative]
 
+  // Sort tasks: by deadline (earliest first), then sort_order, completed last
+  const sortTasks = (a: MilestoneTask, b: MilestoneTask) => {
+    // Completed tasks go to the bottom
+    if (a.status === 'complete' && b.status !== 'complete') return 1
+    if (a.status !== 'complete' && b.status === 'complete') return -1
+    // Then by deadline (tasks with deadlines first, earlier first)
+    if (a.deadline && b.deadline) return a.deadline.localeCompare(b.deadline)
+    if (a.deadline && !b.deadline) return -1
+    if (!a.deadline && b.deadline) return 1
+    // Then by sort_order
+    return a.sort_order - b.sort_order
+  }
+
   useEffect(() => {
     async function fetch() {
       const [msRes, taskRes] = await Promise.all([
         supabase.from('milestones').select('*').eq('initiative', initiative).order('sort_order'),
         supabase.from('master_tasks')
-          .select('id, title, assignee, status, priority, milestone_id')
+          .select('id, title, assignee, status, priority, deadline, sort_order, milestone_id')
           .eq('initiative', initiative)
           .is('deleted_at', null)
           .not('milestone_id', 'is', null),
@@ -90,7 +105,7 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
   const monthsWithContent = MONTHS.map(m => {
     const msList = milestones.filter(ms => ms.target_date?.slice(5, 7) === m.key)
     const allComplete = msList.length > 0 && msList.every(ms => {
-      const msTasks = tasks.filter(t => t.milestone_id === ms.id)
+      const msTasks = tasks.filter(t => t.milestone_id === ms.id).sort(sortTasks)
       return msTasks.length > 0 && msTasks.every(t => t.status === 'complete')
     })
     return { ...m, count: msList.length, allComplete }
@@ -123,7 +138,7 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
         (() => {
           const ms = milestones.find(m => m.id === expandedMilestone)
           if (!ms) return null
-          const msTasks = tasks.filter(t => t.milestone_id === ms.id)
+          const msTasks = tasks.filter(t => t.milestone_id === ms.id).sort(sortTasks)
           const doneCount = msTasks.filter(t => t.status === 'complete').length
           const totalCount = msTasks.length
           const progress = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0
@@ -227,7 +242,7 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
           ) : (
             <div className="grid grid-cols-2 gap-4">
               {monthMilestones.map(ms => {
-                const msTasks = tasks.filter(t => t.milestone_id === ms.id)
+                const msTasks = tasks.filter(t => t.milestone_id === ms.id).sort(sortTasks)
                 const doneCount = msTasks.filter(t => t.status === 'complete').length
                 const totalCount = msTasks.length
                 const progress = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0
