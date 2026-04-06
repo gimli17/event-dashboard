@@ -80,12 +80,25 @@ export function SocialWorkspace() {
   const [aiRecommendations, setAiRecommendations] = useState<{
     timing?: string; audience?: string; boosting?: string; creative_direction?: string; variations?: string
   } | null>(null)
+  const [connectedPlatforms, setConnectedPlatforms] = useState<Record<string, { name: string; connected: boolean }>>({})
+  const [publishing, setPublishing] = useState(false)
+  const [publishResult, setPublishResult] = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchData() {
       const { data } = await supabase.from('social_posts').select('*').order('created_at', { ascending: false })
       if (data) setPosts(data as SocialPost[])
       setLoading(false)
+
+      // Check connected platforms
+      const { data: tokens } = await supabase.from('social_tokens').select('platform, profile_name, expires_at')
+      if (tokens) {
+        const platforms: Record<string, { name: string; connected: boolean }> = {}
+        for (const t of tokens as { platform: string; profile_name: string; expires_at: string }[]) {
+          platforms[t.platform] = { name: t.profile_name, connected: new Date(t.expires_at) > new Date() }
+        }
+        setConnectedPlatforms(platforms)
+      }
 
       // Auto-load drive content
       try {
@@ -141,6 +154,28 @@ export function SocialWorkspace() {
     setCompTitle(''); setCompCopy(''); setCompLinks(''); setCompHashtags(''); setCompDate(''); setCompNotes(''); setCompAssignee('')
     setSaving(false)
     setView('dashboard')
+  }
+
+  const handlePublishLinkedIn = async (text: string) => {
+    setPublishing(true)
+    setPublishResult(null)
+    try {
+      const res = await fetch('/api/publish/linkedin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setPublishResult('Published to LinkedIn!')
+        setTimeout(() => setPublishResult(null), 5000)
+      } else {
+        setPublishResult(`Error: ${data.error}`)
+      }
+    } catch (e) {
+      setPublishResult(`Error: ${String(e)}`)
+    }
+    setPublishing(false)
   }
 
   const handleStatusChange = async (postId: string, newStatus: string) => {
@@ -418,15 +453,34 @@ export function SocialWorkspace() {
                   className="w-full border-2 border-black/20 bg-white px-4 py-3 text-sm leading-relaxed focus:outline-none focus:border-blue placeholder:text-muted/30" />
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex gap-3 flex-wrap">
                 <button onClick={handleCreate} disabled={!compTitle.trim() || !compCopy.trim() || saving}
                   className="bg-red text-white px-8 py-3 text-sm font-bold uppercase tracking-widest hover:bg-red-bright transition-colors disabled:opacity-40">
                   {saving ? 'Saving...' : 'Save as Draft'}
                 </button>
+                {connectedPlatforms.linkedin?.connected ? (
+                  <button
+                    onClick={() => handlePublishLinkedIn(compCopy.trim() + (compHashtags ? '\n\n' + compHashtags : ''))}
+                    disabled={!compCopy.trim() || publishing}
+                    className="bg-blue text-white px-8 py-3 text-sm font-bold uppercase tracking-widest hover:opacity-90 transition-opacity disabled:opacity-40"
+                  >
+                    {publishing ? 'Publishing...' : 'Publish to LinkedIn'}
+                  </button>
+                ) : (
+                  <a href="/api/auth/linkedin"
+                    className="bg-blue text-white px-8 py-3 text-sm font-bold uppercase tracking-widest hover:opacity-90 transition-opacity inline-flex items-center">
+                    Connect LinkedIn
+                  </a>
+                )}
                 <button onClick={() => setView('dashboard')} className="bg-black/5 text-black px-8 py-3 text-sm font-bold uppercase tracking-widest hover:bg-black/10 transition-colors">
                   Cancel
                 </button>
               </div>
+              {publishResult && (
+                <div className={`mt-3 px-4 py-2 text-xs font-bold uppercase tracking-widest ${publishResult.startsWith('Error') ? 'bg-red/10 text-red' : 'bg-green/10 text-green'}`}>
+                  {publishResult}
+                </div>
+              )}
             </div>
 
             {/* Right — Live Preview */}
