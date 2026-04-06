@@ -14,7 +14,7 @@ export default async function BrmfPage() {
     <>
       <Navbar initiative="brmf" />
 
-      <section className="bg-red text-white py-6">
+      <section className="bg-blue text-white py-6">
         <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight leading-none uppercase">
@@ -57,7 +57,7 @@ export default async function BrmfPage() {
       <section className="bg-cream flex-1">
         <div className="max-w-6xl mx-auto px-6 py-12">
           <div className="grid grid-cols-3 gap-3">
-            <Tile title="BRMF Tasks" description="All BRMF priorities with owners and Dan's comments" href="/tasks?initiative=brmf" color="bg-red" />
+            <Tile title="Boulder Roots Tasks" description="All Boulder Roots priorities with owners and Dan's comments" href="/tasks?initiative=brmf" color="bg-blue" />
             <Tile title="Event Schedule" description="Full festival timeline with task tracking per event" href="/schedule" color="bg-blue" />
             <Tile title="Bold Conversations" description="18 topics across 3 tracks with founder interest" href="/bold-conversations" color="bg-green" />
             <Tile title="Private Parties" description="9 sponsor event slots — claimed vs. open" href="/private-parties" color="bg-gold" />

@@ -208,7 +208,7 @@ export function Navbar({ initiative }: { initiative?: InitiativeKey } = {}) {
 
   return (
     <>
-      <nav className="bg-blue text-white relative">
+      <nav className="bg-purple text-white relative">
         <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/" className="text-sm font-bold tracking-widest uppercase">
@@ -289,7 +289,7 @@ export function Navbar({ initiative }: { initiative?: InitiativeKey } = {}) {
           <div className="py-2">
             {[
               // Initiative sections
-              { href: '/brmf', label: 'BRMF', icon: '♫', section: true },
+              { href: '/brmf', label: 'Boulder Roots', icon: '♫', section: true },
               { href: '/bold-summit', label: 'Bold Summit', icon: '◆', section: true },
               { href: '/ensuring-colorado', label: 'Ensuring Colorado', icon: '★', section: true },
               // BRMF-specific (shown always for now)

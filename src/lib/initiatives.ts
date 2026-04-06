@@ -1,11 +1,11 @@
 export const INITIATIVES = {
   'brmf': {
     label: 'Boulder Roots Music Fest',
-    shortLabel: 'BRMF',
-    color: 'bg-red',
-    textColor: 'text-red',
-    borderColor: 'border-red',
-    lightBg: 'bg-red/10',
+    shortLabel: 'Boulder Roots',
+    color: 'bg-blue',
+    textColor: 'text-blue',
+    borderColor: 'border-blue',
+    lightBg: 'bg-blue/10',
     description: 'The Founders Experience — August 26–30, 2026',
   },
   'bold-summit': {
@@ -20,10 +20,10 @@ export const INITIATIVES = {
   'ensuring-colorado': {
     label: 'Ensuring Colorado',
     shortLabel: 'Ensuring CO',
-    color: 'bg-blue',
-    textColor: 'text-blue',
-    borderColor: 'border-blue',
-    lightBg: 'bg-blue/10',
+    color: 'bg-red',
+    textColor: 'text-red',
+    borderColor: 'border-red',
+    lightBg: 'bg-red/10',
     description: 'Building a stronger Colorado community',
   },
 } as const

@@ -39,7 +39,7 @@ export default async function HubPage() {
     <>
       <Navbar />
 
-      <section className="bg-blue text-white py-10">
+      <section className="bg-purple text-white py-10">
         <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-bold tracking-tight leading-none uppercase">
@@ -59,11 +59,11 @@ export default async function HubPage() {
           <div className="grid grid-cols-3 gap-4 mb-12">
             <InitiativeCard
               title="Boulder Roots Music Fest"
-              shortTitle="BRMF"
+              shortTitle="Boulder Roots"
               description="The Founders Experience — August 26-30, 2026"
               href="/brmf"
-              color="bg-red"
-              borderColor="border-red"
+              color="bg-blue"
+              borderColor="border-blue"
               activeTasks={counts['brmf']?.active || 0}
               totalTasks={counts['brmf']?.total || 0}
             />
@@ -82,8 +82,8 @@ export default async function HubPage() {
               shortTitle="Ensuring CO"
               description="Building a stronger Colorado community"
               href="/ensuring-colorado"
-              color="bg-blue"
-              borderColor="border-blue"
+              color="bg-red"
+              borderColor="border-red"
               activeTasks={counts['ensuring-colorado']?.active || 0}
               totalTasks={counts['ensuring-colorado']?.total || 0}
             />
