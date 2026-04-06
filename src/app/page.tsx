@@ -117,7 +117,7 @@ export default async function HubPage() {
             <Link href="/tasks" className="group border-r-2 border-black">
               <div className="bg-gold text-white px-6 py-5">
                 <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/60">Hub</p>
-                <h3 className="text-lg font-bold uppercase tracking-tight mt-1">All Tasks</h3>
+                <h3 className="text-lg font-bold uppercase tracking-tight mt-1">Master Task List</h3>
               </div>
               <div className="bg-white px-6 py-4 group-hover:bg-cream-dark transition-colors">
                 <p className="text-xl font-bold">{totalActive}</p>
@@ -127,7 +127,7 @@ export default async function HubPage() {
             <Link href="/team" className="group border-r-2 border-black">
               <div className="bg-purple text-white px-6 py-5">
                 <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/60">Hub</p>
-                <h3 className="text-lg font-bold uppercase tracking-tight mt-1">Team</h3>
+                <h3 className="text-lg font-bold uppercase tracking-tight mt-1">Team Workspace</h3>
               </div>
               <div className="bg-white px-6 py-4 group-hover:bg-cream-dark transition-colors">
                 <p className="text-xs font-bold text-muted leading-relaxed">Dan&apos;s dashboard,<br />review queue &amp; team</p>
@@ -136,7 +136,7 @@ export default async function HubPage() {
             <Link href="/board" className="group border-r-2 border-black">
               <div className="bg-orange text-white px-6 py-5">
                 <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/60">Hub</p>
-                <h3 className="text-lg font-bold uppercase tracking-tight mt-1">Board</h3>
+                <h3 className="text-lg font-bold uppercase tracking-tight mt-1">Bulletin Board</h3>
               </div>
               <div className="bg-white px-6 py-4 group-hover:bg-cream-dark transition-colors">
                 <p className="text-xs font-bold text-muted leading-relaxed">Team notes &amp;<br />collaboration</p>
