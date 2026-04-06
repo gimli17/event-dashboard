@@ -80,6 +80,33 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
     fetch()
   }, [initiative])
 
+  // Realtime: listen for task inserts/updates with milestone_id
+  useEffect(() => {
+    const channel = supabase
+      .channel('milestone-tasks')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'master_tasks' }, (payload) => {
+        const t = payload.new as MilestoneTask & { initiative: string; deleted_at: string | null }
+        if (!t || t.initiative !== initiative) return
+        if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+          if (t.milestone_id && !t.deleted_at) {
+            setTasks(prev => {
+              const exists = prev.find(x => x.id === t.id)
+              if (exists) return prev.map(x => x.id === t.id ? t : x)
+              return [...prev, t]
+            })
+          } else {
+            // Milestone removed or task deleted — remove from list
+            setTasks(prev => prev.filter(x => x.id !== t.id))
+          }
+        }
+        if (payload.eventType === 'DELETE') {
+          setTasks(prev => prev.filter(x => x.id !== (payload.old as { id: string }).id))
+        }
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [initiative])
+
   const handleEditSave = async (msId: string) => {
     if (!editTitle.trim()) { setEditingId(null); return }
     setMilestones(prev => prev.map(m => m.id === msId ? { ...m, title: editTitle.trim() } : m))

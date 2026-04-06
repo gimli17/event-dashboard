@@ -135,7 +135,6 @@ export function ChatSidebar() {
       if (data && data.length > 0) {
         const typed = data as EventOption[]
         setEvents(typed)
-        setSelectedEvent(typed[0].id)
       }
     }
     fetchEvents()
