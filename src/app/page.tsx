@@ -62,8 +62,8 @@ export default async function HubPage() {
               shortTitle="Boulder Roots"
               description="The Founders Experience — August 26-30, 2026"
               href="/brmf"
-              color="bg-blue"
-              borderColor="border-blue"
+              color="bg-[#1e3a5f]"
+              borderColor="border-[#1e3a5f]"
               activeTasks={counts['brmf']?.active || 0}
               totalTasks={counts['brmf']?.total || 0}
             />
@@ -72,8 +72,8 @@ export default async function HubPage() {
               shortTitle="Bold Summit"
               description="3-day summit for bold conversations"
               href="/bold-summit"
-              color="bg-green"
-              borderColor="border-green"
+              color="bg-[#1a4d3a]"
+              borderColor="border-[#1a4d3a]"
               activeTasks={counts['bold-summit']?.active || 0}
               totalTasks={counts['bold-summit']?.total || 0}
             />
@@ -82,8 +82,8 @@ export default async function HubPage() {
               shortTitle="Ensuring CO"
               description="Building a stronger Colorado community"
               href="/ensuring-colorado"
-              color="bg-red"
-              borderColor="border-red"
+              color="bg-[#6b2a2a]"
+              borderColor="border-[#6b2a2a]"
               activeTasks={counts['ensuring-colorado']?.active || 0}
               totalTasks={counts['ensuring-colorado']?.total || 0}
             />
@@ -94,10 +94,10 @@ export default async function HubPage() {
             <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted">Hub Tools</p>
           </div>
           <div className="grid grid-cols-4 gap-3 items-stretch">
-            <HubTile title="All Tasks" description="Unified task list across all initiatives" href="/tasks" color="bg-black" />
-            <HubTile title="Team Workspace" description="Dan's dashboard, review queue, and team views" href="/team" color="bg-purple" />
-            <HubTile title="Board" description="Bulletin board for team notes and collaboration" href="/board" color="bg-gold" />
-            <HubTile title="Social" description="Social media workspace and content library" href="/social" color="bg-orange" />
+            <HubTile title="All Tasks" description="Unified task list across all initiatives" href="/tasks" color="bg-purple-dark" />
+            <HubTile title="Team Workspace" description="Dan's dashboard, review queue, and team views" href="/team" color="bg-purple-dark" />
+            <HubTile title="Board" description="Bulletin board for team notes and collaboration" href="/board" color="bg-purple-dark" />
+            <HubTile title="Social" description="Social media workspace and content library" href="/social" color="bg-purple-dark" />
           </div>
         </div>
       </section>
