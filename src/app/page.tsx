@@ -39,7 +39,7 @@ export default async function HubPage() {
     <>
       <Navbar />
 
-      <section className="bg-purple text-white py-10">
+      <section className="bg-purple-dark text-white py-10">
         <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-bold tracking-tight leading-none uppercase">
