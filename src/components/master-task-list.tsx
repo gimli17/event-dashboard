@@ -872,69 +872,103 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
 
                             <div className="grid gap-4 sm:grid-cols-2">
                               <EditableField taskId={task.id} field="current_status" label="Current Status" value={task.current_status} editingField={editingField} editValue={editValue} setEditValue={setEditValue} startEditing={startEditing} saveField={saveField} setEditingField={setEditingField} />
-                              <EditableField taskId={task.id} field="overview" label="Overview" value={task.overview} editingField={editingField} editValue={editValue} setEditValue={setEditValue} startEditing={startEditing} saveField={saveField} setEditingField={setEditingField} />
+                              {/* Links — moved to where Overview was */}
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Links</p>
+                                {editingField?.taskId === task.id && editingField?.field === 'links' ? (
+                                  <textarea
+                                    value={editValue}
+                                    onChange={(e) => setEditValue(e.target.value)}
+                                    onBlur={saveField}
+                                    onKeyDown={(e) => { if (e.key === 'Escape') setEditingField(null) }}
+                                    autoFocus
+                                    rows={3}
+                                    placeholder="Paste URLs, one per line..."
+                                    className="w-full border-2 border-black bg-white px-2 py-1 text-xs text-black focus:outline-none focus:border-blue"
+                                  />
+                                ) : (
+                                  <div>
+                                    {task.links ? (
+                                      <div className="space-y-1">
+                                        {task.links.split('\n').filter(Boolean).map((line, li) => {
+                                          const trimmed = line.trim()
+                                          const urlMatch = trimmed.match(/(https?:\/\/[^\s]+)/)
+                                          const url = urlMatch ? urlMatch[1] : (trimmed.startsWith('http') ? trimmed : `https://${trimmed}`)
+                                          return (
+                                            <a key={li} href={url} target="_blank" rel="noopener noreferrer"
+                                              className="text-xs text-blue hover:text-red underline block truncate">{trimmed}</a>
+                                          )
+                                        })}
+                                        <button onClick={() => startEditing(task.id, 'links', task.links)}
+                                          className="text-[9px] text-muted/40 hover:text-muted mt-1">edit links</button>
+                                      </div>
+                                    ) : (
+                                      <button onClick={() => startEditing(task.id, 'links', task.links)}
+                                        className="text-xs text-muted/40 italic hover:text-muted">Click to add links...</button>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             </div>
 
+                            {/* Action Items as checkboxes */}
                             <div className="mt-4">
-                              <EditableField taskId={task.id} field="action_items" label="Action Items" value={task.action_items} multiline editingField={editingField} editValue={editValue} setEditValue={setEditValue} startEditing={startEditing} saveField={saveField} setEditingField={setEditingField} />
-                            </div>
-
-                            <div className="mt-4">
-                              <EditableField taskId={task.id} field="dan_comments" label="Dan's Comments" value={task.dan_comments} highlight editingField={editingField} editValue={editValue} setEditValue={setEditValue} startEditing={startEditing} saveField={saveField} setEditingField={setEditingField} />
-                            </div>
-
-                            {/* Links */}
-                            <div className="mt-4">
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Links</p>
-                              {editingField?.taskId === task.id && editingField?.field === 'links' ? (
+                              <div className="flex items-center justify-between mb-1">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Action Items</p>
+                                <button
+                                  onClick={() => startEditing(task.id, 'action_items', task.action_items)}
+                                  className="text-[9px] text-muted/40 hover:text-muted"
+                                >edit</button>
+                              </div>
+                              {editingField?.taskId === task.id && editingField?.field === 'action_items' ? (
                                 <textarea
                                   value={editValue}
                                   onChange={(e) => setEditValue(e.target.value)}
                                   onBlur={saveField}
                                   onKeyDown={(e) => { if (e.key === 'Escape') setEditingField(null) }}
                                   autoFocus
-                                  rows={3}
-                                  placeholder="Paste URLs, one per line..."
+                                  rows={4}
+                                  placeholder="One item per line..."
                                   className="w-full border-2 border-black bg-white px-2 py-1 text-xs text-black focus:outline-none focus:border-blue"
                                 />
                               ) : (
                                 <div>
-                                  {task.links ? (
-                                    <div className="space-y-1">
-                                      {task.links.split('\n').filter(Boolean).map((line, li) => {
-                                        const trimmed = line.trim()
-                                        // Extract URL from line — handle "Label: https://..." format
-                                        const urlMatch = trimmed.match(/(https?:\/\/[^\s]+)/)
-                                        const url = urlMatch ? urlMatch[1] : (trimmed.startsWith('http') ? trimmed : `https://${trimmed}`)
+                                  {task.action_items ? (
+                                    <div className="space-y-1.5">
+                                      {task.action_items.split('\n').filter(Boolean).map((item, ai) => {
+                                        const trimmed = item.replace(/^[-•*]\s*/, '').replace(/^\[[ x]\]\s*/i, '').trim()
+                                        const isChecked = item.match(/^\[x\]/i) !== null
                                         return (
-                                          <a
-                                            key={li}
-                                            href={url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-xs text-blue hover:text-red underline block truncate"
-                                          >
-                                            {trimmed}
-                                          </a>
+                                          <div key={ai} className="flex items-start gap-2">
+                                            <button
+                                              onClick={async () => {
+                                                const lines = task.action_items!.split('\n')
+                                                lines[ai] = isChecked ? trimmed : `[x] ${trimmed}`
+                                                const updated = lines.join('\n')
+                                                setTasks(prev => prev.map(t => t.id === task.id ? { ...t, action_items: updated } : t))
+                                                await supabase.from('master_tasks').update({ action_items: updated } as never).eq('id', task.id)
+                                              }}
+                                              className={`mt-0.5 w-4 h-4 flex items-center justify-center shrink-0 border-2 transition-colors ${
+                                                isChecked ? 'bg-green border-green text-white' : 'border-black/20 hover:border-black/40'
+                                              }`}
+                                            >
+                                              {isChecked && <span className="text-[9px]">✓</span>}
+                                            </button>
+                                            <span className={`text-xs ${isChecked ? 'line-through text-muted' : ''}`}>{trimmed}</span>
+                                          </div>
                                         )
                                       })}
-                                      <button
-                                        onClick={() => startEditing(task.id, 'links', task.links)}
-                                        className="text-[9px] text-muted/40 hover:text-muted mt-1"
-                                      >
-                                        edit links
-                                      </button>
                                     </div>
                                   ) : (
-                                    <button
-                                      onClick={() => startEditing(task.id, 'links', task.links)}
-                                      className="text-xs text-muted/40 italic hover:text-muted"
-                                    >
-                                      Click to add links...
-                                    </button>
+                                    <button onClick={() => startEditing(task.id, 'action_items', task.action_items)}
+                                      className="text-xs text-muted/40 italic hover:text-muted">Click to add action items...</button>
                                   )}
                                 </div>
                               )}
+                            </div>
+
+                            <div className="mt-4">
+                              <EditableField taskId={task.id} field="dan_comments" label="Dan's Comments" value={task.dan_comments} highlight editingField={editingField} editValue={editValue} setEditValue={setEditValue} startEditing={startEditing} saveField={saveField} setEditingField={setEditingField} />
                             </div>
 
                             {/* Your update to Dan */}
