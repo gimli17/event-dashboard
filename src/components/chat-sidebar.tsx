@@ -93,7 +93,7 @@ export function ChatSidebar() {
   // Add milestone state
   const [msTitle, setMsTitle] = useState('')
   const [msInitiative, setMsInitiative] = useState('brmf')
-  const [msMonth, setMsMonth] = useState(() => String(new Date().getMonth() + 1).padStart(2, '0'))
+  const [msDate, setMsDate] = useState('')
   const [addingMs, setAddingMs] = useState(false)
   const [msSuccess, setMsSuccess] = useState('')
 
@@ -552,10 +552,11 @@ export function ChatSidebar() {
               description: null,
               initiative: msInitiative,
               sort_order: 999,
-              target_date: `2026-${msMonth}-28`,
+              target_date: msDate || null,
             } as never)
             setMsSuccess('Milestone created')
             setMsTitle('')
+            setMsDate('')
             setMilestoneOptions(prev => [...prev, { id, title: msTitle.trim(), initiative: msInitiative }])
             setTimeout(() => setMsSuccess(''), 3000)
             setAddingMs(false)
@@ -574,15 +575,9 @@ export function ChatSidebar() {
                 </select>
               </div>
               <div className="flex-1">
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Month</label>
-                <select value={msMonth} onChange={(e) => setMsMonth(e.target.value)}
-                  className="w-full border-2 border-black/20 bg-white px-2 py-2 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black">
-                  <option value="04">April</option>
-                  <option value="05">May</option>
-                  <option value="06">June</option>
-                  <option value="07">July</option>
-                  <option value="08">August</option>
-                </select>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Target Date</label>
+                <input type="date" value={msDate} onChange={(e) => setMsDate(e.target.value)}
+                  className="w-full border-2 border-black/20 bg-white px-2 py-2 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black cursor-pointer" />
               </div>
             </div>
 
