@@ -898,29 +898,37 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
                                   className="w-full border-2 border-black bg-white px-2 py-1 text-xs text-black focus:outline-none focus:border-blue"
                                 />
                               ) : (
-                                <div
-                                  className="cursor-pointer hover:bg-cream-dark transition-colors rounded px-1 py-0.5 -mx-1"
-                                  onClick={(e) => { if ((e.target as HTMLElement).tagName === 'A' || (e.target as HTMLElement).tagName === 'BUTTON') return; startEditing(task.id, 'links', task.links) }}
-                                  title="Click to edit links"
-                                >
+                                <div>
                                   {task.links ? (
                                     <div className="space-y-1">
-                                      {task.links.split('\n').filter(Boolean).map((link, li) => (
-                                        <a
-                                          key={li}
-                                          href={link.trim().startsWith('http') ? link.trim() : `https://${link.trim()}`}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          onClick={(e) => { e.stopPropagation(); e.preventDefault(); window.open(link.trim().startsWith('http') ? link.trim() : `https://${link.trim()}`, '_blank') }}
-                                          className="text-xs text-blue hover:text-red underline block truncate"
-                                        >
-                                          {link.trim()}
-                                        </a>
-                                      ))}
-                                      <button onClick={() => startEditing(task.id, 'links', task.links)} className="text-[9px] text-muted/40 hover:text-muted mt-1">edit links</button>
+                                      {task.links.split('\n').filter(Boolean).map((link, li) => {
+                                        const url = link.trim().startsWith('http') ? link.trim() : `https://${link.trim()}`
+                                        return (
+                                          <a
+                                            key={li}
+                                            href={url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-xs text-blue hover:text-red underline block truncate"
+                                          >
+                                            {link.trim()}
+                                          </a>
+                                        )
+                                      })}
+                                      <button
+                                        onClick={() => startEditing(task.id, 'links', task.links)}
+                                        className="text-[9px] text-muted/40 hover:text-muted mt-1"
+                                      >
+                                        edit links
+                                      </button>
                                     </div>
                                   ) : (
-                                    <p className="text-xs text-muted/40 italic">Click to add links...</p>
+                                    <button
+                                      onClick={() => startEditing(task.id, 'links', task.links)}
+                                      className="text-xs text-muted/40 italic hover:text-muted"
+                                    >
+                                      Click to add links...
+                                    </button>
                                   )}
                                 </div>
                               )}
