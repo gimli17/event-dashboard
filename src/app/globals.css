@@ -14,6 +14,7 @@
   --orange: #ea580c;
   --teal: #0d9488;
   --purple: #7c39f4;
+  --purple-dark: #4a1d96;
   --purple-light: #CF9FFF;
   --white: #faf7f0;
   --muted: #8b7e6a;
@@ -33,6 +34,7 @@
   --color-orange: var(--orange);
   --color-teal: var(--teal);
   --color-purple: var(--purple);
+  --color-purple-dark: var(--purple-dark);
   --color-purple-light: var(--purple-light);
   --color-white: var(--white);
   --color-muted: var(--muted);

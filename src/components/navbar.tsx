@@ -208,7 +208,7 @@ export function Navbar({ initiative }: { initiative?: InitiativeKey } = {}) {
 
   return (
     <>
-      <nav className="bg-purple text-white relative">
+      <nav className="bg-purple-dark text-white relative">
         <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/" className="text-sm font-bold tracking-widest uppercase">
