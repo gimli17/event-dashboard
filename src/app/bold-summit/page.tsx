@@ -60,8 +60,16 @@ export default async function BoldSummitPage() {
                 <p className="text-xs text-muted leading-relaxed">All Bold Summit priorities and tasks</p>
               </div>
             </Link>
+            <Link href="/bold-summit/schedule" className="group">
+              <div className="bg-purple text-white px-6 h-28 flex items-center">
+                <h2 className="text-sm font-bold tracking-widest uppercase">Event Schedule</h2>
+              </div>
+              <div className="border-l-2 border-r-2 border-b-2 border-black/10 px-6 h-20 flex items-center bg-white group-hover:bg-cream-dark transition-colors">
+                <p className="text-xs text-muted leading-relaxed">3-day summit schedule — Sun Aug 30 to Tue Sep 1</p>
+              </div>
+            </Link>
             <a href="https://creators-website-alpha.vercel.app/" target="_blank" rel="noopener noreferrer" className="group">
-              <div className="bg-green text-white px-6 h-28 flex items-center justify-between">
+              <div className="bg-black text-white px-6 h-28 flex items-center justify-between">
                 <h2 className="text-sm font-bold tracking-widest uppercase">Website</h2>
                 <span className="text-xs font-bold tracking-widest uppercase opacity-50">&nearr;</span>
               </div>
