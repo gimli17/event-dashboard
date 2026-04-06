@@ -236,12 +236,19 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
 
       setLoading(false)
 
-      // Auto-scroll to task if linked via hash
+      // Auto-scroll to task if linked via hash, and ensure initiative filter doesn't hide it
       if (typeof window !== 'undefined' && window.location.hash) {
+        const hashId = window.location.hash.slice(1)
+        if (tasksRes.data) {
+          const linked = (tasksRes.data as MasterTask[]).find(t => t.id === hashId)
+          if (linked && linked.initiative && !initiative) {
+            setFilterInitiative('all')
+          }
+        }
         setTimeout(() => {
-          const el = document.getElementById(window.location.hash.slice(1))
+          const el = document.getElementById(hashId)
           if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        }, 200)
+        }, 400)
       }
     }
     fetch()
@@ -261,6 +268,10 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
   const handleStatusChange = async (task: MasterTask, newStatus: string) => {
     setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: newStatus } : t)))
     await supabase.from('master_tasks').update({ status: newStatus, updated_at: new Date().toISOString() } as never).eq('id', task.id)
+    if (displayName) {
+      const action = newStatus === 'complete' ? 'completed' : `changed status to ${newStatus}`
+      logActivity(displayName, action, 'task', task.id, task.title)
+    }
   }
 
   const handlePriorityChange = async (task: MasterTask, newPriority: string) => {
@@ -958,6 +969,18 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
                                 </button>
                               ))}
                             </div>
+
+                            {/* Mark as Done button */}
+                            {task.status !== 'complete' && (
+                              <div className="mt-4">
+                                <button
+                                  onClick={() => handleStatusChange(task, 'complete')}
+                                  className="bg-green text-white px-6 py-2.5 text-xs font-bold uppercase tracking-widest hover:bg-green-light transition-colors"
+                                >
+                                  Mark as Done
+                                </button>
+                              </div>
+                            )}
 
                             {/* Comments */}
                             <div className="mt-4 border-t-2 border-black/5 pt-4">
