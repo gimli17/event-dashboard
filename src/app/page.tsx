@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Navbar } from '@/components/navbar'
+import { SidebarButtons } from '@/components/sidebar-buttons'
 import { createClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
@@ -48,9 +49,12 @@ export default async function HubPage() {
                 Caruso Ventures
               </h1>
             </div>
-            <div className="text-right">
-              <p className="text-5xl font-bold">{totalActive}</p>
-              <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 mt-1">Active Tasks</p>
+            <div className="text-right flex items-end gap-6">
+              <SidebarButtons />
+              <div>
+                <p className="text-5xl font-bold">{totalActive}</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 mt-1">Active Tasks</p>
+              </div>
             </div>
           </div>
         </div>
