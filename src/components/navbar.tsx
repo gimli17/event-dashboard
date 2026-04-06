@@ -233,10 +233,10 @@ export function Navbar({ initiative }: { initiative?: InitiativeKey } = {}) {
             <Link href="/tasks" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
               Tasks
             </Link>
-            <Link href="/social" className="text-xs font-bold tracking-widest uppercase bg-pink-500/20 hover:bg-pink-500/30 px-3 py-1.5 transition-colors">
+            <Link href="/social" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
               Social
             </Link>
-            <Link href="/board" className="text-xs font-bold tracking-widest uppercase bg-amber-500/30 hover:bg-amber-500/50 px-3 py-1.5 transition-colors">
+            <Link href="/board" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
               Board
             </Link>
             <Link href="/team" className="text-xs font-bold tracking-widest uppercase bg-purple-light/30 hover:bg-purple-light/50 px-3 py-1.5 transition-colors relative">
