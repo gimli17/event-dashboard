@@ -74,6 +74,9 @@ export async function getSponsors(): Promise<Sponsor[]> {
   }
 }
 
+// Internal/related entities excluded from committed revenue count
+const INTERNAL_SPONSORS = ['Caruso Ventures', 'CV Team', 'Roots Music Project']
+
 export function getSponsorStats(sponsors: Sponsor[]) {
   const tiered = sponsors.filter((s) => s.tier_id)
   const withPayment = sponsors.filter((s) => s.payment_status && s.payment_status !== 'none')
@@ -85,7 +88,9 @@ export function getSponsorStats(sponsors: Sponsor[]) {
     tierCounts[s.tier_id!] = (tierCounts[s.tier_id!] || 0) + 1
   })
 
-  const totalRevenue = tiered.reduce((sum, s) => sum + (s.amount || 0), 0)
+  // Committed revenue: funnel stage 6+ (committed/paid), excluding internal entities
+  const committed = tiered.filter((s) => (s.funnel_stage ?? 0) >= 6 && !INTERNAL_SPONSORS.includes(s.name))
+  const totalRevenue = committed.reduce((sum, s) => sum + (s.amount || 0), 0)
 
   return {
     total: sponsors.length,
