@@ -170,7 +170,8 @@ export function ActivityLog() {
                   const hasTaskContext = entry.target_type === 'task' && entry.target_id
                   const isExpanded = expandedEntry === entry.id
                   const ctx = entry.target_id ? taskContexts[entry.target_id] : null
-                  const isDeleteOrArchive = actionWord === 'deleted' || actionWord === 'archived'
+                  const actionLower = entry.action.toLowerCase()
+                  const isDeleteOrArchive = actionLower.includes('deleted') || actionLower.includes('archived') || actionLower.includes('delete')
                   const canRestore = isDeleteOrArchive && entry.target_type === 'task' && entry.target_id && !restoredIds.has(entry.id)
 
                   return (
@@ -210,13 +211,13 @@ export function ActivityLog() {
                                     } as never)
                                   }
                                 }}
-                                className="text-[10px] font-bold uppercase tracking-widest text-green bg-green/10 hover:bg-green hover:text-white px-2 py-0.5 transition-colors"
+                                className="text-xs font-bold uppercase tracking-widest text-green bg-green/10 hover:bg-green hover:text-white px-3 py-1 transition-colors border border-green/30"
                               >
                                 Restore
                               </button>
                             )}
                             {restoredIds.has(entry.id) && (
-                              <span className="text-[10px] font-bold uppercase tracking-widest text-green">Restored ✓</span>
+                              <span className="text-xs font-bold uppercase tracking-widest text-green bg-green/10 px-3 py-1">Restored ✓</span>
                             )}
                           </div>
                           {entry.details && (
