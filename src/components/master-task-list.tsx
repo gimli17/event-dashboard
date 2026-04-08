@@ -1207,7 +1207,7 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
       {viewMode === 'deleted' && (
         <div>
           <div className="bg-muted text-white px-6 py-4 flex items-center justify-between mt-6">
-            <h2 className="text-sm font-bold tracking-widest uppercase">Deleted Tasks</h2>
+            <h2 className="text-sm font-bold tracking-widest uppercase">Deleted &amp; Archived Tasks</h2>
             <span className="text-xs font-bold tracking-wider opacity-70">{deletedTasks.length} ITEMS</span>
           </div>
           {deletedTasks.length === 0 ? (
@@ -1223,13 +1223,17 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
                     <div className="flex items-center gap-2 mt-1">
                       {task.assignee && <span className="text-[10px] font-bold text-muted uppercase tracking-wider">{task.assignee}</span>}
                       <span className="text-[10px] text-muted uppercase tracking-wider">{task.priority}</span>
+                      <span className={`text-[10px] font-bold uppercase tracking-wider ${task.status === 'complete' ? 'text-green' : 'text-muted'}`}>
+                        {task.status === 'complete' ? 'Archived' : 'Deleted'}
+                      </span>
                     </div>
                   </div>
                   <button
                     onClick={async () => {
-                      await supabase.from('master_tasks').update({ deleted_at: null, status: 'not-started' } as never).eq('id', task.id)
+                      await supabase.from('master_tasks').update({ deleted_at: null } as never).eq('id', task.id)
                       setDeletedTasks((prev) => prev.filter((t) => t.id !== task.id))
-                      setTasks((prev) => [...prev, { ...task, status: 'not-started' } as MasterTask])
+                      setTasks((prev) => [...prev, task as MasterTask])
+                      if (displayName) logActivity(displayName, 'restored', 'task', task.id, task.title)
                     }}
                     className="text-xs font-bold uppercase tracking-widest text-blue bg-blue/10 hover:bg-blue hover:text-white px-3 py-1.5 transition-colors shrink-0"
                   >
