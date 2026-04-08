@@ -17,14 +17,20 @@ interface LogEntry {
 }
 
 interface TaskContext {
+  title: string | null
+  current_status: string | null
+  overview: string | null
+  action_items: string | null
+  dan_comments: string | null
   update_to_dan: string | null
   dan_feedback: string | null
   dan_checklist: { id: string; text: string; checked: boolean }[] | null
   links: string | null
-  overview: string | null
   status: string | null
   assignee: string | null
   priority: string | null
+  deadline: string | null
+  initiative: string | null
 }
 
 const actionColors: Record<string, string> = {
@@ -70,7 +76,7 @@ export function ActivityLog() {
             setExpandedEntry(match.id)
             // Pre-load context
             const { data: mt } = await supabase.from('master_tasks')
-              .select('update_to_dan, dan_feedback, dan_checklist, links, overview, status, assignee, priority')
+              .select('title, current_status, overview, action_items, dan_comments, update_to_dan, dan_feedback, dan_checklist, links, status, assignee, priority, deadline, initiative')
               .eq('id', highlightTaskId)
               .single()
             if (mt) {
@@ -99,7 +105,7 @@ export function ActivityLog() {
     }
     // Try master_tasks first
     const { data: mt } = await supabase.from('master_tasks')
-      .select('update_to_dan, dan_feedback, dan_checklist, links, overview, status, assignee, priority')
+      .select('title, current_status, overview, action_items, dan_comments, update_to_dan, dan_feedback, dan_checklist, links, status, assignee, priority, deadline, initiative')
       .eq('id', taskId)
       .single()
     if (mt) {
@@ -222,15 +228,17 @@ export function ActivityLog() {
                         </div>
                       </div>
 
-                      {/* Expanded task context */}
+                      {/* Expanded task context — full view */}
                       {isExpanded && ctx && (
-                        <div className="ml-4 mt-2 mb-2 border-l-4 border-blue/20 bg-white px-5 py-4 space-y-3">
+                        <div className="ml-4 mt-2 mb-2 border-l-4 border-blue/20 bg-white px-5 py-4 space-y-4">
+                          {/* Status badges */}
                           <div className="flex items-center gap-3 flex-wrap">
                             {ctx.status && (
                               <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 ${
                                 ctx.status === 'complete' ? 'bg-green text-white' :
                                 ctx.status === 'review' ? 'bg-purple text-white' :
                                 ctx.status === 'in-progress' ? 'bg-blue text-white' :
+                                ctx.status === 'blocked' ? 'bg-red text-white' :
                                 'bg-black/10 text-black'
                               }`}>{ctx.status}</span>
                             )}
@@ -245,15 +253,78 @@ export function ActivityLog() {
                             {ctx.assignee && (
                               <span className="text-[10px] font-bold text-blue uppercase tracking-widest">{ctx.assignee}</span>
                             )}
+                            {ctx.deadline && (
+                              <span className="text-[10px] font-bold text-red uppercase tracking-widest">
+                                Due {new Date(ctx.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              </span>
+                            )}
+                            {ctx.initiative && (
+                              <span className="text-[10px] font-bold uppercase tracking-widest text-muted">{ctx.initiative}</span>
+                            )}
                           </div>
 
+                          {/* Current Status */}
+                          {ctx.current_status && (
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Current Status</p>
+                              <div className="text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: ctx.current_status }} />
+                            </div>
+                          )}
+
+                          {/* Action Items */}
+                          {ctx.action_items && (
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Action Items</p>
+                              <div className="space-y-1">
+                                {ctx.action_items.split('\n').filter(Boolean).map((item, ai) => {
+                                  const trimmed = item.replace(/^[-•*]\s*/, '').replace(/^\[[ x]\]\s*/i, '').trim()
+                                  const isChecked = item.match(/^\[x\]/i) !== null
+                                  return (
+                                    <div key={ai} className="flex items-start gap-2">
+                                      <span className={`mt-0.5 w-4 h-4 flex items-center justify-center shrink-0 border-2 ${isChecked ? 'bg-green border-green text-white' : 'border-black/20'}`}>
+                                        {isChecked && <span className="text-[9px]">✓</span>}
+                                      </span>
+                                      <span className={`text-sm ${isChecked ? 'line-through text-muted' : ''}`}>{trimmed}</span>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Links */}
+                          {ctx.links && (
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Links</p>
+                              {ctx.links.split('\n').filter(Boolean).map((line, li) => {
+                                const trimmed = line.trim()
+                                const urlMatch = trimmed.match(/(https?:\/\/[^\s]+)/)
+                                const url = urlMatch ? urlMatch[1] : (trimmed.startsWith('http') ? trimmed : `https://${trimmed}`)
+                                return (
+                                  <a key={li} href={url} target="_blank" rel="noopener noreferrer"
+                                    className="text-sm text-blue hover:text-red underline block">{trimmed}</a>
+                                )
+                              })}
+                            </div>
+                          )}
+
+                          {/* Dan's Comments */}
+                          {ctx.dan_comments && (
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Dan&apos;s Comments</p>
+                              <div className="text-sm leading-relaxed border-l-4 border-muted/20 pl-3 italic text-muted" dangerouslySetInnerHTML={{ __html: ctx.dan_comments }} />
+                            </div>
+                          )}
+
+                          {/* Update to Dan */}
                           {ctx.update_to_dan && (
                             <div>
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-purple mb-1">Update Submitted</p>
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-purple mb-1">Update Submitted to Dan</p>
                               <div className="text-sm leading-relaxed border-l-4 border-purple pl-3" dangerouslySetInnerHTML={{ __html: ctx.update_to_dan }} />
                             </div>
                           )}
 
+                          {/* Dan's Feedback */}
                           {ctx.dan_feedback && (
                             <div>
                               <p className="text-[10px] font-bold uppercase tracking-widest text-red mb-1">Dan&apos;s Feedback</p>
@@ -261,9 +332,10 @@ export function ActivityLog() {
                             </div>
                           )}
 
+                          {/* Dan's Checklist */}
                           {ctx.dan_checklist && ctx.dan_checklist.length > 0 && (
                             <div>
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-purple mb-1">Checklist</p>
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-purple mb-1">Dan&apos;s Checklist</p>
                               <div className="space-y-1">
                                 {ctx.dan_checklist.map((item) => (
                                   <div key={item.id} className="flex items-center gap-2">
@@ -275,24 +347,15 @@ export function ActivityLog() {
                             </div>
                           )}
 
-                          {ctx.links && (
-                            <div>
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Links</p>
-                              {ctx.links.split('\n').filter(Boolean).map((link, li) => (
-                                <a key={li} href={link.trim().startsWith('http') ? link.trim() : `https://${link.trim()}`} target="_blank" rel="noopener noreferrer"
-                                  className="text-sm text-blue hover:text-red underline block">{link.trim()}</a>
-                              ))}
-                            </div>
-                          )}
-
+                          {/* Overview */}
                           {ctx.overview && (
                             <div>
                               <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Overview</p>
-                              <div className="text-sm" dangerouslySetInnerHTML={{ __html: ctx.overview }} />
+                              <div className="text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: ctx.overview }} />
                             </div>
                           )}
 
-                          {!ctx.update_to_dan && !ctx.dan_feedback && !ctx.overview && !ctx.links && (
+                          {!ctx.current_status && !ctx.action_items && !ctx.update_to_dan && !ctx.dan_feedback && !ctx.dan_comments && !ctx.overview && !ctx.links && (
                             <p className="text-xs text-muted italic">No additional context on this task.</p>
                           )}
                         </div>
