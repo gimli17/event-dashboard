@@ -599,10 +599,6 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
             Weekly Report
           </button>
           <WeeklyReviewButton />
-          <button onClick={() => setViewMode('deleted')}
-            className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest border-2 transition-all ${viewMode === 'deleted' ? 'bg-muted text-white border-muted' : 'bg-white text-black border-black/20 hover:border-black'}`}>
-            Deleted ({deletedTasks.length})
-          </button>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Owner:</span>
@@ -1203,48 +1199,6 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
         </div>
       )}
 
-      {/* Deleted Backlog */}
-      {viewMode === 'deleted' && (
-        <div>
-          <div className="bg-muted text-white px-6 py-4 flex items-center justify-between mt-6">
-            <h2 className="text-sm font-bold tracking-widest uppercase">Deleted &amp; Archived Tasks</h2>
-            <span className="text-xs font-bold tracking-wider opacity-70">{deletedTasks.length} ITEMS</span>
-          </div>
-          {deletedTasks.length === 0 ? (
-            <div className="border-l-2 border-r-2 border-b-2 border-black/10 px-6 py-12 text-center">
-              <p className="text-sm text-muted">No deleted tasks.</p>
-            </div>
-          ) : (
-            <div className="border-l-2 border-r-2 border-b-2 border-black/10">
-              {deletedTasks.map((task, i) => (
-                <div key={task.id} className={`px-5 py-3 flex items-center justify-between gap-4 ${i > 0 ? 'border-t border-black/5' : ''}`}>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold line-through text-muted">{task.title}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      {task.assignee && <span className="text-[10px] font-bold text-muted uppercase tracking-wider">{task.assignee}</span>}
-                      <span className="text-[10px] text-muted uppercase tracking-wider">{task.priority}</span>
-                      <span className={`text-[10px] font-bold uppercase tracking-wider ${task.status === 'complete' ? 'text-green' : 'text-muted'}`}>
-                        {task.status === 'complete' ? 'Archived' : 'Deleted'}
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={async () => {
-                      await supabase.from('master_tasks').update({ deleted_at: null } as never).eq('id', task.id)
-                      setDeletedTasks((prev) => prev.filter((t) => t.id !== task.id))
-                      setTasks((prev) => [...prev, task as MasterTask])
-                      if (displayName) logActivity(displayName, 'restored', 'task', task.id, task.title)
-                    }}
-                    className="text-xs font-bold uppercase tracking-widest text-blue bg-blue/10 hover:bg-blue hover:text-white px-3 py-1.5 transition-colors shrink-0"
-                  >
-                    Restore
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   )
 }

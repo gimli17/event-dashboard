@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { useUser } from './user-provider'
 
 interface LogEntry {
   id: string
@@ -43,8 +44,10 @@ const actionColors: Record<string, string> = {
 const teamMembers = ['All', 'Dan', 'Cody', 'Sabrina', 'Joe', 'Danny', 'Connor', 'Gib', 'Emily', 'Kendall', 'Alex', 'Liam', 'Dave', 'Tom', 'Kevin']
 
 export function ActivityLog() {
+  const { displayName } = useUser()
   const searchParams = useSearchParams()
   const highlightTaskId = searchParams.get('task')
+  const [restoredIds, setRestoredIds] = useState<Set<string>>(new Set())
   const [entries, setEntries] = useState<LogEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [filterPerson, setFilterPerson] = useState('All')
@@ -161,6 +164,8 @@ export function ActivityLog() {
                   const hasTaskContext = entry.target_type === 'task' && entry.target_id
                   const isExpanded = expandedEntry === entry.id
                   const ctx = entry.target_id ? taskContexts[entry.target_id] : null
+                  const isDeleteOrArchive = actionWord === 'deleted' || actionWord === 'archived'
+                  const canRestore = isDeleteOrArchive && entry.target_type === 'task' && entry.target_id && !restoredIds.has(entry.id)
 
                   return (
                     <div key={entry.id} className="py-2"
@@ -183,6 +188,29 @@ export function ActivityLog() {
                               >
                                 {isExpanded ? '▲ Hide context' : '▼ View context'}
                               </button>
+                            )}
+                            {canRestore && (
+                              <button
+                                onClick={async () => {
+                                  await supabase.from('master_tasks').update({ deleted_at: null } as never).eq('id', entry.target_id!)
+                                  setRestoredIds(prev => new Set([...prev, entry.id]))
+                                  if (displayName) {
+                                    await supabase.from('activity_log').insert({
+                                      actor: displayName,
+                                      action: 'restored',
+                                      target_type: 'task',
+                                      target_id: entry.target_id,
+                                      target_title: entry.target_title,
+                                    } as never)
+                                  }
+                                }}
+                                className="text-[10px] font-bold uppercase tracking-widest text-green bg-green/10 hover:bg-green hover:text-white px-2 py-0.5 transition-colors"
+                              >
+                                Restore
+                              </button>
+                            )}
+                            {restoredIds.has(entry.id) && (
+                              <span className="text-[10px] font-bold uppercase tracking-widest text-green">Restored ✓</span>
                             )}
                           </div>
                           {entry.details && (
