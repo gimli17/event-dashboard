@@ -44,7 +44,7 @@ export default async function HubPage() {
       <div className="min-h-screen bg-cream">
         {/* Hero — bold graphic header */}
         <div className="bg-purple-dark text-white">
-          <div className="max-w-7xl mx-auto px-8 py-14 flex items-end justify-between">
+          <div className="max-w-screen-2xl mx-auto px-8 py-14 flex items-end justify-between">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.4em] text-white/40 mb-3">Operations Hub</p>
               <h1 className="text-6xl font-bold uppercase tracking-tight">
@@ -62,15 +62,15 @@ export default async function HubPage() {
         </div>
 
         {/* Initiative cards — bold color blocks */}
-        <div className="max-w-7xl mx-auto px-8 py-10">
+        <div className="max-w-screen-2xl mx-auto px-8 py-10">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-0">
             {/* Boulder Roots */}
             <Link href="/brmf" className="group">
               <div className="bg-[#2a4e80] text-white h-full">
                 <div className="px-6 pt-7 pb-5">
                   <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/50 mb-4">Music Fest</p>
-                  <h2 className="text-2xl font-bold uppercase tracking-tight leading-[0.95] mb-5">
-                    Boulder<br />Roots
+                  <h2 className="text-2xl font-bold uppercase tracking-tight leading-[0.95] mb-5 whitespace-nowrap">
+                    Boulder Roots
                   </h2>
                   <p className="text-[11px] text-white/60 leading-relaxed">The Founders Experience<br />August 26–30, 2026</p>
                 </div>
@@ -86,8 +86,8 @@ export default async function HubPage() {
               <div className="bg-[#d4a020] text-white h-full">
                 <div className="px-6 pt-7 pb-5">
                   <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/50 mb-4">3-Day Summit</p>
-                  <h2 className="text-2xl font-bold uppercase tracking-tight leading-[0.95] mb-5">
-                    Bold<br />Summit
+                  <h2 className="text-2xl font-bold uppercase tracking-tight leading-[0.95] mb-5 whitespace-nowrap">
+                    Bold Summit
                   </h2>
                   <p className="text-[11px] text-white/60 leading-relaxed">Bold conversations<br />shaping the future</p>
                 </div>
@@ -103,8 +103,8 @@ export default async function HubPage() {
               <div className="bg-[#cc4444] text-white h-full">
                 <div className="px-6 pt-7 pb-5">
                   <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/50 mb-4">Community</p>
-                  <h2 className="text-2xl font-bold uppercase tracking-tight leading-[0.95] mb-5">
-                    Engage<br />Colorado
+                  <h2 className="text-2xl font-bold uppercase tracking-tight leading-[0.95] mb-5 whitespace-nowrap">
+                    Engage Colorado
                   </h2>
                   <p className="text-[11px] text-white/60 leading-relaxed">Building a stronger<br />Colorado community</p>
                 </div>
@@ -120,8 +120,8 @@ export default async function HubPage() {
               <div className="bg-[#2a7d5c] text-white h-full">
                 <div className="px-6 pt-7 pb-5">
                   <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/50 mb-4">Capital</p>
-                  <h2 className="text-2xl font-bold uppercase tracking-tight leading-[0.95] mb-5">
-                    Invest-<br />ments
+                  <h2 className="text-2xl font-bold uppercase tracking-tight leading-[0.95] mb-5 whitespace-nowrap">
+                    Investments
                   </h2>
                   <p className="text-[11px] text-white/60 leading-relaxed">Portfolio, diligence,<br />capital allocation</p>
                 </div>
@@ -137,8 +137,8 @@ export default async function HubPage() {
               <div className="bg-[#8b5a3c] text-white h-full">
                 <div className="px-6 pt-7 pb-5">
                   <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/50 mb-4">Media</p>
-                  <h2 className="text-2xl font-bold uppercase tracking-tight leading-[0.95] mb-5">
-                    Loud<br />Bear
+                  <h2 className="text-2xl font-bold uppercase tracking-tight leading-[0.95] mb-5 whitespace-nowrap">
+                    Loud Bear
                   </h2>
                   <p className="text-[11px] text-white/60 leading-relaxed">Podcast, social,<br />and media voice</p>
                 </div>
@@ -152,7 +152,7 @@ export default async function HubPage() {
         </div>
 
         {/* Hub tools — graphic grid */}
-        <div className="max-w-7xl mx-auto px-8 pb-16">
+        <div className="max-w-screen-2xl mx-auto px-8 pb-16">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-0 border-2 border-black">
             <Link href="/tasks" className="group md:border-r-2 border-black">
               <div className="bg-[#333333] text-white px-6 py-5">
