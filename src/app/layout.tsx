@@ -14,7 +14,7 @@ const dmSans = DM_Sans({
 
 export const metadata: Metadata = {
   title: "Caruso Ventures — Operations Hub",
-  description: "Central hub for Boulder Roots, Bold Summit, and Ensuring Colorado initiatives",
+  description: "Central hub for Boulder Roots, Bold Summit, Engage Colorado, Investments, and Loud Bear initiatives",
 };
 
 export default function RootLayout({

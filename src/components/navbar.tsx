@@ -291,7 +291,9 @@ export function Navbar({ initiative }: { initiative?: InitiativeKey } = {}) {
               // Initiative sections
               { href: '/brmf', label: 'Boulder Roots', icon: '♫', section: true },
               { href: '/bold-summit', label: 'Bold Summit', icon: '◆', section: true },
-              { href: '/ensuring-colorado', label: 'Ensuring Colorado', icon: '★', section: true },
+              { href: '/ensuring-colorado', label: 'Engage Colorado', icon: '★', section: true },
+              { href: '/investments', label: 'Investments', icon: '◇', section: true },
+              { href: '/loud-bear', label: 'Loud Bear', icon: '●', section: true },
               // BRMF-specific (shown always for now)
               { href: '/schedule', label: 'Schedule', icon: '▦' },
               { href: '/bold-conversations', label: 'Bold Conversations', icon: '◉' },

@@ -18,13 +18,31 @@ export const INITIATIVES = {
     description: '3-day summit for bold conversations',
   },
   'ensuring-colorado': {
-    label: 'Ensuring Colorado',
-    shortLabel: 'Ensuring CO',
+    label: 'Engage Colorado',
+    shortLabel: 'Engage CO',
     color: 'bg-[#cc4444]',
     textColor: 'text-[#cc4444]',
     borderColor: 'border-[#cc4444]',
     lightBg: 'bg-[#cc4444]/10',
     description: 'Building a stronger Colorado community',
+  },
+  'investments': {
+    label: 'Investments',
+    shortLabel: 'Investments',
+    color: 'bg-[#2a7d5c]',
+    textColor: 'text-[#2a7d5c]',
+    borderColor: 'border-[#2a7d5c]',
+    lightBg: 'bg-[#2a7d5c]/10',
+    description: 'Portfolio, diligence, and capital allocation',
+  },
+  'loud-bear': {
+    label: 'Loud Bear',
+    shortLabel: 'Loud Bear',
+    color: 'bg-[#8b5a3c]',
+    textColor: 'text-[#8b5a3c]',
+    borderColor: 'border-[#8b5a3c]',
+    lightBg: 'bg-[#8b5a3c]/10',
+    description: 'Media, podcast, and social voice',
   },
 } as const
 

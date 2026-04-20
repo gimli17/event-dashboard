@@ -13,27 +13,27 @@ async function getTaskCount() {
   const { count } = await supabase
     .from('master_tasks')
     .select('*', { count: 'exact', head: true })
-    .eq('initiative', 'ensuring-colorado')
+    .eq('initiative', 'loud-bear')
     .is('deleted_at', null)
     .neq('status', 'complete')
   return count || 0
 }
 
-export default async function EnsuringColoradoPage() {
+export default async function LoudBearPage() {
   const activeCount = await getTaskCount()
 
   return (
     <>
-      <Navbar initiative="ensuring-colorado" />
+      <Navbar initiative="loud-bear" />
 
-      <section className="bg-[#cc4444] text-white py-6">
+      <section className="bg-[#8b5a3c] text-white py-6">
         <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight leading-none uppercase">
-              Engage Colorado
+              Loud Bear
             </h1>
             <p className="text-xs text-white/50 mt-1">
-              Building a stronger Colorado community
+              Podcast, social, and media voice
             </p>
           </div>
           <SidebarButtons />
@@ -43,7 +43,7 @@ export default async function EnsuringColoradoPage() {
       <section className="bg-cream-dark border-b-2 border-black/10">
         <div className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-center gap-16">
           <div className="text-center">
-            <p className="text-3xl font-bold text-[#cc4444]">{activeCount}</p>
+            <p className="text-3xl font-bold text-[#8b5a3c]">{activeCount}</p>
             <p className="text-xs text-muted uppercase tracking-widest font-bold mt-1">Active Tasks</p>
           </div>
         </div>
@@ -51,31 +51,30 @@ export default async function EnsuringColoradoPage() {
 
       <section className="bg-cream flex-1">
         <div className="max-w-6xl mx-auto px-6 py-12">
-          <div className="grid grid-cols-3 gap-3">
-            <Link href="/ensuring-colorado/tasks" className="group">
-              <div className="bg-[#cc4444] text-white px-6 h-28 flex items-center">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Link href="/loud-bear/tasks" className="group">
+              <div className="bg-[#8b5a3c] text-white px-6 h-28 flex items-center">
                 <h2 className="text-sm font-bold tracking-widest uppercase">Tasks</h2>
               </div>
               <div className="border-l-2 border-r-2 border-b-2 border-black/10 px-6 h-20 flex items-center bg-white group-hover:bg-cream-dark transition-colors">
-                <p className="text-xs text-muted leading-relaxed">All Engage Colorado priorities and tasks</p>
+                <p className="text-xs text-muted leading-relaxed">All Loud Bear priorities and tasks</p>
               </div>
             </Link>
-            <a href="https://ensuring-colorado.vercel.app/" target="_blank" rel="noopener noreferrer" className="group">
-              <div className="bg-[#a83838] text-white px-6 h-28 flex items-center justify-between">
-                <h2 className="text-sm font-bold tracking-widest uppercase">Website</h2>
-                <span className="text-xs font-bold tracking-widest uppercase opacity-50">&nearr;</span>
+            <Link href="/social" className="group">
+              <div className="bg-[#3d9058] text-white px-6 h-28 flex items-center">
+                <h2 className="text-sm font-bold tracking-widest uppercase">Social</h2>
               </div>
               <div className="border-l-2 border-r-2 border-b-2 border-black/10 px-6 h-20 flex items-center bg-white group-hover:bg-cream-dark transition-colors">
-                <p className="text-xs text-muted leading-relaxed">Engage Colorado external site</p>
+                <p className="text-xs text-muted leading-relaxed">Media workspace &amp; content library</p>
               </div>
-            </a>
+            </Link>
           </div>
         </div>
       </section>
 
       <footer className="bg-black text-white/40 text-center py-8">
         <p className="text-xs font-bold tracking-widest uppercase">
-          Caruso Ventures &middot; Engage Colorado
+          Caruso Ventures &middot; Loud Bear
         </p>
       </footer>
     </>

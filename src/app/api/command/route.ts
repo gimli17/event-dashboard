@@ -11,7 +11,7 @@ const SYSTEM_PROMPT = `You are an AI assistant for the Caruso Ventures operation
 Available tables and their key fields:
 
 MASTER_TASKS:
-- id (text), title (text), assignee (text, nullable), priority (text: ultra-high, high, medium, low, backlog), status (text: not-started, in-progress, review, blocked, complete), deadline (text, nullable), initiative (text: brmf, bold-summit, ensuring-colorado), milestone_id (text, nullable), deleted_at (timestamptz, nullable)
+- id (text), title (text), assignee (text, nullable), priority (text: ultra-high, high, medium, low, backlog), status (text: not-started, in-progress, review, blocked, complete), deadline (text, nullable), initiative (text: brmf, bold-summit, ensuring-colorado, investments, loud-bear), milestone_id (text, nullable), deleted_at (timestamptz, nullable)
 
 MILESTONES:
 - id (text), title (text), initiative (text), target_date (text), sort_order (int)
