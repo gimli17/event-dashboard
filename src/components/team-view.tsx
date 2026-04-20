@@ -91,8 +91,9 @@ export function TeamView() {
       ? displayName
       : 'Sabrina',
   )
-  const [priorityFilter, setPriorityFilter] = useState<Set<string>>(new Set())
+  const [priorityFilter, setPriorityFilter] = useState<Set<string>>(new Set(['ultra-high', 'high']))
   const [openItem, setOpenItem] = useState<OpenItem>(null)
+  const [focusedStream, setFocusedStream] = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchAll() {
@@ -331,21 +332,23 @@ export function TeamView() {
         </span>
       </div>
 
-      {/* Stream board */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
-        {STREAMS.map((stream) => {
-          const streamFocus = [...visibleFocus.filter((f) => f.stream === stream.key)].sort(
+      {/* Stream board — overview grid or single-stream detail */}
+      {focusedStream ? (
+        (() => {
+          const stream = STREAMS.find((s) => s.key === focusedStream)
+          if (!stream) return null
+          const streamFocus = [...personFocus.filter((f) => f.stream === stream.key)].sort(
             (a, b) => (PRIORITY_RANK[a.priority] ?? 4) - (PRIORITY_RANK[b.priority] ?? 4) || a.sort_order - b.sort_order,
           )
-          const streamTasks = [...visibleTasks.filter((t) => t.initiative === stream.key)].sort(
+          const streamTasks = [...personTasks.filter((t) => t.initiative === stream.key)].sort(
             (a, b) => (PRIORITY_RANK[a.priority] ?? 4) - (PRIORITY_RANK[b.priority] ?? 4),
           )
           return (
-            <StreamColumn
-              key={stream.key}
+            <StreamDetail
               stream={stream}
               focus={streamFocus}
               tasks={streamTasks}
+              onBack={() => setFocusedStream(null)}
               onOpenFocus={(id) => setOpenItem({ type: 'focus', id })}
               onOpenTask={(id) => setOpenItem({ type: 'task', id })}
               onFocusAdd={(title) => handleFocusAdd(stream.key, title)}
@@ -353,8 +356,38 @@ export function TeamView() {
               onFocusDelete={handleFocusDelete}
             />
           )
-        })}
-      </div>
+        })()
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+          {STREAMS.map((stream) => {
+            const allStreamFocus = personFocus.filter((f) => f.stream === stream.key)
+            const allStreamTasks = personTasks.filter((t) => t.initiative === stream.key)
+            const streamFocus = [...visibleFocus.filter((f) => f.stream === stream.key)].sort(
+              (a, b) => (PRIORITY_RANK[a.priority] ?? 4) - (PRIORITY_RANK[b.priority] ?? 4) || a.sort_order - b.sort_order,
+            )
+            const streamTasks = [...visibleTasks.filter((t) => t.initiative === stream.key)].sort(
+              (a, b) => (PRIORITY_RANK[a.priority] ?? 4) - (PRIORITY_RANK[b.priority] ?? 4),
+            )
+            const hiddenCount =
+              allStreamFocus.length + allStreamTasks.length - streamFocus.length - streamTasks.length
+            return (
+              <StreamColumn
+                key={stream.key}
+                stream={stream}
+                focus={streamFocus}
+                tasks={streamTasks}
+                hiddenCount={hiddenCount}
+                onOpenFocus={(id) => setOpenItem({ type: 'focus', id })}
+                onOpenTask={(id) => setOpenItem({ type: 'task', id })}
+                onFocusAdd={(title) => handleFocusAdd(stream.key, title)}
+                onGenerateTask={handleGenerateTask}
+                onFocusDelete={handleFocusDelete}
+                onOpenStream={() => setFocusedStream(stream.key)}
+              />
+            )
+          })}
+        </div>
+      )}
 
       {openTask && openStream && (
         <TaskDrawer
@@ -386,26 +419,36 @@ interface StreamColumnProps {
   stream: (typeof STREAMS)[number]
   focus: FocusItem[]
   tasks: MasterTask[]
+  hiddenCount: number
   onOpenFocus: (id: string) => void
   onOpenTask: (id: string) => void
   onFocusAdd: (title: string) => void
   onGenerateTask: (focusId: string) => void
   onFocusDelete: (id: string) => void
+  onOpenStream: () => void
 }
 
-function StreamColumn({ stream, focus, tasks, onOpenFocus, onOpenTask, onFocusAdd, onGenerateTask, onFocusDelete }: StreamColumnProps) {
+function StreamColumn({ stream, focus, tasks, hiddenCount, onOpenFocus, onOpenTask, onFocusAdd, onGenerateTask, onFocusDelete, onOpenStream }: StreamColumnProps) {
   const [newTitle, setNewTitle] = useState('')
   return (
     <div className={`border-2 ${stream.border} bg-white flex flex-col`}>
-      <div className={`${stream.bg} text-white px-4 py-3`}>
-        <h2 className="text-xs font-bold tracking-widest uppercase leading-tight">
-          <span className="mr-1.5">{stream.emoji}</span>
-          {stream.label}
-        </h2>
+      <button
+        onClick={onOpenStream}
+        className={`${stream.bg} text-white px-4 py-3 text-left w-full hover:brightness-110 transition`}
+        title="Open full stream view"
+      >
+        <div className="flex items-start justify-between gap-2">
+          <h2 className="text-xs font-bold tracking-widest uppercase leading-tight">
+            <span className="mr-1.5">{stream.emoji}</span>
+            {stream.label}
+          </h2>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-white/70 shrink-0">&rarr;</span>
+        </div>
         <p className="text-[10px] uppercase tracking-widest text-white/70 mt-0.5">
           {focus.length} focus &middot; {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}
+          {hiddenCount > 0 && <span className="ml-1.5 text-white/60">&middot; +{hiddenCount} hidden</span>}
         </p>
-      </div>
+      </button>
 
       {/* Brain-dump input */}
       <div className="px-3 py-2 bg-cream-dark/40 border-b border-black/10">
@@ -943,6 +986,158 @@ function FocusDrawer({ item, stream, onClose, onUpdate, onAddComment, onGenerate
           </div>
         </div>
       </aside>
+    </div>
+  )
+}
+
+interface StreamDetailProps {
+  stream: (typeof STREAMS)[number]
+  focus: FocusItem[]
+  tasks: MasterTask[]
+  onBack: () => void
+  onOpenFocus: (id: string) => void
+  onOpenTask: (id: string) => void
+  onFocusAdd: (title: string) => void
+  onGenerateTask: (focusId: string) => void
+  onFocusDelete: (id: string) => void
+}
+
+function StreamDetail({ stream, focus, tasks, onBack, onOpenFocus, onOpenTask, onFocusAdd, onGenerateTask, onFocusDelete }: StreamDetailProps) {
+  const [newTitle, setNewTitle] = useState('')
+  return (
+    <div>
+      <button
+        onClick={onBack}
+        className="inline-flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase text-muted hover:text-black transition-colors mb-3"
+      >
+        <span>&larr;</span> All streams
+      </button>
+
+      <div className={`border-2 ${stream.border} bg-white max-w-4xl mx-auto`}>
+        <div className={`${stream.bg} text-white px-6 py-5`}>
+          <h2 className="text-xl font-bold tracking-widest uppercase leading-tight">
+            <span className="mr-2">{stream.emoji}</span>
+            {stream.label}
+          </h2>
+          <p className="text-[11px] uppercase tracking-widest text-white/70 mt-1">
+            {focus.length} focus &middot; {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'} &middot; full list
+          </p>
+        </div>
+
+        <div className="px-6 py-4 bg-cream-dark/40 border-b border-black/10">
+          <input
+            type="text"
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && newTitle.trim()) {
+                onFocusAdd(newTitle)
+                setNewTitle('')
+              }
+            }}
+            placeholder="Brain dump a new focus item..."
+            className="w-full border-2 border-black/20 bg-white px-4 py-2.5 text-sm text-black focus:outline-none focus:border-black placeholder:text-muted/40"
+          />
+        </div>
+
+        <div className="px-6 py-3 bg-black/5 border-b border-black/10 flex items-center justify-between">
+          <span className="text-[11px] font-bold uppercase tracking-widest text-black">Focus Items</span>
+          <span className="text-[11px] uppercase tracking-widest text-muted">{focus.length}</span>
+        </div>
+        {focus.length === 0 ? (
+          <div className="px-6 py-6 text-center">
+            <p className="text-sm text-muted italic">No focus items yet</p>
+          </div>
+        ) : (
+          <div>
+            {focus.map((f) => {
+              const pCfg = PRIORITY_OPTIONS.find((p) => p.value === f.priority)
+              return (
+                <div key={f.id} className="flex items-start gap-3 px-6 py-3 border-t border-black/5 bg-white hover:bg-cream-dark/30 transition-colors">
+                  <button onClick={() => onOpenFocus(f.id)} className="flex-1 min-w-0 text-left">
+                    <p className="text-[15px] font-semibold leading-snug text-black">{f.title}</p>
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 ${pCfg?.badge ?? 'bg-black/10 text-black'}`}>
+                        {pCfg?.label ?? f.priority}
+                      </span>
+                      {f.master_task_id ? (
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-green">Task &#10003;</span>
+                      ) : (
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-muted/60">Focus</span>
+                      )}
+                      {(f.comments?.length ?? 0) > 0 && (
+                        <span className="text-[10px] uppercase tracking-widest text-muted/60">
+                          {f.comments.length} {f.comments.length === 1 ? 'comment' : 'comments'}
+                        </span>
+                      )}
+                      {f.notes && (
+                        <span className="text-[11px] text-muted truncate max-w-md">&mdash; {f.notes}</span>
+                      )}
+                    </div>
+                  </button>
+                  {!f.master_task_id && (
+                    <button
+                      onClick={() => onGenerateTask(f.id)}
+                      className="text-[10px] font-bold uppercase tracking-widest text-blue hover:text-white hover:bg-blue border border-blue/40 px-2 py-1 shrink-0 transition-colors"
+                      title="Generate a master task from this focus item"
+                    >
+                      &#x2192; Task
+                    </button>
+                  )}
+                  <button
+                    onClick={() => onFocusDelete(f.id)}
+                    className="text-muted/30 hover:text-red text-xl font-bold shrink-0 w-6 h-6 flex items-center justify-center"
+                    title="Delete"
+                  >
+                    &times;
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        <div className="px-6 py-3 bg-black/5 border-t border-b border-black/10 flex items-center justify-between">
+          <span className="text-[11px] font-bold uppercase tracking-widest text-black">Tasks</span>
+          <span className="text-[11px] uppercase tracking-widest text-muted">{tasks.length}</span>
+        </div>
+        {tasks.length === 0 ? (
+          <div className="px-6 py-6 text-center">
+            <p className="text-sm text-muted italic">No tasks</p>
+          </div>
+        ) : (
+          <div>
+            {tasks.map((t) => {
+              const pCfg = PRIORITY_OPTIONS.find((p) => p.value === t.priority)
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => onOpenTask(t.id)}
+                  className="block w-full text-left px-6 py-3 border-t border-black/5 bg-white hover:bg-cream-dark/40 transition-colors"
+                >
+                  <p className="text-[15px] font-semibold leading-snug text-black">{t.title}</p>
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 ${pCfg?.badge ?? 'bg-black/10 text-black'}`}>
+                      {pCfg?.label ?? t.priority}
+                    </span>
+                    <span className="text-[10px] uppercase tracking-widest text-muted/70">
+                      {STATUS_LABELS[t.status] ?? t.status}
+                    </span>
+                    {t.deadline && (
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-red">
+                        Due {new Date(t.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>
+                    )}
+                    {t.overview && (
+                      <span className="text-[11px] text-muted truncate max-w-md">&mdash; {t.overview}</span>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
