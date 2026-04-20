@@ -26,6 +26,8 @@ const PRIORITY_OPTIONS = [
 const PRIORITY_RANK: Record<string, number> = { 'ultra-high': 0, high: 1, medium: 2, low: 3, backlog: 4 }
 
 const STATUS_OPTIONS = ['not-started', 'in-progress', 'blocked', 'complete'] as const
+
+const makeId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
 const STATUS_LABELS: Record<string, string> = {
   'not-started': 'Not Started',
   'in-progress': 'In Progress',
@@ -56,9 +58,33 @@ interface TaskComment {
   created_at: string
 }
 
+interface FocusComment {
+  id: string
+  author: string
+  text: string
+  created_at: string
+}
+
+interface FocusItem {
+  id: string
+  owner: string
+  title: string
+  stream: string | null
+  master_task_id: string | null
+  sort_order: number
+  completed: boolean
+  priority: string
+  deadline: string | null
+  notes: string | null
+  comments: FocusComment[]
+}
+
+type OpenItem = { type: 'task'; id: string } | { type: 'focus'; id: string } | null
+
 export function TeamView() {
   const { displayName } = useUser()
   const [tasks, setTasks] = useState<MasterTask[]>([])
+  const [focusItems, setFocusItems] = useState<FocusItem[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedPerson, setSelectedPerson] = useState<string>(() =>
     displayName && (ALL_TEAM_MEMBERS as readonly string[]).includes(displayName)
@@ -66,22 +92,29 @@ export function TeamView() {
       : 'Sabrina',
   )
   const [priorityFilter, setPriorityFilter] = useState<Set<string>>(new Set())
-  const [openTaskId, setOpenTaskId] = useState<string | null>(null)
+  const [openItem, setOpenItem] = useState<OpenItem>(null)
 
   useEffect(() => {
-    async function fetchTasks() {
-      const { data } = await supabase
-        .from('master_tasks')
-        .select('id, title, status, assignee, priority, links, current_status, overview, action_items, deadline, initiative')
-        .is('deleted_at', null)
-        .neq('status', 'complete')
-      if (data) setTasks(data as MasterTask[])
+    async function fetchAll() {
+      const [tRes, fRes] = await Promise.all([
+        supabase
+          .from('master_tasks')
+          .select('id, title, status, assignee, priority, links, current_status, overview, action_items, deadline, initiative')
+          .is('deleted_at', null)
+          .neq('status', 'complete'),
+        supabase
+          .from('daily_priorities')
+          .select('*')
+          .is('deleted_at', null)
+          .order('sort_order', { ascending: true }),
+      ])
+      if (tRes.data) setTasks(tRes.data as MasterTask[])
+      if (fRes.data) setFocusItems(fRes.data as FocusItem[])
       setLoading(false)
     }
-    fetchTasks()
+    fetchAll()
   }, [])
 
-  // Order team members — current user first, then alphabetical
   const orderedMembers = [...ALL_TEAM_MEMBERS].sort((a, b) => {
     if (a === displayName) return -1
     if (b === displayName) return 1
@@ -89,9 +122,13 @@ export function TeamView() {
   })
 
   const personTasks = tasks.filter((t) => t.assignee?.includes(selectedPerson))
-  const visibleTasks = priorityFilter.size === 0
-    ? personTasks
-    : personTasks.filter((t) => priorityFilter.has(t.priority))
+  const personFocus = focusItems.filter((f) => f.owner === selectedPerson && !f.completed)
+
+  const applyPriorityFilter = <T extends { priority: string }>(arr: T[]) =>
+    priorityFilter.size === 0 ? arr : arr.filter((x) => priorityFilter.has(x.priority))
+
+  const visibleTasks = applyPriorityFilter(personTasks)
+  const visibleFocus = applyPriorityFilter(personFocus)
 
   const togglePriority = (p: string) => {
     setPriorityFilter((prev) => {
@@ -108,13 +145,121 @@ export function TeamView() {
       .from('master_tasks')
       .update({ ...updates, updated_at: new Date().toISOString() } as never)
       .eq('id', id)
-    if (displayName && updates.title) {
-      logActivity(displayName, 'updated', 'task', id, updates.title)
-    }
+    if (displayName && updates.title) logActivity(displayName, 'updated', 'task', id, updates.title)
   }
 
-  const openTask = openTaskId ? tasks.find((t) => t.id === openTaskId) ?? null : null
-  const openStream = openTask ? STREAMS.find((s) => s.key === openTask.initiative) ?? null : null
+  const handleFocusUpdate = async (id: string, updates: Partial<FocusItem>) => {
+    setFocusItems((prev) => prev.map((f) => (f.id === id ? { ...f, ...updates } : f)))
+    await supabase
+      .from('daily_priorities')
+      .update({ ...updates, updated_at: new Date().toISOString() } as never)
+      .eq('id', id)
+  }
+
+  const handleFocusDelete = async (id: string) => {
+    setFocusItems((prev) => prev.filter((f) => f.id !== id))
+    setOpenItem((prev) => (prev?.type === 'focus' && prev.id === id ? null : prev))
+    await supabase
+      .from('daily_priorities')
+      .update({ deleted_at: new Date().toISOString() } as never)
+      .eq('id', id)
+  }
+
+  const handleFocusAdd = async (streamKey: string, title: string) => {
+    if (!title.trim()) return
+    const id = makeId('dp')
+    const streamItems = focusItems.filter((f) => f.stream === streamKey && f.owner === selectedPerson)
+    const nextOrder = streamItems.length > 0 ? Math.max(...streamItems.map((i) => i.sort_order)) + 1 : 0
+    const item: FocusItem = {
+      id,
+      owner: selectedPerson,
+      title: title.trim(),
+      stream: streamKey,
+      master_task_id: null,
+      sort_order: nextOrder,
+      completed: false,
+      priority: 'medium',
+      deadline: null,
+      notes: null,
+      comments: [],
+    }
+    setFocusItems((prev) => [...prev, item])
+    await supabase.from('daily_priorities').insert(item as never)
+  }
+
+  const handleFocusAddComment = async (id: string, text: string) => {
+    const trimmed = text.trim()
+    if (!trimmed) return
+    const author = displayName || selectedPerson
+    const newComment: FocusComment = {
+      id: makeId('pc'),
+      author,
+      text: trimmed,
+      created_at: new Date().toISOString(),
+    }
+    let nextComments: FocusComment[] = []
+    setFocusItems((prev) =>
+      prev.map((f) => {
+        if (f.id !== id) return f
+        nextComments = [...(f.comments || []), newComment]
+        return { ...f, comments: nextComments }
+      }),
+    )
+    await supabase
+      .from('daily_priorities')
+      .update({ comments: nextComments, updated_at: new Date().toISOString() } as never)
+      .eq('id', id)
+  }
+
+  const handleGenerateTask = async (focusId: string) => {
+    const item = focusItems.find((f) => f.id === focusId)
+    if (!item || item.master_task_id || !item.stream) return
+    const taskId = makeId('mt')
+    const newTask: MasterTask = {
+      id: taskId,
+      title: item.title,
+      assignee: item.owner,
+      priority: item.priority || 'medium',
+      status: 'not-started',
+      deadline: item.deadline,
+      links: null,
+      current_status: null,
+      overview: item.notes,
+      action_items: null,
+      initiative: item.stream,
+    }
+    setTasks((prev) => [newTask, ...prev])
+    setFocusItems((prev) => prev.map((f) => (f.id === focusId ? { ...f, master_task_id: taskId } : f)))
+
+    await supabase.from('master_tasks').insert({
+      ...newTask,
+      current_status: null,
+      action_items: null,
+      dan_comments: null,
+      update_to_dan: null,
+      dan_feedback: null,
+      dan_checklist: [],
+      created_by: displayName || item.owner,
+      sort_order: 0,
+      event_id: null,
+      week_of: null,
+    } as never)
+    await supabase
+      .from('daily_priorities')
+      .update({ master_task_id: taskId, updated_at: new Date().toISOString() } as never)
+      .eq('id', focusId)
+
+    if (displayName) logActivity(displayName, 'generated task from focus', 'task', taskId, item.title)
+    // Switch drawer focus → the new task
+    setOpenItem({ type: 'task', id: taskId })
+  }
+
+  const openTask = openItem?.type === 'task' ? tasks.find((t) => t.id === openItem.id) ?? null : null
+  const openFocus = openItem?.type === 'focus' ? focusItems.find((f) => f.id === openItem.id) ?? null : null
+  const openStream =
+    openTask ? STREAMS.find((s) => s.key === openTask.initiative) ?? null :
+    openFocus ? STREAMS.find((s) => s.key === openFocus.stream) ?? null :
+    null
 
   if (loading) {
     return (
@@ -132,7 +277,8 @@ export function TeamView() {
         <div className="flex flex-wrap gap-1.5">
           {orderedMembers.map((name) => {
             const isActive = name === selectedPerson
-            const count = tasks.filter((t) => t.assignee?.includes(name)).length
+            const tCount = tasks.filter((t) => t.assignee?.includes(name)).length
+            const fCount = focusItems.filter((f) => f.owner === name && !f.completed).length
             return (
               <button
                 key={name}
@@ -145,7 +291,7 @@ export function TeamView() {
               >
                 {name}
                 <span className={`ml-1.5 text-[10px] ${isActive ? 'text-white/60' : 'text-muted'}`}>
-                  {count}
+                  {tCount + fCount}
                 </span>
               </button>
             )
@@ -181,62 +327,31 @@ export function TeamView() {
           )
         })}
         <span className="text-[10px] uppercase tracking-widest text-muted ml-auto">
-          {visibleTasks.length} of {personTasks.length} shown
+          {visibleFocus.length + visibleTasks.length} of {personFocus.length + personTasks.length} shown
         </span>
       </div>
 
       {/* Stream board */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
         {STREAMS.map((stream) => {
+          const streamFocus = [...visibleFocus.filter((f) => f.stream === stream.key)].sort(
+            (a, b) => (PRIORITY_RANK[a.priority] ?? 4) - (PRIORITY_RANK[b.priority] ?? 4) || a.sort_order - b.sort_order,
+          )
           const streamTasks = [...visibleTasks.filter((t) => t.initiative === stream.key)].sort(
             (a, b) => (PRIORITY_RANK[a.priority] ?? 4) - (PRIORITY_RANK[b.priority] ?? 4),
           )
           return (
-            <div key={stream.key} className={`border-2 ${stream.border} bg-white flex flex-col`}>
-              <div className={`${stream.bg} text-white px-4 py-3`}>
-                <h2 className="text-xs font-bold tracking-widest uppercase leading-tight">
-                  <span className="mr-1.5">{stream.emoji}</span>
-                  {stream.label}
-                </h2>
-                <p className="text-[10px] uppercase tracking-widest text-white/70 mt-0.5">
-                  {streamTasks.length} {streamTasks.length === 1 ? 'task' : 'tasks'}
-                </p>
-              </div>
-
-              {streamTasks.length === 0 ? (
-                <div className="px-4 py-6 text-center">
-                  <p className="text-[11px] text-muted italic">Nothing here</p>
-                </div>
-              ) : (
-                <div>
-                  {streamTasks.map((t) => {
-                    const priorityCfg = PRIORITY_OPTIONS.find((p) => p.value === t.priority)
-                    return (
-                      <button
-                        key={t.id}
-                        onClick={() => setOpenTaskId(t.id)}
-                        className="block w-full text-left px-3 py-2.5 border-t border-black/5 bg-white hover:bg-cream-dark/40 transition-colors"
-                      >
-                        <p className="text-[13px] font-semibold leading-snug text-black">{t.title}</p>
-                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                          <span className={`text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 ${priorityCfg?.badge ?? 'bg-black/10 text-black'}`}>
-                            {priorityCfg?.label ?? t.priority}
-                          </span>
-                          <span className="text-[9px] uppercase tracking-widest text-muted/70">
-                            {STATUS_LABELS[t.status] ?? t.status}
-                          </span>
-                          {t.deadline && (
-                            <span className="text-[9px] font-bold uppercase tracking-widest text-red">
-                              Due {new Date(t.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
+            <StreamColumn
+              key={stream.key}
+              stream={stream}
+              focus={streamFocus}
+              tasks={streamTasks}
+              onOpenFocus={(id) => setOpenItem({ type: 'focus', id })}
+              onOpenTask={(id) => setOpenItem({ type: 'task', id })}
+              onFocusAdd={(title) => handleFocusAdd(stream.key, title)}
+              onGenerateTask={handleGenerateTask}
+              onFocusDelete={handleFocusDelete}
+            />
           )
         })}
       </div>
@@ -247,15 +362,170 @@ export function TeamView() {
           task={openTask}
           stream={openStream}
           currentUser={displayName}
-          onClose={() => setOpenTaskId(null)}
+          onClose={() => setOpenItem(null)}
           onUpdate={handleTaskUpdate}
+        />
+      )}
+      {openFocus && openStream && (
+        <FocusDrawer
+          key={openFocus.id}
+          item={openFocus}
+          stream={openStream}
+          onClose={() => setOpenItem(null)}
+          onUpdate={handleFocusUpdate}
+          onAddComment={handleFocusAddComment}
+          onGenerateTask={handleGenerateTask}
+          onDelete={handleFocusDelete}
         />
       )}
     </div>
   )
 }
 
-interface DrawerProps {
+interface StreamColumnProps {
+  stream: (typeof STREAMS)[number]
+  focus: FocusItem[]
+  tasks: MasterTask[]
+  onOpenFocus: (id: string) => void
+  onOpenTask: (id: string) => void
+  onFocusAdd: (title: string) => void
+  onGenerateTask: (focusId: string) => void
+  onFocusDelete: (id: string) => void
+}
+
+function StreamColumn({ stream, focus, tasks, onOpenFocus, onOpenTask, onFocusAdd, onGenerateTask, onFocusDelete }: StreamColumnProps) {
+  const [newTitle, setNewTitle] = useState('')
+  return (
+    <div className={`border-2 ${stream.border} bg-white flex flex-col`}>
+      <div className={`${stream.bg} text-white px-4 py-3`}>
+        <h2 className="text-xs font-bold tracking-widest uppercase leading-tight">
+          <span className="mr-1.5">{stream.emoji}</span>
+          {stream.label}
+        </h2>
+        <p className="text-[10px] uppercase tracking-widest text-white/70 mt-0.5">
+          {focus.length} focus &middot; {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}
+        </p>
+      </div>
+
+      {/* Brain-dump input */}
+      <div className="px-3 py-2 bg-cream-dark/40 border-b border-black/10">
+        <input
+          type="text"
+          value={newTitle}
+          onChange={(e) => setNewTitle(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && newTitle.trim()) {
+              onFocusAdd(newTitle)
+              setNewTitle('')
+            }
+          }}
+          placeholder="Brain dump..."
+          className="w-full border-2 border-black/20 bg-white px-3 py-1.5 text-xs text-black focus:outline-none focus:border-black placeholder:text-muted/40"
+        />
+      </div>
+
+      {/* FOCUS section */}
+      <div className="px-3 py-2 bg-black/5 border-b border-black/10 flex items-center justify-between">
+        <span className="text-[9px] font-bold uppercase tracking-widest text-black">Focus</span>
+        <span className="text-[9px] uppercase tracking-widest text-muted">{focus.length}</span>
+      </div>
+      {focus.length === 0 ? (
+        <div className="px-4 py-3 text-center">
+          <p className="text-[11px] text-muted italic">No focus items</p>
+        </div>
+      ) : (
+        <div>
+          {focus.map((f) => {
+            const pCfg = PRIORITY_OPTIONS.find((p) => p.value === f.priority)
+            return (
+              <div key={f.id} className="flex items-start gap-1 px-3 py-2 border-t border-black/5 bg-white hover:bg-cream-dark/30 transition-colors">
+                <button
+                  onClick={() => onOpenFocus(f.id)}
+                  className="flex-1 min-w-0 text-left"
+                  title="Click to open details"
+                >
+                  <p className="text-[12px] font-semibold leading-snug text-black">{f.title}</p>
+                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                    <span className={`text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 ${pCfg?.badge ?? 'bg-black/10 text-black'}`}>
+                      {pCfg?.label ?? f.priority}
+                    </span>
+                    {f.master_task_id ? (
+                      <span className="text-[8px] font-bold uppercase tracking-widest text-green">Task &#10003;</span>
+                    ) : (
+                      <span className="text-[8px] font-bold uppercase tracking-widest text-muted/60">Focus</span>
+                    )}
+                    {(f.comments?.length ?? 0) > 0 && (
+                      <span className="text-[9px] uppercase tracking-widest text-muted/60">
+                        {f.comments.length} {f.comments.length === 1 ? 'comment' : 'comments'}
+                      </span>
+                    )}
+                  </div>
+                </button>
+                {!f.master_task_id && (
+                  <button
+                    onClick={() => onGenerateTask(f.id)}
+                    className="text-[8px] font-bold uppercase tracking-widest text-blue hover:text-white hover:bg-blue border border-blue/40 px-1.5 py-1 shrink-0 transition-colors"
+                    title="Generate a master task from this focus item"
+                  >
+                    &#x2192; Task
+                  </button>
+                )}
+                <button
+                  onClick={() => onFocusDelete(f.id)}
+                  className="text-muted/30 hover:text-red text-base font-bold shrink-0 w-5 h-5 flex items-center justify-center"
+                  title="Delete"
+                >
+                  &times;
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* TASKS section */}
+      <div className="px-3 py-2 bg-black/5 border-t border-b border-black/10 flex items-center justify-between">
+        <span className="text-[9px] font-bold uppercase tracking-widest text-black">Tasks</span>
+        <span className="text-[9px] uppercase tracking-widest text-muted">{tasks.length}</span>
+      </div>
+      {tasks.length === 0 ? (
+        <div className="px-4 py-3 text-center">
+          <p className="text-[11px] text-muted italic">No tasks</p>
+        </div>
+      ) : (
+        <div>
+          {tasks.map((t) => {
+            const pCfg = PRIORITY_OPTIONS.find((p) => p.value === t.priority)
+            return (
+              <button
+                key={t.id}
+                onClick={() => onOpenTask(t.id)}
+                className="block w-full text-left px-3 py-2.5 border-t border-black/5 bg-white hover:bg-cream-dark/40 transition-colors"
+              >
+                <p className="text-[13px] font-semibold leading-snug text-black">{t.title}</p>
+                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                  <span className={`text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 ${pCfg?.badge ?? 'bg-black/10 text-black'}`}>
+                    {pCfg?.label ?? t.priority}
+                  </span>
+                  <span className="text-[9px] uppercase tracking-widest text-muted/70">
+                    {STATUS_LABELS[t.status] ?? t.status}
+                  </span>
+                  {t.deadline && (
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-red">
+                      Due {new Date(t.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </span>
+                  )}
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+interface TaskDrawerProps {
   task: MasterTask
   stream: (typeof STREAMS)[number]
   currentUser: string | null
@@ -263,7 +533,7 @@ interface DrawerProps {
   onUpdate: (id: string, updates: Partial<MasterTask>) => Promise<void>
 }
 
-function TaskDrawer({ task, stream, currentUser, onClose, onUpdate }: DrawerProps) {
+function TaskDrawer({ task, stream, currentUser, onClose, onUpdate }: TaskDrawerProps) {
   const [titleDraft, setTitleDraft] = useState(task.title)
   const [overviewDraft, setOverviewDraft] = useState(task.overview || '')
   const [currentStatusDraft, setCurrentStatusDraft] = useState(task.current_status || '')
@@ -297,7 +567,7 @@ function TaskDrawer({ task, stream, currentUser, onClose, onUpdate }: DrawerProp
     if (!trimmed) return
     const author = currentUser || 'Unknown'
     const newComment: TaskComment = {
-      id: `tc-${Date.now()}`,
+      id: makeId('tc'),
       task_id: task.id,
       author,
       message: trimmed,
@@ -315,7 +585,7 @@ function TaskDrawer({ task, stream, currentUser, onClose, onUpdate }: DrawerProp
         <div className={`${stream.bg} text-white px-6 py-5 flex items-start justify-between gap-3 sticky top-0 z-10`}>
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">
-              {stream.emoji} {stream.label}
+              {stream.emoji} {stream.label} &middot; Task
             </p>
             <textarea
               value={titleDraft}
@@ -339,7 +609,6 @@ function TaskDrawer({ task, stream, currentUser, onClose, onUpdate }: DrawerProp
         </div>
 
         <div className="px-6 py-5 space-y-6">
-          {/* Controls */}
           <div className="flex items-center gap-3 flex-wrap">
             <select
               value={task.priority}
@@ -391,7 +660,6 @@ function TaskDrawer({ task, stream, currentUser, onClose, onUpdate }: DrawerProp
             />
           </div>
 
-          {/* Overview */}
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Overview</p>
             <textarea
@@ -406,7 +674,6 @@ function TaskDrawer({ task, stream, currentUser, onClose, onUpdate }: DrawerProp
             />
           </div>
 
-          {/* Current Status */}
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Current Status</p>
             <textarea
@@ -421,7 +688,6 @@ function TaskDrawer({ task, stream, currentUser, onClose, onUpdate }: DrawerProp
             />
           </div>
 
-          {/* Action Items */}
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Action Items</p>
             <textarea
@@ -436,7 +702,6 @@ function TaskDrawer({ task, stream, currentUser, onClose, onUpdate }: DrawerProp
             />
           </div>
 
-          {/* Links */}
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Links</p>
             <textarea
@@ -451,7 +716,6 @@ function TaskDrawer({ task, stream, currentUser, onClose, onUpdate }: DrawerProp
             />
           </div>
 
-          {/* Comments */}
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">
               Comments {comments.length > 0 ? `(${comments.length})` : ''}
@@ -489,6 +753,187 @@ function TaskDrawer({ task, stream, currentUser, onClose, onUpdate }: DrawerProp
               />
               <button
                 onClick={handleAddComment}
+                disabled={!commentText.trim()}
+                className="bg-black text-white px-4 py-2 text-xs font-bold uppercase tracking-widest disabled:opacity-40"
+              >
+                Post
+              </button>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  )
+}
+
+interface FocusDrawerProps {
+  item: FocusItem
+  stream: (typeof STREAMS)[number]
+  onClose: () => void
+  onUpdate: (id: string, updates: Partial<FocusItem>) => Promise<void>
+  onAddComment: (id: string, text: string) => Promise<void>
+  onGenerateTask: (id: string) => void
+  onDelete: (id: string) => void
+}
+
+function FocusDrawer({ item, stream, onClose, onUpdate, onAddComment, onGenerateTask, onDelete }: FocusDrawerProps) {
+  const [titleDraft, setTitleDraft] = useState(item.title)
+  const [notesDraft, setNotesDraft] = useState(item.notes || '')
+  const [commentText, setCommentText] = useState('')
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <div className="fixed inset-0 z-50 flex">
+      <button onClick={onClose} aria-label="Close" className="flex-1 bg-black/40" />
+      <aside className="w-full max-w-lg bg-white border-l-2 border-black overflow-y-auto">
+        <div className={`${stream.bg} text-white px-6 py-5 flex items-start justify-between gap-3 sticky top-0 z-10`}>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">
+              {stream.emoji} {stream.label} &middot; Focus
+            </p>
+            <textarea
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onBlur={() => {
+                if (titleDraft.trim() && titleDraft !== item.title) onUpdate(item.id, { title: titleDraft.trim() })
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  e.currentTarget.blur()
+                }
+              }}
+              rows={2}
+              className="mt-1 w-full bg-transparent text-xl font-bold leading-tight text-white border-b border-transparent focus:border-white/50 focus:outline-none py-1 -mx-1 px-1 resize-none break-words"
+            />
+          </div>
+          <button onClick={onClose} className="text-white/80 hover:text-white text-2xl font-bold shrink-0" title="Close">
+            &times;
+          </button>
+        </div>
+
+        <div className="px-6 py-5 space-y-6">
+          <div className="flex items-center gap-3 flex-wrap">
+            <select
+              value={item.priority}
+              onChange={(e) => onUpdate(item.id, { priority: e.target.value })}
+              className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 border-0 cursor-pointer focus:outline-none ${
+                PRIORITY_OPTIONS.find((p) => p.value === item.priority)?.badge ?? 'bg-black/10 text-black'
+              }`}
+            >
+              {PRIORITY_OPTIONS.map((p) => (
+                <option key={p.value} value={p.value} className="text-black bg-white">
+                  {p.label}
+                </option>
+              ))}
+            </select>
+            <select
+              value={item.stream || ''}
+              onChange={(e) => onUpdate(item.id, { stream: e.target.value || null })}
+              className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 border border-black/20 bg-white focus:outline-none"
+            >
+              {STREAMS.map((s) => (
+                <option key={s.key} value={s.key}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+            <input
+              type="date"
+              value={item.deadline || ''}
+              onChange={(e) => onUpdate(item.id, { deadline: e.target.value || null })}
+              className="border border-black/20 bg-white px-2 py-1 text-[11px] font-bold uppercase tracking-widest focus:outline-none"
+            />
+            {item.master_task_id ? (
+              <span className="text-[10px] font-bold uppercase tracking-widest text-green px-2 py-1 bg-green/10">
+                Task created &#10003;
+              </span>
+            ) : (
+              <button
+                onClick={() => onGenerateTask(item.id)}
+                className="text-[11px] font-bold uppercase tracking-widest bg-blue text-white hover:bg-blue/80 px-3 py-1.5 transition-colors"
+                title="Promote this focus item into a tracked master task"
+              >
+                &#x2192; Generate Task
+              </button>
+            )}
+            <button
+              onClick={() => {
+                onDelete(item.id)
+                onClose()
+              }}
+              className="ml-auto text-[10px] font-bold uppercase tracking-widest text-muted hover:text-red"
+            >
+              Delete
+            </button>
+          </div>
+
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Context</p>
+            <textarea
+              value={notesDraft}
+              onChange={(e) => setNotesDraft(e.target.value)}
+              onBlur={() => {
+                if (notesDraft !== (item.notes || '')) onUpdate(item.id, { notes: notesDraft || null })
+              }}
+              placeholder="Add context, background, or details..."
+              rows={8}
+              className="w-full border-2 border-black/20 bg-white px-3 py-2 text-sm leading-relaxed focus:outline-none focus:border-black placeholder:text-muted/40 resize-y"
+            />
+          </div>
+
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">
+              Comments {item.comments?.length ? `(${item.comments.length})` : ''}
+            </p>
+            {item.comments && item.comments.length > 0 && (
+              <div className="space-y-3 mb-3">
+                {item.comments.map((c) => (
+                  <div key={c.id} className="border-l-2 border-black/30 pl-3 py-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-black">{c.author}</span>
+                      <span className="text-[10px] text-muted">
+                        {new Date(c.created_at).toLocaleString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: 'numeric',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
+                    <p className="text-sm leading-relaxed text-black/80 whitespace-pre-wrap mt-1">{c.text}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && commentText.trim()) {
+                    onAddComment(item.id, commentText)
+                    setCommentText('')
+                  }
+                }}
+                placeholder="Add a comment..."
+                className="flex-1 border-2 border-black/20 bg-white px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted/40"
+              />
+              <button
+                onClick={() => {
+                  if (commentText.trim()) {
+                    onAddComment(item.id, commentText)
+                    setCommentText('')
+                  }
+                }}
                 disabled={!commentText.trim()}
                 className="bg-black text-white px-4 py-2 text-xs font-bold uppercase tracking-widest disabled:opacity-40"
               >
