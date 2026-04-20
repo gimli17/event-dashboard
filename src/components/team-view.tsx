@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useUser } from './user-provider'
 import type { EventTask } from '@/lib/types'
 import { logActivity } from '@/lib/activity-log'
+import Link from 'next/link'
 import { INITIATIVES, ALL_INITIATIVE_KEYS, type InitiativeKey } from '@/lib/initiatives'
 
 interface ChecklistItem { id: string; text: string; checked: boolean }
@@ -846,6 +847,20 @@ export function TeamView() {
           ) : (
             <>
               {/* Person's view */}
+              {selectedPerson === 'Sabrina' && (
+                <Link
+                  href="/priorities"
+                  className="mb-4 flex items-center justify-between bg-black text-white px-6 py-4 hover:bg-black/80 transition-colors border-2 border-black"
+                >
+                  <div>
+                    <p className="text-sm font-bold uppercase tracking-widest">My Priorities Dashboard</p>
+                    <p className="text-[11px] uppercase tracking-widest text-white/60 mt-0.5">
+                      Streams of work, brain dump, morning meeting view
+                    </p>
+                  </div>
+                  <span className="text-xl">&#x2192;</span>
+                </Link>
+              )}
               <div className="bg-blue text-white px-6 py-5 flex items-center justify-between">
                 <h2 className="text-lg font-bold tracking-widest uppercase">{selectedPerson}&apos;s Tasks</h2>
                 <div className="flex items-center gap-3">
