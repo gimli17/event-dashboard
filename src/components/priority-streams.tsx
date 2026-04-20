@@ -23,7 +23,7 @@ import { useUser } from './user-provider'
 const STREAMS = [
   { key: 'brmf', label: 'Boulder Roots Music Fest', short: 'Boulder Roots', emoji: '\uD83C\uDFB8', bg: 'bg-[#2a4e80]', border: 'border-[#2a4e80]' },
   { key: 'bold-summit', label: 'The Bold Summit', short: 'Bold Summit', emoji: '\uD83E\uDDE0', bg: 'bg-[#d4a020]', border: 'border-[#d4a020]' },
-  { key: 'ensuring-colorado', label: 'Ensuring Colorado', short: 'Ensuring CO', emoji: '\uD83C\uDFD4\uFE0F', bg: 'bg-[#cc4444]', border: 'border-[#cc4444]' },
+  { key: 'ensuring-colorado', label: 'Engage Colorado', short: 'Engage CO', emoji: '\uD83C\uDFD4\uFE0F', bg: 'bg-[#cc4444]', border: 'border-[#cc4444]' },
   { key: 'investments', label: 'Investments', short: 'Investments', emoji: '\uD83D\uDCBC', bg: 'bg-[#2a7d5c]', border: 'border-[#2a7d5c]' },
   { key: 'loud-bear', label: 'Loud Bear', short: 'Loud Bear', emoji: '\uD83D\uDC3B', bg: 'bg-[#8b5a3c]', border: 'border-[#8b5a3c]' },
 ] as const
