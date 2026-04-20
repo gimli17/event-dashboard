@@ -11,11 +11,11 @@ export default function TeamPage() {
       <Navbar />
 
       <section className="bg-[#8855c0] text-white py-6">
-        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
+        <div className="max-w-[1600px] mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <BackLink />
             <h1 className="text-2xl font-bold tracking-tight leading-none uppercase">
-              Dan&apos;s Dashboard
+              Team Workspace
             </h1>
           </div>
           <SidebarButtons />
@@ -28,7 +28,7 @@ export default function TeamPage() {
 
       <footer className="bg-black text-white/40 text-center py-8">
         <p className="text-xs font-bold tracking-widest uppercase">
-          Boulder Roots Music Fest &middot; 2026
+          Caruso Ventures &middot; 2026
         </p>
       </footer>
     </>
