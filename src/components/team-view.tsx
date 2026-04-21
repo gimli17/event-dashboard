@@ -41,14 +41,25 @@ interface MasterTask {
   title: string
   status: string
   assignee: string | null
+  executive_lead: string | null
   priority: string
   links: string | null
   current_status: string | null
   overview: string | null
   action_items: string | null
+  dan_comments: string | null
   deadline: string | null
   initiative: string
+  milestone_id: string | null
 }
+
+interface MilestoneOption {
+  id: string
+  title: string
+  initiative: string
+}
+
+const EXECUTIVES = ['Cody', 'Joe', 'Sabrina'] as const
 
 interface TaskComment {
   id: string
@@ -85,6 +96,7 @@ export function TeamView() {
   const { displayName } = useUser()
   const [tasks, setTasks] = useState<MasterTask[]>([])
   const [focusItems, setFocusItems] = useState<FocusItem[]>([])
+  const [milestones, setMilestones] = useState<MilestoneOption[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedPerson, setSelectedPerson] = useState<string | null>(null)
   const [priorityFilter, setPriorityFilter] = useState<Set<string>>(new Set(['ultra-high', 'high']))
@@ -93,10 +105,10 @@ export function TeamView() {
 
   useEffect(() => {
     async function fetchAll() {
-      const [tRes, fRes] = await Promise.all([
+      const [tRes, fRes, mRes] = await Promise.all([
         supabase
           .from('master_tasks')
-          .select('id, title, status, assignee, priority, links, current_status, overview, action_items, deadline, initiative')
+          .select('id, title, status, assignee, executive_lead, priority, links, current_status, overview, action_items, dan_comments, deadline, initiative, milestone_id')
           .is('deleted_at', null)
           .neq('status', 'complete'),
         supabase
@@ -104,9 +116,11 @@ export function TeamView() {
           .select('*')
           .is('deleted_at', null)
           .order('sort_order', { ascending: true }),
+        supabase.from('milestones').select('id, title, initiative').order('sort_order'),
       ])
       if (tRes.data) setTasks(tRes.data as MasterTask[])
       if (fRes.data) setFocusItems(fRes.data as FocusItem[])
+      if (mRes.data) setMilestones(mRes.data as MilestoneOption[])
       setLoading(false)
     }
     fetchAll()
@@ -216,14 +230,17 @@ export function TeamView() {
       id: taskId,
       title: item.title,
       assignee: item.owner,
+      executive_lead: null,
       priority: item.priority || 'medium',
       status: 'not-started',
       deadline: item.deadline,
       links: null,
-      current_status: null,
-      overview: item.notes,
+      current_status: item.notes,
+      overview: null,
       action_items: null,
+      dan_comments: null,
       initiative: item.stream,
+      milestone_id: null,
     }
     setTasks((prev) => [newTask, ...prev])
     setFocusItems((prev) => prev.map((f) => (f.id === focusId ? { ...f, master_task_id: taskId } : f)))
@@ -380,6 +397,7 @@ export function TeamView() {
           key={openTask.id}
           task={openTask}
           stream={openStream}
+          milestones={milestones}
           currentUser={displayName}
           onClose={() => setOpenItem(null)}
           onUpdate={handleTaskUpdate}
@@ -557,17 +575,20 @@ function StreamColumn({ stream, focus, tasks, hiddenCount, onOpenFocus, onOpenTa
 interface TaskDrawerProps {
   task: MasterTask
   stream: (typeof STREAMS)[number]
+  milestones: MilestoneOption[]
   currentUser: string | null
   onClose: () => void
   onUpdate: (id: string, updates: Partial<MasterTask>) => Promise<void>
 }
 
-function TaskDrawer({ task, stream, currentUser, onClose, onUpdate }: TaskDrawerProps) {
+function TaskDrawer({ task, stream, milestones, currentUser, onClose, onUpdate }: TaskDrawerProps) {
   const [titleDraft, setTitleDraft] = useState(task.title)
-  const [overviewDraft, setOverviewDraft] = useState(task.overview || '')
-  const [currentStatusDraft, setCurrentStatusDraft] = useState(task.current_status || '')
-  const [actionItemsDraft, setActionItemsDraft] = useState(task.action_items || '')
+  const [detailDraft, setDetailDraft] = useState(task.current_status || task.action_items || '')
+  const [editingDetail, setEditingDetail] = useState(false)
   const [linksDraft, setLinksDraft] = useState(task.links || '')
+  const [editingLinks, setEditingLinks] = useState(false)
+  const [danCommentsDraft, setDanCommentsDraft] = useState(task.dan_comments || '')
+  const [editingDanComments, setEditingDanComments] = useState(false)
   const [comments, setComments] = useState<TaskComment[]>([])
   const [commentText, setCommentText] = useState('')
 
@@ -607,11 +628,13 @@ function TaskDrawer({ task, stream, currentUser, onClose, onUpdate }: TaskDrawer
     await supabase.from('master_task_comments').insert(newComment as never)
   }
 
+  const availableMilestones = milestones.filter((m) => m.initiative === task.initiative)
+
   return (
     <div className="fixed inset-0 z-50 flex">
       <button onClick={onClose} aria-label="Close" className="flex-1 bg-black/40" />
-      <aside className="w-full max-w-lg bg-white border-l-2 border-black overflow-y-auto">
-        <div className={`${stream.bg} text-white px-6 py-5 flex items-start justify-between gap-3 sticky top-0 z-10`}>
+      <aside className="w-full max-w-3xl bg-white border-l-2 border-black overflow-y-auto">
+        <div className={`${stream.bg} text-white px-8 py-5 flex items-start justify-between gap-3 sticky top-0 z-10`}>
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">
               {stream.emoji} {stream.label} &middot; Task
@@ -632,119 +655,211 @@ function TaskDrawer({ task, stream, currentUser, onClose, onUpdate }: TaskDrawer
               className="mt-1 w-full bg-transparent text-xl font-bold leading-tight text-white border-b border-transparent focus:border-white/50 focus:outline-none py-1 -mx-1 px-1 resize-none break-words"
             />
           </div>
-          <button onClick={onClose} className="text-white/80 hover:text-white text-2xl font-bold shrink-0" title="Close">
-            &times;
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {task.status !== 'complete' && (
+              <button
+                onClick={() => onUpdate(task.id, { status: 'complete' })}
+                className="bg-white/20 text-white hover:bg-white hover:text-black px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors"
+                title="Mark as done"
+              >
+                Mark Done
+              </button>
+            )}
+            <button onClick={onClose} className="text-white/80 hover:text-white text-2xl font-bold" title="Close">
+              &times;
+            </button>
+          </div>
         </div>
 
-        <div className="px-6 py-5 space-y-6">
-          <div className="flex items-center gap-3 flex-wrap">
-            <select
-              value={task.priority}
-              onChange={(e) => onUpdate(task.id, { priority: e.target.value })}
-              className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 border-0 cursor-pointer focus:outline-none ${
-                PRIORITY_OPTIONS.find((p) => p.value === task.priority)?.badge ?? 'bg-black/10 text-black'
-              }`}
-            >
-              {PRIORITY_OPTIONS.map((p) => (
-                <option key={p.value} value={p.value} className="text-black bg-white">
-                  {p.label}
-                </option>
-              ))}
-            </select>
-            <select
-              value={task.status}
-              onChange={(e) => onUpdate(task.id, { status: e.target.value })}
-              className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 border border-black/20 bg-white focus:outline-none"
-            >
-              {STATUS_OPTIONS.map((s) => (
-                <option key={s} value={s}>
-                  {STATUS_LABELS[s]}
-                </option>
-              ))}
-            </select>
-            <select
-              value={task.initiative}
-              onChange={(e) => onUpdate(task.id, { initiative: e.target.value })}
-              className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 border border-black/20 bg-white focus:outline-none"
-            >
-              {STREAMS.map((s) => (
-                <option key={s.key} value={s.key}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-            <input
-              type="date"
-              value={task.deadline || ''}
-              onChange={(e) => onUpdate(task.id, { deadline: e.target.value || null })}
-              className="border border-black/20 bg-white px-2 py-1 text-[11px] font-bold uppercase tracking-widest focus:outline-none"
-            />
-            <input
-              type="text"
-              value={task.assignee || ''}
-              onChange={(e) => onUpdate(task.id, { assignee: e.target.value })}
-              placeholder="Assignee"
-              className="text-[11px] font-bold border border-black/20 bg-white px-2 py-1 focus:outline-none placeholder:text-muted/40"
-            />
+        <div className="px-8 py-6 space-y-6">
+          {/* Meta row: Owner / Exec / Due / Status / Priority / Milestone */}
+          <div className="flex items-center gap-x-5 gap-y-2 flex-wrap">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Owner:</span>
+              <select
+                value={task.assignee || ''}
+                onChange={(e) => onUpdate(task.id, { assignee: e.target.value || null })}
+                className={`border-none bg-transparent px-1 py-0.5 text-[11px] font-bold uppercase tracking-wider focus:outline-none cursor-pointer hover:bg-black/5 ${task.assignee ? 'text-blue' : 'text-muted/40'}`}
+              >
+                <option value="">Unassigned</option>
+                {ALL_TEAM_MEMBERS.map((n) => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Exec:</span>
+              <select
+                value={task.executive_lead || ''}
+                onChange={(e) => onUpdate(task.id, { executive_lead: e.target.value || null })}
+                className={`border-none bg-transparent px-1 py-0.5 text-[11px] font-bold uppercase tracking-wider focus:outline-none cursor-pointer hover:bg-black/5 ${task.executive_lead ? 'text-purple' : 'text-muted/40'}`}
+              >
+                <option value="">None</option>
+                {EXECUTIVES.map((n) => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Due:</span>
+              <input
+                type="date"
+                min="2025-01-01"
+                max="2100-12-31"
+                value={task.deadline || ''}
+                onChange={(e) => {
+                  const v = e.target.value
+                  if (v) {
+                    const y = parseInt(v.slice(0, 4), 10)
+                    if (isNaN(y) || y < 2020 || y > 2100) return
+                  }
+                  onUpdate(task.id, { deadline: v || null })
+                }}
+                className="border-none bg-transparent px-1 py-0.5 text-[11px] font-bold uppercase tracking-wider focus:outline-none cursor-pointer hover:bg-black/5"
+              />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Status:</span>
+              <select
+                value={task.status}
+                onChange={(e) => onUpdate(task.id, { status: e.target.value })}
+                className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 border border-black/20 bg-white focus:outline-none cursor-pointer"
+              >
+                {STATUS_OPTIONS.map((s) => (
+                  <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Priority:</span>
+              <select
+                value={task.priority}
+                onChange={(e) => onUpdate(task.id, { priority: e.target.value })}
+                className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 border-0 cursor-pointer focus:outline-none ${PRIORITY_OPTIONS.find((p) => p.value === task.priority)?.badge ?? 'bg-black/10 text-black'}`}
+              >
+                {PRIORITY_OPTIONS.map((p) => (
+                  <option key={p.value} value={p.value} className="text-black bg-white">{p.label}</option>
+                ))}
+              </select>
+            </div>
+            {availableMilestones.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Milestone:</span>
+                <select
+                  value={task.milestone_id || ''}
+                  onChange={(e) => onUpdate(task.id, { milestone_id: e.target.value || null })}
+                  className={`border-none bg-transparent px-1 py-0.5 text-[11px] font-bold uppercase tracking-wider focus:outline-none cursor-pointer hover:bg-black/5 ${task.milestone_id ? 'text-black' : 'text-muted/40'}`}
+                >
+                  <option value="">None</option>
+                  {availableMilestones.map((m) => <option key={m.id} value={m.id}>{m.title}</option>)}
+                </select>
+              </div>
+            )}
           </div>
 
+          {/* Dan's Comments */}
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Overview</p>
-            <textarea
-              value={overviewDraft}
-              onChange={(e) => setOverviewDraft(e.target.value)}
-              onBlur={() => {
-                if (overviewDraft !== (task.overview || '')) onUpdate(task.id, { overview: overviewDraft || null })
-              }}
-              placeholder="Background, scope, links..."
-              rows={5}
-              className="w-full border-2 border-black/20 bg-white px-3 py-2 text-sm leading-relaxed focus:outline-none focus:border-black placeholder:text-muted/40 resize-y"
-            />
+            <p className="text-[10px] font-bold uppercase tracking-widest text-red mb-1.5">Dan&apos;s Comments</p>
+            {editingDanComments ? (
+              <textarea
+                value={danCommentsDraft}
+                onChange={(e) => setDanCommentsDraft(e.target.value)}
+                onBlur={() => {
+                  if (danCommentsDraft !== (task.dan_comments || '')) onUpdate(task.id, { dan_comments: danCommentsDraft || null })
+                  setEditingDanComments(false)
+                }}
+                onKeyDown={(e) => { if (e.key === 'Escape') { setDanCommentsDraft(task.dan_comments || ''); setEditingDanComments(false) } }}
+                autoFocus
+                rows={3}
+                placeholder="Notes from Dan..."
+                className="w-full border-2 border-red bg-white px-3 py-2 text-sm leading-relaxed focus:outline-none placeholder:text-muted/40 resize-y"
+              />
+            ) : (
+              <button
+                onClick={() => setEditingDanComments(true)}
+                className="flex items-start w-full text-left border-l-4 border-red bg-red/5 px-3 py-2 min-h-[48px] hover:bg-red/10 transition-colors"
+              >
+                {task.dan_comments ? (
+                  <p className="text-sm leading-relaxed italic text-black/80 whitespace-pre-wrap w-full">
+                    {task.dan_comments.replace(/<[^>]+>/g, '').trim()}
+                  </p>
+                ) : (
+                  <span className="text-sm text-muted/50 italic">Click to add…</span>
+                )}
+              </button>
+            )}
           </div>
 
+          {/* Task Detail (merged current_status + action_items) */}
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Current Status</p>
-            <textarea
-              value={currentStatusDraft}
-              onChange={(e) => setCurrentStatusDraft(e.target.value)}
-              onBlur={() => {
-                if (currentStatusDraft !== (task.current_status || '')) onUpdate(task.id, { current_status: currentStatusDraft || null })
-              }}
-              placeholder="Where things stand right now..."
-              rows={3}
-              className="w-full border-2 border-black/20 bg-white px-3 py-2 text-sm leading-relaxed focus:outline-none focus:border-black placeholder:text-muted/40 resize-y"
-            />
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1.5">Task Detail</p>
+            {editingDetail ? (
+              <textarea
+                value={detailDraft}
+                onChange={(e) => setDetailDraft(e.target.value)}
+                onBlur={() => {
+                  if (detailDraft !== (task.current_status || task.action_items || '')) onUpdate(task.id, { current_status: detailDraft || null })
+                  setEditingDetail(false)
+                }}
+                onKeyDown={(e) => { if (e.key === 'Escape') { setDetailDraft(task.current_status || task.action_items || ''); setEditingDetail(false) } }}
+                autoFocus
+                rows={10}
+                placeholder="Status, context, next steps, anything relevant..."
+                className="w-full border-2 border-black bg-cream-dark/40 px-4 py-3 text-sm leading-relaxed text-black focus:outline-none focus:border-blue focus:bg-white resize-y"
+              />
+            ) : (
+              <button
+                onClick={() => {
+                  setDetailDraft(task.current_status || task.action_items || '')
+                  setEditingDetail(true)
+                }}
+                className="flex items-start w-full text-left bg-cream-dark/40 border-2 border-black/10 hover:border-black/30 px-4 py-3 min-h-[200px] transition-colors"
+              >
+                {task.current_status || task.action_items ? (
+                  <div className="text-sm leading-relaxed whitespace-pre-wrap text-black/80 w-full">
+                    {(task.current_status || task.action_items || '').replace(/<[^>]+>/g, '').trim()}
+                  </div>
+                ) : (
+                  <span className="text-sm text-muted/50 italic">Click to add task detail…</span>
+                )}
+              </button>
+            )}
           </div>
 
+          {/* Links */}
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Action Items</p>
-            <textarea
-              value={actionItemsDraft}
-              onChange={(e) => setActionItemsDraft(e.target.value)}
-              onBlur={() => {
-                if (actionItemsDraft !== (task.action_items || '')) onUpdate(task.id, { action_items: actionItemsDraft || null })
-              }}
-              placeholder="- Next step..."
-              rows={4}
-              className="w-full border-2 border-black/20 bg-white px-3 py-2 text-sm leading-relaxed focus:outline-none focus:border-black placeholder:text-muted/40 resize-y"
-            />
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1.5">Links</p>
+            {editingLinks ? (
+              <textarea
+                value={linksDraft}
+                onChange={(e) => setLinksDraft(e.target.value)}
+                onBlur={() => {
+                  if (linksDraft !== (task.links || '')) onUpdate(task.id, { links: linksDraft || null })
+                  setEditingLinks(false)
+                }}
+                onKeyDown={(e) => { if (e.key === 'Escape') { setLinksDraft(task.links || ''); setEditingLinks(false) } }}
+                autoFocus
+                rows={3}
+                placeholder="Paste URLs, one per line..."
+                className="w-full border-2 border-black bg-white px-3 py-2 text-sm text-black focus:outline-none focus:border-blue resize-y"
+              />
+            ) : task.links ? (
+              <div className="bg-cream-dark/20 border border-black/10 px-3 py-2 space-y-1">
+                {task.links.split('\n').filter(Boolean).map((line, li) => {
+                  const trimmed = line.trim()
+                  const urlMatch = trimmed.match(/(https?:\/\/[^\s]+)/)
+                  const url = urlMatch ? urlMatch[1] : (trimmed.startsWith('http') ? trimmed : `https://${trimmed}`)
+                  return (
+                    <a key={li} href={url} target="_blank" rel="noopener noreferrer"
+                      className="text-sm text-blue hover:text-red underline block truncate">{trimmed}</a>
+                  )
+                })}
+                <button onClick={() => setEditingLinks(true)}
+                  className="text-[10px] text-muted/50 hover:text-muted mt-1">edit</button>
+              </div>
+            ) : (
+              <button onClick={() => setEditingLinks(true)}
+                className="w-full text-left text-sm text-muted/50 italic bg-cream-dark/20 border border-black/10 hover:border-black/30 px-3 py-2 transition-colors">Click to add links…</button>
+            )}
           </div>
 
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Links</p>
-            <textarea
-              value={linksDraft}
-              onChange={(e) => setLinksDraft(e.target.value)}
-              onBlur={() => {
-                if (linksDraft !== (task.links || '')) onUpdate(task.id, { links: linksDraft || null })
-              }}
-              placeholder="One URL per line..."
-              rows={2}
-              className="w-full border-2 border-black/20 bg-white px-3 py-2 text-sm focus:outline-none focus:border-black placeholder:text-muted/40 resize-y"
-            />
-          </div>
-
+          {/* Comments */}
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">
               Comments {comments.length > 0 ? `(${comments.length})` : ''}
