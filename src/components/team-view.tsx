@@ -1545,29 +1545,18 @@ function PersonWorkspace({
     personFocus.some((f) => f.stream === s.key) || personTasks.some((t) => t.initiative === s.key),
   )
 
-  // Auto-pick first available stream if none selected or current selection has no activities
-  const activeStreamKey = focusedStream && availableStreams.some((s) => s.key === focusedStream)
-    ? focusedStream
-    : availableStreams[0]?.key ?? null
-
+  // Selection: 'dashboard' | stream key. Default to dashboard.
+  const isDashboard = !focusedStream || focusedStream === 'dashboard'
+  const activeStreamKey = isDashboard
+    ? null
+    : availableStreams.some((s) => s.key === focusedStream)
+      ? focusedStream
+      : availableStreams[0]?.key ?? null
   const activeStream = activeStreamKey ? STREAMS.find((s) => s.key === activeStreamKey) ?? null : null
-
-  if (availableStreams.length === 0) {
-    return (
-      <div className="border-2 border-black/10 bg-white py-16 text-center">
-        <p className="text-sm text-muted uppercase tracking-widest font-bold">{person} has no notes or tasks yet.</p>
-      </div>
-    )
-  }
 
   const apply = <T extends { priority: string }>(arr: T[]) =>
     priorityFilter.size === 0 ? arr : arr.filter((x) => priorityFilter.has(x.priority))
 
-  const streamFocus = activeStream
-    ? [...apply(personFocus.filter((f) => f.stream === activeStream.key))].sort(
-        (a, b) => (PRIORITY_RANK[a.priority] ?? 4) - (PRIORITY_RANK[b.priority] ?? 4) || a.sort_order - b.sort_order,
-      )
-    : []
   const streamTasks = activeStream
     ? [...apply(personTasks.filter((t) => t.initiative === activeStream.key))].sort(
         (a, b) => (PRIORITY_RANK[a.priority] ?? 4) - (PRIORITY_RANK[b.priority] ?? 4),
@@ -1576,12 +1565,27 @@ function PersonWorkspace({
 
   return (
     <div className="flex gap-5">
-      {/* Left sidebar: stream selector */}
+      {/* Left sidebar: Dashboard + stream selector */}
       <aside className="w-52 shrink-0">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">{person}&apos;s Workstreams</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">{person}&apos;s Workspace</p>
         <div className="flex flex-col border-2 border-black/10 bg-white">
+          <button
+            onClick={() => setFocusedStream('dashboard')}
+            className={`text-left px-3 py-3 border-b border-black/10 transition-colors ${
+              isDashboard ? 'bg-black text-white' : 'bg-white text-black hover:bg-cream-dark/30'
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-bold tracking-widest uppercase leading-tight">
+                <span className="mr-1.5">&#x25A3;</span>
+                Dashboard
+              </span>
+            </div>
+            <p className={`text-[10px] uppercase tracking-widest mt-1 ${isDashboard ? 'text-white/70' : 'text-muted'}`}>
+              Summary &middot; notes
+            </p>
+          </button>
           {availableStreams.map((s) => {
-            const fCount = apply(personFocus.filter((f) => f.stream === s.key)).length
             const tCount = apply(personTasks.filter((t) => t.initiative === s.key)).length
             const isActive = s.key === activeStreamKey
             return (
@@ -1599,7 +1603,7 @@ function PersonWorkspace({
                   </span>
                 </div>
                 <p className={`text-[10px] uppercase tracking-widest mt-1 ${isActive ? 'text-white/70' : 'text-muted'}`}>
-                  {fCount} notes &middot; {tCount} {tCount === 1 ? 'task' : 'tasks'}
+                  {tCount} {tCount === 1 ? 'task' : 'tasks'}
                 </p>
               </button>
             )
@@ -1609,20 +1613,26 @@ function PersonWorkspace({
 
       {/* Right: active stream detail */}
       <div className="flex-1 min-w-0">
-        {activeStream ? (
-          <PersonStreamPanel
-            stream={activeStream}
-            focus={streamFocus}
-            tasks={streamTasks}
+        {isDashboard ? (
+          <PersonDashboard
+            person={person}
+            personFocus={personFocus}
+            personTasks={personTasks}
             onOpenFocus={onOpenFocus}
             onOpenTask={onOpenTask}
-            onFocusAdd={(title) => onFocusAdd(activeStream.key, title)}
+            onFocusAdd={onFocusAdd}
             onGenerateTask={onGenerateTask}
             onFocusDelete={onFocusDelete}
           />
+        ) : activeStream ? (
+          <PersonStreamPanel
+            stream={activeStream}
+            tasks={streamTasks}
+            onOpenTask={onOpenTask}
+          />
         ) : (
           <div className="border-2 border-black/10 bg-white py-16 text-center">
-            <p className="text-sm text-muted uppercase tracking-widest font-bold">Pick a workstream</p>
+            <p className="text-sm text-muted uppercase tracking-widest font-bold">Pick a view from the left</p>
           </div>
         )}
       </div>
@@ -1632,17 +1642,11 @@ function PersonWorkspace({
 
 interface PersonStreamPanelProps {
   stream: (typeof STREAMS)[number]
-  focus: FocusItem[]
   tasks: MasterTask[]
-  onOpenFocus: (id: string) => void
   onOpenTask: (id: string) => void
-  onFocusAdd: (title: string) => void
-  onGenerateTask: (focusId: string) => void
-  onFocusDelete: (id: string) => void
 }
 
-function PersonStreamPanel({ stream, focus, tasks, onOpenFocus, onOpenTask, onFocusAdd, onGenerateTask, onFocusDelete }: PersonStreamPanelProps) {
-  const [newTitle, setNewTitle] = useState('')
+function PersonStreamPanel({ stream, tasks, onOpenTask }: PersonStreamPanelProps) {
   return (
     <div className={`border-2 ${stream.border} bg-white`}>
       <div className={`${stream.bg} text-white px-6 py-5`}>
@@ -1651,89 +1655,12 @@ function PersonStreamPanel({ stream, focus, tasks, onOpenFocus, onOpenTask, onFo
           {stream.label}
         </h2>
         <p className="text-[11px] uppercase tracking-widest text-white/70 mt-1">
-          {focus.length} {focus.length === 1 ? "note" : "notes"} &middot; {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}
+          {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}
         </p>
       </div>
 
-      <div className="px-6 py-4 bg-cream-dark/40 border-b border-black/10">
-        <input
-          type="text"
-          value={newTitle}
-          onChange={(e) => setNewTitle(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && newTitle.trim()) {
-              onFocusAdd(newTitle)
-              setNewTitle('')
-            }
-          }}
-          placeholder="Brain dump a new note..."
-          className="w-full border-2 border-black/20 bg-white px-4 py-2.5 text-sm text-black focus:outline-none focus:border-black placeholder:text-muted/40"
-        />
-      </div>
-
-      <div className="px-6 py-3 bg-black/5 border-b border-black/10 flex items-center justify-between">
-        <span className="text-[11px] font-bold uppercase tracking-widest text-black">Notes</span>
-        <span className="text-[11px] uppercase tracking-widest text-muted">{focus.length}</span>
-      </div>
-      {focus.length === 0 ? (
-        <div className="px-6 py-6 text-center">
-          <p className="text-sm text-muted italic">No notes</p>
-        </div>
-      ) : (
-        <div>
-          {focus.map((f) => {
-            const pCfg = PRIORITY_OPTIONS.find((p) => p.value === f.priority)
-            return (
-              <div key={f.id} className="flex items-start gap-3 px-6 py-3 border-t border-black/5 bg-white hover:bg-cream-dark/30 transition-colors">
-                <button onClick={() => onOpenFocus(f.id)} className="flex-1 min-w-0 text-left">
-                  <p className="text-[15px] font-semibold leading-snug text-black">{f.title}</p>
-                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                    <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 ${pCfg?.badge ?? 'bg-black/10 text-black'}`}>
-                      {pCfg?.label ?? f.priority}
-                    </span>
-                    {f.master_task_id ? (
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-green">Task &#10003;</span>
-                    ) : (
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-muted/60">Notes</span>
-                    )}
-                    {(f.comments?.length ?? 0) > 0 && (
-                      <span className="text-[10px] uppercase tracking-widest text-muted/60">
-                        {f.comments.length} {f.comments.length === 1 ? 'comment' : 'comments'}
-                      </span>
-                    )}
-                    {f.notes && (
-                      <span className="text-[11px] text-muted truncate max-w-md">&mdash; {f.notes}</span>
-                    )}
-                  </div>
-                </button>
-                {!f.master_task_id && (
-                  <button
-                    onClick={() => onGenerateTask(f.id)}
-                    className="text-[10px] font-bold uppercase tracking-widest text-blue hover:text-white hover:bg-blue border border-blue/40 px-2 py-1 shrink-0 transition-colors"
-                    title="Generate a master task from this note"
-                  >
-                    &#x2192; Task
-                  </button>
-                )}
-                <button
-                  onClick={() => onFocusDelete(f.id)}
-                  className="text-muted/30 hover:text-red text-xl font-bold shrink-0 w-6 h-6 flex items-center justify-center"
-                  title="Delete"
-                >
-                  &times;
-                </button>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      <div className="px-6 py-3 bg-black/5 border-t border-b border-black/10 flex items-center justify-between">
-        <span className="text-[11px] font-bold uppercase tracking-widest text-black">Tasks</span>
-        <span className="text-[11px] uppercase tracking-widest text-muted">{tasks.length}</span>
-      </div>
       {tasks.length === 0 ? (
-        <div className="px-6 py-6 text-center">
+        <div className="px-6 py-10 text-center">
           <p className="text-sm text-muted italic">No tasks</p>
         </div>
       ) : (
@@ -1768,6 +1695,196 @@ function PersonStreamPanel({ stream, focus, tasks, onOpenFocus, onOpenTask, onFo
           })}
         </div>
       )}
+    </div>
+  )
+}
+
+interface PersonDashboardProps {
+  person: string
+  personFocus: FocusItem[]
+  personTasks: MasterTask[]
+  onOpenFocus: (id: string) => void
+  onOpenTask: (id: string) => void
+  onFocusAdd: (streamKey: string, title: string) => void
+  onGenerateTask: (focusId: string) => void
+  onFocusDelete: (id: string) => void
+}
+
+function PersonDashboard({ person, personFocus, personTasks, onOpenFocus, onOpenTask, onFocusAdd, onGenerateTask, onFocusDelete }: PersonDashboardProps) {
+  const [newTitle, setNewTitle] = useState('')
+  const [newStream, setNewStream] = useState<string>('brmf')
+
+  // ---- Summary stats ----
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const weekEnd = new Date(today)
+  weekEnd.setDate(today.getDate() + 7)
+
+  const parseDate = (s: string | null) => {
+    if (!s) return null
+    const d = new Date(s + 'T00:00:00')
+    return isNaN(d.getTime()) ? null : d
+  }
+
+  const openTasks = personTasks.filter((t) => t.status !== 'complete')
+  const overdueTasks = openTasks.filter((t) => {
+    const d = parseDate(t.deadline)
+    return d && d < today
+  })
+  const dueTodayTasks = openTasks.filter((t) => {
+    const d = parseDate(t.deadline)
+    return d && d.getTime() === today.getTime()
+  })
+  const dueThisWeekTasks = openTasks.filter((t) => {
+    const d = parseDate(t.deadline)
+    return d && d > today && d <= weekEnd
+  })
+  const veryHighTasks = openTasks.filter((t) => t.priority === 'ultra-high')
+  const inReviewTasks = openTasks.filter((t) => t.status === 'review')
+  const activeNotes = personFocus.filter((f) => !f.completed && !f.master_task_id)
+
+  const summary: { label: string; count: number; tone: string; tasks: MasterTask[] }[] = [
+    { label: 'Overdue', count: overdueTasks.length, tone: 'bg-red text-white', tasks: overdueTasks },
+    { label: 'Due today', count: dueTodayTasks.length, tone: 'bg-orange text-white', tasks: dueTodayTasks },
+    { label: 'Due this week', count: dueThisWeekTasks.length, tone: 'bg-gold text-white', tasks: dueThisWeekTasks },
+    { label: 'Very high priority', count: veryHighTasks.length, tone: 'bg-red text-white', tasks: veryHighTasks },
+    { label: 'Being reviewed', count: inReviewTasks.length, tone: 'bg-blue text-white', tasks: inReviewTasks },
+  ].filter((s) => s.count > 0)
+
+  return (
+    <div className="space-y-5">
+      {/* Summary */}
+      <div className="border-2 border-black bg-white">
+        <div className="bg-black text-white px-6 py-4">
+          <h2 className="text-sm font-bold tracking-widest uppercase leading-tight">
+            <span className="mr-2">&#x25A3;</span>
+            {person}&apos;s Dashboard
+          </h2>
+          <p className="text-[11px] uppercase tracking-widest text-white/60 mt-1">
+            {openTasks.length} active {openTasks.length === 1 ? 'task' : 'tasks'} &middot; {activeNotes.length} {activeNotes.length === 1 ? 'note' : 'notes'}
+          </p>
+        </div>
+        {summary.length === 0 ? (
+          <div className="px-6 py-8 text-center">
+            <p className="text-sm text-muted italic">All caught up — no urgent items or ongoing reviews.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-black/5">
+            {summary.map((s) => (
+              <div key={s.label} className="px-6 py-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 ${s.tone}`}>
+                    {s.count}
+                  </span>
+                  <p className="text-sm font-bold text-black">
+                    You have {s.count} {s.count === 1 ? 'task' : 'tasks'} {s.label.toLowerCase()}
+                  </p>
+                </div>
+                <div className="space-y-1 pl-2">
+                  {s.tasks.slice(0, 5).map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => onOpenTask(t.id)}
+                      className="block w-full text-left text-[12px] text-black/80 hover:text-blue"
+                    >
+                      &middot; {t.title}
+                    </button>
+                  ))}
+                  {s.tasks.length > 5 && (
+                    <p className="text-[11px] text-muted italic">+ {s.tasks.length - 5} more</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Notes */}
+      <div className="border-2 border-black/10 bg-white">
+        <div className="bg-cream-dark/60 px-6 py-4 border-b border-black/10">
+          <h3 className="text-sm font-bold tracking-widest uppercase text-black">Notes</h3>
+          <p className="text-[10px] uppercase tracking-widest text-muted mt-1">
+            Quick brain dumps. Promote to a task with &rarr; Task when ready.
+          </p>
+        </div>
+        <div className="px-6 py-4 bg-cream-dark/30 border-b border-black/10 flex gap-2">
+          <input
+            type="text"
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && newTitle.trim()) {
+                onFocusAdd(newStream, newTitle)
+                setNewTitle('')
+              }
+            }}
+            placeholder="Brain dump a new note..."
+            className="flex-1 border-2 border-black/20 bg-white px-4 py-2.5 text-sm text-black focus:outline-none focus:border-black placeholder:text-muted/40"
+          />
+          <select
+            value={newStream}
+            onChange={(e) => setNewStream(e.target.value)}
+            className="border-2 border-black/20 bg-white px-3 py-2.5 text-xs font-bold uppercase tracking-widest focus:outline-none focus:border-black"
+            title="Stream to tag this note with"
+          >
+            {STREAMS.map((s) => (
+              <option key={s.key} value={s.key}>{s.label}</option>
+            ))}
+          </select>
+        </div>
+        {activeNotes.length === 0 ? (
+          <div className="px-6 py-6 text-center">
+            <p className="text-sm text-muted italic">No notes yet. Brain dump above.</p>
+          </div>
+        ) : (
+          <div>
+            {activeNotes.map((f) => {
+              const pCfg = PRIORITY_OPTIONS.find((p) => p.value === f.priority)
+              const streamCfg = STREAMS.find((s) => s.key === f.stream)
+              return (
+                <div key={f.id} className="flex items-start gap-3 px-6 py-3 border-t border-black/5 bg-white hover:bg-cream-dark/30 transition-colors">
+                  <button onClick={() => onOpenFocus(f.id)} className="flex-1 min-w-0 text-left">
+                    <p className="text-[14px] font-semibold leading-snug text-black">{f.title}</p>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      {streamCfg && (
+                        <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 ${streamCfg.bg} text-white`}>
+                          {streamCfg.emoji} {streamCfg.label}
+                        </span>
+                      )}
+                      <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 ${pCfg?.badge ?? 'bg-black/10 text-black'}`}>
+                        {pCfg?.label ?? f.priority}
+                      </span>
+                      {(f.comments?.length ?? 0) > 0 && (
+                        <span className="text-[10px] uppercase tracking-widest text-muted/60">
+                          {f.comments.length} {f.comments.length === 1 ? 'comment' : 'comments'}
+                        </span>
+                      )}
+                      {f.notes && (
+                        <span className="text-[11px] text-muted truncate max-w-md">&mdash; {f.notes}</span>
+                      )}
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => onGenerateTask(f.id)}
+                    className="text-[10px] font-bold uppercase tracking-widest text-blue hover:text-white hover:bg-blue border border-blue/40 px-2 py-1 shrink-0 transition-colors"
+                    title="Promote to a master task"
+                  >
+                    &rarr; Task
+                  </button>
+                  <button
+                    onClick={() => onFocusDelete(f.id)}
+                    className="text-muted/30 hover:text-red text-xl font-bold shrink-0 w-6 h-6 flex items-center justify-center"
+                    title="Delete"
+                  >
+                    &times;
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
