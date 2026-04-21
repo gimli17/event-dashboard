@@ -180,6 +180,7 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
   const [sending, setSending] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('all')
   const [filterAssignee, setFilterAssignee] = useState('all')
+  const [filterExec, setFilterExec] = useState('all')
   const [filterInitiative, setFilterInitiative] = useState<string>(initiative || 'all')
   const [showAddTask, setShowAddTask] = useState(false)
   const [editingField, setEditingField] = useState<{ taskId: string; field: string } | null>(null)
@@ -543,6 +544,9 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
   if (filterAssignee !== 'all') {
     filtered = filtered.filter((t) => t.assignee?.includes(filterAssignee))
   }
+  if (filterExec !== 'all') {
+    filtered = filtered.filter((t) => t.executive_lead === filterExec)
+  }
   if (filterInitiative !== 'all') {
     filtered = filtered.filter((t) => t.initiative === filterInitiative)
   }
@@ -606,6 +610,16 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
           <select value={filterAssignee} onChange={(e) => setFilterAssignee(e.target.value)}
             className="border-2 border-black/20 bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black cursor-pointer">
             {assignees.map((a) => <option key={a} value={a}>{a}</option>)}
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Exec:</span>
+          <select value={filterExec} onChange={(e) => setFilterExec(e.target.value)}
+            className="border-2 border-black/20 bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black cursor-pointer">
+            <option value="all">all</option>
+            <option value="Cody">Cody</option>
+            <option value="Joe">Joe</option>
+            <option value="Sabrina">Sabrina</option>
           </select>
         </div>
         <div className="flex items-center gap-2">
