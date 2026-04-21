@@ -1739,71 +1739,20 @@ function PersonDashboard({ person, personFocus, personTasks, onOpenFocus, onOpen
     const d = parseDate(t.deadline)
     return d && d > today && d <= weekEnd
   })
-  const veryHighTasks = openTasks.filter((t) => t.priority === 'ultra-high')
-  const inReviewTasks = openTasks.filter((t) => t.status === 'review')
   const activeNotes = personFocus.filter((f) => !f.completed && !f.master_task_id)
 
   const summary: { label: string; count: number; tone: string; tasks: MasterTask[] }[] = [
     { label: 'Overdue', count: overdueTasks.length, tone: 'bg-red text-white', tasks: overdueTasks },
     { label: 'Due today', count: dueTodayTasks.length, tone: 'bg-orange text-white', tasks: dueTodayTasks },
     { label: 'Due this week', count: dueThisWeekTasks.length, tone: 'bg-gold text-white', tasks: dueThisWeekTasks },
-    { label: 'Very high priority', count: veryHighTasks.length, tone: 'bg-red text-white', tasks: veryHighTasks },
-    { label: 'Being reviewed', count: inReviewTasks.length, tone: 'bg-blue text-white', tasks: inReviewTasks },
   ].filter((s) => s.count > 0)
 
   return (
-    <div className="space-y-5">
-      {/* Summary */}
-      <div className="border-2 border-black bg-white">
-        <div className="bg-black text-white px-6 py-4">
-          <h2 className="text-sm font-bold tracking-widest uppercase leading-tight">
-            <span className="mr-2">&#x25A3;</span>
-            {person}&apos;s Dashboard
-          </h2>
-          <p className="text-[11px] uppercase tracking-widest text-white/60 mt-1">
-            {openTasks.length} active {openTasks.length === 1 ? 'task' : 'tasks'} &middot; {activeNotes.length} {activeNotes.length === 1 ? 'note' : 'notes'}
-          </p>
-        </div>
-        {summary.length === 0 ? (
-          <div className="px-6 py-8 text-center">
-            <p className="text-sm text-muted italic">All caught up — no urgent items or ongoing reviews.</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-black/5">
-            {summary.map((s) => (
-              <div key={s.label} className="px-6 py-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 ${s.tone}`}>
-                    {s.count}
-                  </span>
-                  <p className="text-sm font-bold text-black">
-                    You have {s.count} {s.count === 1 ? 'task' : 'tasks'} {s.label.toLowerCase()}
-                  </p>
-                </div>
-                <div className="space-y-1 pl-2">
-                  {s.tasks.slice(0, 5).map((t) => (
-                    <button
-                      key={t.id}
-                      onClick={() => onOpenTask(t.id)}
-                      className="block w-full text-left text-[12px] text-black/80 hover:text-blue"
-                    >
-                      &middot; {t.title}
-                    </button>
-                  ))}
-                  {s.tasks.length > 5 && (
-                    <p className="text-[11px] text-muted italic">+ {s.tasks.length - 5} more</p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Notes */}
+    <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-5 items-start">
+      {/* LEFT: Notes */}
       <div className="border-2 border-black/10 bg-white">
         <div className="bg-cream-dark/60 px-6 py-4 border-b border-black/10">
-          <h3 className="text-sm font-bold tracking-widest uppercase text-black">Notes</h3>
+          <h3 className="text-sm font-bold tracking-widest uppercase text-black">{person}&apos;s Notes</h3>
           <p className="text-[10px] uppercase tracking-widest text-muted mt-1">
             Quick brain dumps. Promote to a task with &rarr; Task when ready.
           </p>
@@ -1882,6 +1831,53 @@ function PersonDashboard({ person, personFocus, personTasks, onOpenFocus, onOpen
                 </div>
               )
             })}
+          </div>
+        )}
+      </div>
+
+      {/* RIGHT: Summary */}
+      <div className="border-2 border-black bg-white lg:sticky lg:top-4 self-start">
+        <div className="bg-black text-white px-5 py-4">
+          <h2 className="text-sm font-bold tracking-widest uppercase leading-tight">
+            <span className="mr-1.5">&#x25A3;</span>
+            {person}&apos;s Dashboard
+          </h2>
+          <p className="text-[10px] uppercase tracking-widest text-white/60 mt-1">
+            {openTasks.length} active {openTasks.length === 1 ? 'task' : 'tasks'} &middot; {activeNotes.length} {activeNotes.length === 1 ? 'note' : 'notes'}
+          </p>
+        </div>
+        {summary.length === 0 ? (
+          <div className="px-5 py-8 text-center">
+            <p className="text-sm text-muted italic">All caught up on deadlines.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-black/5">
+            {summary.map((s) => (
+              <div key={s.label} className="px-5 py-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 ${s.tone}`}>
+                    {s.count}
+                  </span>
+                  <p className="text-xs font-bold text-black">
+                    {s.label}
+                  </p>
+                </div>
+                <div className="space-y-1 pl-1">
+                  {s.tasks.slice(0, 8).map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => onOpenTask(t.id)}
+                      className="block w-full text-left text-[12px] leading-snug text-black/80 hover:text-blue"
+                    >
+                      &middot; {t.title}
+                    </button>
+                  ))}
+                  {s.tasks.length > 8 && (
+                    <p className="text-[11px] text-muted italic">+ {s.tasks.length - 8} more</p>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
