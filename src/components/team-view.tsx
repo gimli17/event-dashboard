@@ -25,15 +25,15 @@ const PRIORITY_OPTIONS = [
 
 const PRIORITY_RANK: Record<string, number> = { 'ultra-high': 0, high: 1, medium: 2, low: 3, backlog: 4 }
 
-const STATUS_OPTIONS = ['not-started', 'in-progress', 'blocked', 'complete'] as const
+const STATUS_OPTIONS = ['not-started', 'in-progress', 'review', 'blocked', 'complete'] as const
 
 const makeId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
 const STATUS_LABELS: Record<string, string> = {
   'not-started': 'Not Started',
   'in-progress': 'In Progress',
+  review: 'Being Reviewed',
   blocked: 'Blocked',
   complete: 'Complete',
-  review: 'In Review',
 }
 
 interface MasterTask {

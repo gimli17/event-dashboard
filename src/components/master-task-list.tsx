@@ -110,10 +110,12 @@ const priorityDeadlines: Record<string, string> = {
 const statusLabels: Record<string, string> = {
   'not-started': 'NOT STARTED',
   'in-progress': 'IN PROGRESS',
-  review: 'READY FOR REVIEW',
+  review: 'BEING REVIEWED',
   blocked: 'BLOCKED',
   complete: 'DONE',
 }
+
+const statusOrder = ['not-started', 'in-progress', 'review', 'blocked', 'complete']
 
 const statusColors: Record<string, string> = {
   'not-started': 'text-muted bg-black/5',
@@ -863,6 +865,20 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
                                   onChange={(e) => handleDeadlineChange(task, e.target.value || null)}
                                   className="border-none bg-transparent px-1 py-0.5 text-[11px] font-bold uppercase tracking-wider focus:outline-none cursor-pointer hover:bg-black/5"
                                 />
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Status:</span>
+                                <select
+                                  value={task.status}
+                                  onChange={(e) => handleStatusChange(task, e.target.value)}
+                                  className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 border-0 cursor-pointer focus:outline-none ${statusColors[task.status] ?? 'bg-black/10 text-black'}`}
+                                >
+                                  {statusOrder.map((s) => (
+                                    <option key={s} value={s} className="text-black bg-white">
+                                      {statusLabels[s]}
+                                    </option>
+                                  ))}
+                                </select>
                               </div>
                               <div className="flex items-center gap-1.5">
                                 <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Priority:</span>
