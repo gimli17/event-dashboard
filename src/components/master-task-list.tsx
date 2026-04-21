@@ -608,16 +608,14 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
             {assignees.map((a) => <option key={a} value={a}>{a}</option>)}
           </select>
         </div>
-        {!initiative && (
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Initiative:</span>
-            <select value={filterInitiative} onChange={(e) => setFilterInitiative(e.target.value)}
-              className="border-2 border-black/20 bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black cursor-pointer">
-              <option value="all">All</option>
-              {ALL_INITIATIVE_KEYS.map((k) => <option key={k} value={k}>{INITIATIVES[k].shortLabel}</option>)}
-            </select>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Initiative:</span>
+          <select value={filterInitiative} onChange={(e) => setFilterInitiative(e.target.value)}
+            className="border-2 border-black/20 bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black cursor-pointer">
+            <option value="all">All</option>
+            {ALL_INITIATIVE_KEYS.map((k) => <option key={k} value={k}>{INITIATIVES[k].shortLabel}</option>)}
+          </select>
+        </div>
         <button
           onClick={() => setShowAddTask(!showAddTask)}
           className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest border-2 transition-all ${showAddTask ? 'bg-red text-white border-red' : 'bg-white text-black border-black/20 hover:border-black'}`}
@@ -674,12 +672,10 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
               }
             }}
               className="border-2 border-black/20 bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black cursor-pointer" />
-            {!initiative && (
-              <select value={newTaskInitiative} onChange={(e) => setNewTaskInitiative(e.target.value)}
-                className="border-2 border-black/20 bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black">
-                {ALL_INITIATIVE_KEYS.map((k) => <option key={k} value={k}>{INITIATIVES[k].shortLabel}</option>)}
-              </select>
-            )}
+            <select value={newTaskInitiative} onChange={(e) => setNewTaskInitiative(e.target.value)}
+              className="border-2 border-black/20 bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black">
+              {ALL_INITIATIVE_KEYS.map((k) => <option key={k} value={k}>{INITIATIVES[k].shortLabel}</option>)}
+            </select>
             <button
               onClick={handleAddMasterTask}
               disabled={!newTaskTitle.trim() || !displayName}
@@ -740,7 +736,7 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
                               <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                                 {task.assignee && <span className="text-[10px] font-bold text-blue uppercase tracking-wider">{task.assignee}</span>}
                                 {!task.assignee && <span className="text-[10px] text-muted/40 uppercase tracking-wider">Unassigned</span>}
-                                {!initiative && task.initiative && INITIATIVES[task.initiative as InitiativeKey] && (
+                                {filterInitiative === 'all' && task.initiative && INITIATIVES[task.initiative as InitiativeKey] && (
                                   <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 ${INITIATIVES[task.initiative as InitiativeKey].color} text-white`}>
                                     {INITIATIVES[task.initiative as InitiativeKey].shortLabel}
                                   </span>
