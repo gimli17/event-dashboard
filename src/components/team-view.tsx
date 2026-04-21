@@ -935,7 +935,7 @@ function TaskDrawer({ task, stream, milestones, currentUser, onClose, onUpdate }
                     rel="noopener noreferrer"
                     className="text-[11px] font-bold uppercase tracking-widest text-blue hover:underline"
                   >
-                    Open in Notion &nearr;
+                    Open in Notion
                   </a>
                 </div>
               ) : (

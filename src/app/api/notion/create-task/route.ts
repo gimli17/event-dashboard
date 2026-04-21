@@ -129,11 +129,6 @@ export async function POST(req: Request) {
     if (task.deadline) {
       properties.Date = { date: { start: task.deadline } }
     }
-    if (notesText) {
-      properties.Notes = {
-        rich_text: [{ type: 'text', text: { content: notesText.slice(0, 1900) } }],
-      }
-    }
     if (task.status === 'complete') {
       properties.Done = { checkbox: true }
     }
