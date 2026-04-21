@@ -151,6 +151,17 @@ export function TeamView() {
     })
   }
 
+  const handleTaskDelete = async (id: string) => {
+    const task = tasks.find((t) => t.id === id)
+    setTasks((prev) => prev.filter((t) => t.id !== id))
+    setOpenItem((prev) => (prev?.type === 'task' && prev.id === id ? null : prev))
+    await supabase
+      .from('master_tasks')
+      .update({ deleted_at: new Date().toISOString() } as never)
+      .eq('id', id)
+    if (displayName && task) logActivity(displayName, 'deleted', 'task', id, task.title)
+  }
+
   const handleTaskUpdate = async (id: string, updates: Partial<MasterTask>) => {
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...updates } : t)))
     await supabase
@@ -408,6 +419,7 @@ export function TeamView() {
           currentUser={displayName}
           onClose={() => setOpenItem(null)}
           onUpdate={handleTaskUpdate}
+          onDelete={handleTaskDelete}
         />
       )}
       {openFocus && openStream && (
@@ -586,9 +598,10 @@ interface TaskDrawerProps {
   currentUser: string | null
   onClose: () => void
   onUpdate: (id: string, updates: Partial<MasterTask>) => Promise<void>
+  onDelete: (id: string) => Promise<void>
 }
 
-function TaskDrawer({ task, stream, milestones, currentUser, onClose, onUpdate }: TaskDrawerProps) {
+function TaskDrawer({ task, stream, milestones, currentUser, onClose, onUpdate, onDelete }: TaskDrawerProps) {
   const [titleDraft, setTitleDraft] = useState(task.title)
   const [detailDraft, setDetailDraft] = useState(task.current_status || task.action_items || '')
   const [editingDetail, setEditingDetail] = useState(false)
@@ -985,6 +998,20 @@ function TaskDrawer({ task, stream, milestones, currentUser, onClose, onUpdate }
                   Mark Done
                 </button>
               )}
+            </div>
+
+            {/* Delete */}
+            <div className="flex justify-center">
+              <button
+                onClick={async () => {
+                  if (!confirm(`Delete "${task.title}"? It will be moved to the archive.`)) return
+                  await onDelete(task.id)
+                  onClose()
+                }}
+                className="text-[10px] font-bold uppercase tracking-widest text-muted hover:text-red transition-colors"
+              >
+                Delete task
+              </button>
             </div>
           </div>
         </div>
