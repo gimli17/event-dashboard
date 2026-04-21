@@ -230,14 +230,8 @@ export function Navbar({ initiative }: { initiative?: InitiativeKey } = {}) {
               <kbd className="hidden lg:inline text-[9px] bg-white/20 px-1.5 py-0.5 rounded font-mono">⌘K</kbd>
             </button>
             {/* Primary nav items */}
-            <Link href="/tasks" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
-              Tasks
-            </Link>
-            <Link href="/social" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
-              Social
-            </Link>
-            <Link href="/board" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
-              Board
+            <Link href="/" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
+              Hub
             </Link>
             <Link href="/team" className="text-xs font-bold tracking-widest uppercase bg-purple-light/30 hover:bg-purple-light/50 px-3 py-1.5 transition-colors relative">
               Team Workspace
@@ -288,20 +282,15 @@ export function Navbar({ initiative }: { initiative?: InitiativeKey } = {}) {
           {/* Menu items */}
           <div className="py-2">
             {[
-              // Initiative sections
               { href: '/brmf', label: 'Boulder Roots', icon: '♫', section: true },
               { href: '/bold-summit', label: 'Bold Summit', icon: '◆', section: true },
               { href: '/ensuring-colorado', label: 'Engage Colorado', icon: '★', section: true },
               { href: '/investments', label: 'Investments', icon: '◇', section: true },
               { href: '/loud-bear', label: 'Loud Bear', icon: '●', section: true },
-              // BRMF-specific (shown always for now)
-              { href: '/schedule', label: 'Schedule', icon: '▦' },
-              { href: '/bold-conversations', label: 'Bold Conversations', icon: '◉' },
-              { href: '/private-parties', label: 'Private Parties', icon: '◈' },
               { href: '/log', label: 'Activity Log', icon: '▤' },
             ].map((item, i) => (
               <div key={item.href}>
-                {i === 3 && <div className="border-t border-black/10 my-2 mx-6" />}
+                {i === 5 && <div className="border-t border-black/10 my-2 mx-6" />}
                 <Link
                   href={item.href}
                   onClick={() => setMenuOpen(false)}

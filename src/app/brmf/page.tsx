@@ -61,7 +61,7 @@ export default async function BrmfPage() {
             <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted">Project Management</p>
           </div>
           <div className="grid grid-cols-3 gap-3 mb-10">
-            <Tile title="Tasks" description="All Boulder Roots priorities with owners and Dan's comments" href="/tasks?initiative=brmf" color="bg-[#2a4e80]" />
+            <Tile title="Tasks" description="All Boulder Roots priorities with owners and Dan's comments" href="/brmf/tasks" color="bg-[#2a4e80]" />
             <Tile title="Milestones" description="Track key milestones and progress toward launch" href="/brmf/milestones" color="bg-[#2a4e80]" />
             <Tile title="Event Schedule" description="Full festival timeline with task tracking per event" href="/schedule" color="bg-[#2a4e80]" />
           </div>
