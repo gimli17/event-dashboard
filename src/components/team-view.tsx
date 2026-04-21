@@ -473,14 +473,14 @@ function StreamColumn({ stream, focus, tasks, hiddenCount, onOpenFocus, onOpenTa
         />
       </div>
 
-      {/* FOCUS section */}
+      {/* NOTES section */}
       <div className="px-3 py-2 bg-black/5 border-b border-black/10 flex items-center justify-between">
-        <span className="text-[9px] font-bold uppercase tracking-widest text-black">Focus</span>
+        <span className="text-[9px] font-bold uppercase tracking-widest text-black">Notes</span>
         <span className="text-[9px] uppercase tracking-widest text-muted">{focus.length}</span>
       </div>
       {focus.length === 0 ? (
         <div className="px-4 py-3 text-center">
-          <p className="text-[11px] text-muted italic">No focus items</p>
+          <p className="text-[11px] text-muted italic">No notes</p>
         </div>
       ) : (
         <div>
@@ -501,7 +501,7 @@ function StreamColumn({ stream, focus, tasks, hiddenCount, onOpenFocus, onOpenTa
                     {f.master_task_id ? (
                       <span className="text-[8px] font-bold uppercase tracking-widest text-green">Task &#10003;</span>
                     ) : (
-                      <span className="text-[8px] font-bold uppercase tracking-widest text-muted/60">Focus</span>
+                      <span className="text-[8px] font-bold uppercase tracking-widest text-muted/60">Notes</span>
                     )}
                     {(f.comments?.length ?? 0) > 0 && (
                       <span className="text-[9px] uppercase tracking-widest text-muted/60">
@@ -1018,7 +1018,7 @@ function FocusDrawer({ item, stream, onClose, onUpdate, onAddComment, onGenerate
         <div className={`${stream.bg} text-white px-6 py-5 flex items-start justify-between gap-3 sticky top-0 z-10`}>
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">
-              {stream.emoji} {stream.label} &middot; Focus
+              {stream.emoji} {stream.label} &middot; Note
             </p>
             <textarea
               value={titleDraft}
@@ -1220,12 +1220,12 @@ function StreamDetail({ stream, focus, tasks, onBack, onOpenFocus, onOpenTask, o
         </div>
 
         <div className="px-6 py-3 bg-black/5 border-b border-black/10 flex items-center justify-between">
-          <span className="text-[11px] font-bold uppercase tracking-widest text-black">Focus Items</span>
+          <span className="text-[11px] font-bold uppercase tracking-widest text-black">Notes</span>
           <span className="text-[11px] uppercase tracking-widest text-muted">{focus.length}</span>
         </div>
         {focus.length === 0 ? (
           <div className="px-6 py-6 text-center">
-            <p className="text-sm text-muted italic">No focus items yet</p>
+            <p className="text-sm text-muted italic">No notes yet</p>
           </div>
         ) : (
           <div>
@@ -1242,7 +1242,7 @@ function StreamDetail({ stream, focus, tasks, onBack, onOpenFocus, onOpenTask, o
                       {f.master_task_id ? (
                         <span className="text-[9px] font-bold uppercase tracking-widest text-green">Task &#10003;</span>
                       ) : (
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-muted/60">Focus</span>
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-muted/60">Notes</span>
                       )}
                       {(f.comments?.length ?? 0) > 0 && (
                         <span className="text-[10px] uppercase tracking-widest text-muted/60">
@@ -1386,7 +1386,7 @@ function TeamSummary({ tasks, focus, onOpenTask, onOpenFocus, onPickPerson }: Te
                             <span className={`text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 ${pCfg?.badge ?? 'bg-black/10 text-black'}`}>
                               {pCfg?.label ?? f.priority}
                             </span>
-                            <span className="text-[8px] font-bold uppercase tracking-widest text-muted/60">Focus</span>
+                            <span className="text-[8px] font-bold uppercase tracking-widest text-muted/60">Notes</span>
                             {f.deadline && (
                               <span className="text-[8px] font-bold uppercase tracking-widest text-red">
                                 Due {new Date(f.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -1601,12 +1601,12 @@ function PersonStreamPanel({ stream, focus, tasks, onOpenFocus, onOpenTask, onFo
       </div>
 
       <div className="px-6 py-3 bg-black/5 border-b border-black/10 flex items-center justify-between">
-        <span className="text-[11px] font-bold uppercase tracking-widest text-black">Focus Items</span>
+        <span className="text-[11px] font-bold uppercase tracking-widest text-black">Notes</span>
         <span className="text-[11px] uppercase tracking-widest text-muted">{focus.length}</span>
       </div>
       {focus.length === 0 ? (
         <div className="px-6 py-6 text-center">
-          <p className="text-sm text-muted italic">No focus items</p>
+          <p className="text-sm text-muted italic">No notes</p>
         </div>
       ) : (
         <div>
@@ -1623,7 +1623,7 @@ function PersonStreamPanel({ stream, focus, tasks, onOpenFocus, onOpenTask, onFo
                     {f.master_task_id ? (
                       <span className="text-[9px] font-bold uppercase tracking-widest text-green">Task &#10003;</span>
                     ) : (
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-muted/60">Focus</span>
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-muted/60">Notes</span>
                     )}
                     {(f.comments?.length ?? 0) > 0 && (
                       <span className="text-[10px] uppercase tracking-widest text-muted/60">

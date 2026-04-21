@@ -353,7 +353,7 @@ function StreamColumn({ stream, priorities, onAdd, onToggle, onDelete, onOpen, o
 
       {focusList.length === 0 ? (
         <div className="px-4 py-10 text-center">
-          <p className="text-[11px] text-muted italic">No focus items yet</p>
+          <p className="text-[11px] text-muted italic">No notes yet</p>
         </div>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => onDragEnd(stream.key, e)}>
