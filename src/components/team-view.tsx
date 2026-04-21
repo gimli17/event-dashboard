@@ -331,7 +331,7 @@ export function TeamView() {
           {orderedMembers.map((name) => {
             const isActive = name === selectedPerson
             const tCount = tasks.filter((t) => t.assignee?.includes(name)).length
-            const fCount = focusItems.filter((f) => f.owner === name && !f.completed).length
+            const fCount = focusItems.filter((f) => f.owner === name && !f.completed && !f.master_task_id).length
             if (tCount + fCount === 0) return null
             return (
               <button
