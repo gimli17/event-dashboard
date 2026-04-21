@@ -83,6 +83,7 @@ export function PriorityStreams({ owner }: Props) {
         .select('*')
         .eq('owner', owner)
         .is('deleted_at', null)
+        .is('master_task_id', null)
         .order('sort_order', { ascending: true })
       if (data) setPriorities(data as DailyPriority[])
       setLoading(false)

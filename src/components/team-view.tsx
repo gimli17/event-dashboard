@@ -119,7 +119,7 @@ export function TeamView() {
   })
 
   const personTasks = selectedPerson ? tasks.filter((t) => t.assignee?.includes(selectedPerson)) : []
-  const personFocus = selectedPerson ? focusItems.filter((f) => f.owner === selectedPerson && !f.completed) : []
+  const personFocus = selectedPerson ? focusItems.filter((f) => f.owner === selectedPerson && !f.completed && !f.master_task_id) : []
 
   const applyPriorityFilter = <T extends { priority: string }>(arr: T[]) =>
     priorityFilter.size === 0 ? arr : arr.filter((x) => priorityFilter.has(x.priority))
@@ -342,7 +342,7 @@ export function TeamView() {
         })}
         <span className="text-[10px] uppercase tracking-widest text-muted ml-auto">
           {selectedPerson === null
-            ? `${tasks.filter((t) => priorityFilter.has(t.priority)).length + focusItems.filter((f) => !f.completed && priorityFilter.has(f.priority)).length} items shown`
+            ? `${tasks.filter((t) => priorityFilter.has(t.priority)).length + focusItems.filter((f) => !f.completed && !f.master_task_id && priorityFilter.has(f.priority)).length} items shown`
             : `${visibleFocus.length + visibleTasks.length} of ${personFocus.length + personTasks.length} shown`}
         </span>
       </div>
@@ -351,7 +351,7 @@ export function TeamView() {
       {selectedPerson === null ? (
         <TeamSummary
           tasks={tasks.filter((t) => priorityFilter.has(t.priority))}
-          focus={focusItems.filter((f) => !f.completed && priorityFilter.has(f.priority))}
+          focus={focusItems.filter((f) => !f.completed && !f.master_task_id && priorityFilter.has(f.priority))}
           onOpenTask={(id) => setOpenItem({ type: 'task', id })}
           onOpenFocus={(id) => setOpenItem({ type: 'focus', id })}
           onPickPerson={(name) => {
