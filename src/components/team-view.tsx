@@ -631,7 +631,7 @@ function TaskDrawer({ task, stream, milestones, currentUser, onClose, onUpdate }
   const availableMilestones = milestones.filter((m) => m.initiative === task.initiative)
 
   return (
-    <div className="fixed inset-0 z-50 flex">
+    <div className="fixed inset-0 z-[70] flex">
       <button onClick={onClose} aria-label="Close" className="flex-1 bg-black/40" />
       <aside className="w-full max-w-3xl bg-white border-l-2 border-black overflow-y-auto">
         <div className={`${stream.bg} text-white px-8 py-5 flex items-start justify-between gap-3 sticky top-0 z-10`}>
@@ -655,20 +655,9 @@ function TaskDrawer({ task, stream, milestones, currentUser, onClose, onUpdate }
               className="mt-1 w-full bg-transparent text-xl font-bold leading-tight text-white border-b border-transparent focus:border-white/50 focus:outline-none py-1 -mx-1 px-1 resize-none break-words"
             />
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {task.status !== 'complete' && (
-              <button
-                onClick={() => onUpdate(task.id, { status: 'complete' })}
-                className="bg-white/20 text-white hover:bg-white hover:text-black px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors"
-                title="Mark as done"
-              >
-                Mark Done
-              </button>
-            )}
-            <button onClick={onClose} className="text-white/80 hover:text-white text-2xl font-bold" title="Close">
-              &times;
-            </button>
-          </div>
+          <button onClick={onClose} className="text-white/80 hover:text-white text-2xl font-bold shrink-0" title="Close">
+            &times;
+          </button>
         </div>
 
         <div className="px-8 py-6 space-y-6">
@@ -904,6 +893,28 @@ function TaskDrawer({ task, stream, milestones, currentUser, onClose, onUpdate }
               </button>
             </div>
           </div>
+
+          {/* Mark Done — bottom action */}
+          <div className="pt-4 border-t-2 border-black/10 flex items-center justify-between gap-3">
+            {task.status === 'complete' ? (
+              <>
+                <span className="text-sm font-bold uppercase tracking-widest text-green">Done &#10003;</span>
+                <button
+                  onClick={() => onUpdate(task.id, { status: 'in-progress' })}
+                  className="text-[10px] font-bold uppercase tracking-widest text-muted hover:text-black"
+                >
+                  Reopen
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => onUpdate(task.id, { status: 'complete' })}
+                className="w-full bg-green text-white hover:bg-green/80 px-6 py-3 text-sm font-bold uppercase tracking-widest transition-colors"
+              >
+                Mark Done
+              </button>
+            )}
+          </div>
         </div>
       </aside>
     </div>
@@ -934,7 +945,7 @@ function FocusDrawer({ item, stream, onClose, onUpdate, onAddComment, onGenerate
   }, [onClose])
 
   return (
-    <div className="fixed inset-0 z-50 flex">
+    <div className="fixed inset-0 z-[70] flex">
       <button onClick={onClose} aria-label="Close" className="flex-1 bg-black/40" />
       <aside className="w-full max-w-lg bg-white border-l-2 border-black overflow-y-auto">
         <div className={`${stream.bg} text-white px-6 py-5 flex items-start justify-between gap-3 sticky top-0 z-10`}>

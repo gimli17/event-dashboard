@@ -496,7 +496,7 @@ function PriorityDrawer({
   }, [onClose])
 
   return (
-    <div className="fixed inset-0 z-50 flex">
+    <div className="fixed inset-0 z-[70] flex">
       <button
         onClick={onClose}
         aria-label="Close"
