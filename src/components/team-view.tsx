@@ -377,7 +377,7 @@ export function TeamView() {
         })}
         <span className="text-[10px] uppercase tracking-widest text-muted ml-auto">
           {selectedPerson === null
-            ? `${tasks.filter((t) => priorityFilter.has(t.priority)).length + focusItems.filter((f) => !f.completed && !f.master_task_id && priorityFilter.has(f.priority)).length} items shown`
+            ? `${(priorityFilter.size === 0 ? tasks.length : tasks.filter((t) => priorityFilter.has(t.priority)).length) + focusItems.filter((f) => !f.completed && !f.master_task_id && (priorityFilter.size === 0 || priorityFilter.has(f.priority))).length} items shown`
             : `${visibleFocus.length + visibleTasks.length} of ${personFocus.length + personTasks.length} shown`}
         </span>
       </div>
@@ -385,8 +385,8 @@ export function TeamView() {
       {/* Main body — Team Summary vs Person Workspace */}
       {selectedPerson === null ? (
         <TeamSummary
-          tasks={tasks.filter((t) => priorityFilter.has(t.priority))}
-          focus={focusItems.filter((f) => !f.completed && !f.master_task_id && priorityFilter.has(f.priority))}
+          tasks={priorityFilter.size === 0 ? tasks : tasks.filter((t) => priorityFilter.has(t.priority))}
+          focus={focusItems.filter((f) => !f.completed && !f.master_task_id && (priorityFilter.size === 0 || priorityFilter.has(f.priority)))}
           onOpenTask={(id) => setOpenItem({ type: 'task', id })}
           onOpenFocus={(id) => setOpenItem({ type: 'focus', id })}
           onPickPerson={(name) => {
