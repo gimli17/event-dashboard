@@ -28,6 +28,7 @@ interface MasterTask {
   id: string
   title: string
   assignee: string | null
+  executive_lead: string | null
   priority: string
   status: string
   deadline: string | null
@@ -45,6 +46,8 @@ interface MasterTask {
   initiative: string
   milestone_id: string | null
 }
+
+const EXECUTIVES = ['Cody', 'Joe', 'Sabrina'] as const
 
 interface MilestoneOption {
   id: string
@@ -296,6 +299,7 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
       id: taskId,
       title: newTaskTitle.trim(),
       assignee: newTaskAssignee || null,
+      executive_lead: null,
       priority: newTaskPriority,
       status: 'not-started',
       deadline: newTaskDeadline || null,
@@ -821,54 +825,93 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
                               </div>
                             </div>
 
-                            {/* Assignee + Deadline */}
-                            <div className="flex items-center gap-4 mb-4 flex-wrap">
+                            {/* Owner / Executive Lead / Deadline — click-to-change */}
+                            <div className="flex items-center gap-5 mb-5 flex-wrap">
                               <div className="flex items-center gap-2">
                                 <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Owner:</span>
-                                <span className={`text-[10px] font-bold uppercase tracking-wider ${task.assignee ? 'text-blue' : 'text-muted/40'}`}>{task.assignee || 'Unassigned'}</span>
                                 <select
-                                  value=""
-                                  onChange={(e) => {
-                                    if (!e.target.value) return
-                                    const current = task.assignee || ''
-                                    const names = current.split(', ').filter(Boolean)
-                                    if (names.includes(e.target.value)) return
-                                    handleAssigneeChange(task, names.length > 0 ? current + ', ' + e.target.value : e.target.value)
-                                  }}
-                                  className="border-2 border-black/20 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black cursor-pointer"
+                                  value={task.assignee || ''}
+                                  onChange={(e) => handleAssigneeChange(task, e.target.value || null)}
+                                  className={`border-none bg-transparent px-1 py-0.5 text-[11px] font-bold uppercase tracking-wider focus:outline-none cursor-pointer hover:bg-black/5 ${task.assignee ? 'text-blue' : 'text-muted/40'}`}
                                 >
-                                  <option value="">+ Add</option>
-                                  {teamMembers.filter(n => !(task.assignee || '').includes(n)).map((n) => <option key={n} value={n}>{n}</option>)}
+                                  <option value="">Unassigned</option>
+                                  {teamMembers.map((n) => <option key={n} value={n}>{n}</option>)}
                                 </select>
-                                {task.assignee && (
-                                  <select
-                                    value=""
-                                    onChange={(e) => {
-                                      if (!e.target.value) return
-                                      const names = (task.assignee || '').split(', ').filter(n => n !== e.target.value)
-                                      handleAssigneeChange(task, names.length > 0 ? names.join(', ') : null)
-                                    }}
-                                    className="border-2 border-black/20 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-red cursor-pointer"
-                                  >
-                                    <option value="">- Remove</option>
-                                    {(task.assignee || '').split(', ').filter(Boolean).map((n) => <option key={n} value={n}>{n}</option>)}
-                                  </select>
-                                )}
                               </div>
                               <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Deadline:</span>
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Exec Lead:</span>
+                                <select
+                                  value={task.executive_lead || ''}
+                                  onChange={async (e) => {
+                                    const val = e.target.value || null
+                                    setTasks(prev => prev.map(t => t.id === task.id ? { ...t, executive_lead: val } : t))
+                                    await supabase.from('master_tasks').update({ executive_lead: val } as never).eq('id', task.id)
+                                  }}
+                                  className={`border-none bg-transparent px-1 py-0.5 text-[11px] font-bold uppercase tracking-wider focus:outline-none cursor-pointer hover:bg-black/5 ${task.executive_lead ? 'text-purple' : 'text-muted/40'}`}
+                                >
+                                  <option value="">Unassigned</option>
+                                  {EXECUTIVES.map((n) => <option key={n} value={n}>{n}</option>)}
+                                </select>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Due:</span>
                                 <input
                                   type="date"
                                   value={task.deadline || ''}
                                   onChange={(e) => handleDeadlineChange(task, e.target.value || null)}
-                                  className="border-2 border-black/20 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black cursor-pointer"
+                                  className="border-none bg-transparent px-1 py-0.5 text-[11px] font-bold uppercase tracking-wider focus:outline-none cursor-pointer hover:bg-black/5"
                                 />
                               </div>
                             </div>
 
-                            <div className="grid gap-4 sm:grid-cols-2">
-                              <EditableField taskId={task.id} field="current_status" label="Current Status" value={task.current_status} editingField={editingField} editValue={editValue} setEditValue={setEditValue} startEditing={startEditing} saveField={saveField} setEditingField={setEditingField} />
-                              {/* Links — moved to where Overview was */}
+                            {/* Dan's Comments — moved to top for prominence */}
+                            <div className="mb-5">
+                              <EditableField taskId={task.id} field="dan_comments" label="Dan's Comments" value={task.dan_comments} highlight editingField={editingField} editValue={editValue} setEditValue={setEditValue} startEditing={startEditing} saveField={saveField} setEditingField={setEditingField} />
+                            </div>
+
+                            {/* Notes (merged current_status + action_items) + Links side-by-side */}
+                            <div className="grid gap-5 sm:grid-cols-[2fr_1fr] mb-5">
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Notes</p>
+                                {editingField?.taskId === task.id && editingField?.field === 'current_status' ? (
+                                  <textarea
+                                    value={editValue}
+                                    onChange={(e) => setEditValue(e.target.value)}
+                                    onBlur={saveField}
+                                    onKeyDown={(e) => { if (e.key === 'Escape') setEditingField(null) }}
+                                    autoFocus
+                                    rows={6}
+                                    placeholder="Status, next steps, anything relevant..."
+                                    className="w-full border-2 border-black bg-white px-3 py-2 text-sm text-black focus:outline-none focus:border-blue resize-y"
+                                  />
+                                ) : (
+                                  <button
+                                    onClick={() => {
+                                      // Merge legacy action_items into notes on first edit
+                                      const seed = [task.current_status, task.action_items].filter(Boolean).join('\n\n')
+                                      startEditing(task.id, 'current_status', seed || null)
+                                    }}
+                                    className="w-full text-left"
+                                  >
+                                    {task.current_status || task.action_items ? (
+                                      <div className="text-sm leading-relaxed whitespace-pre-wrap text-black/80">
+                                        {task.current_status && <div>{task.current_status.replace(/<[^>]+>/g, '').trim()}</div>}
+                                        {task.action_items && (
+                                          <div className={task.current_status ? 'mt-2 pt-2 border-t border-black/10' : ''}>
+                                            {task.action_items.split('\n').filter(Boolean).map((item, ai) => {
+                                              const cleaned = item.replace(/^[-•*]\s*/, '').replace(/^\[[ x]\]\s*/i, '').trim()
+                                              return <div key={ai}>{cleaned}</div>
+                                            })}
+                                          </div>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <span className="text-sm text-muted/40 italic">Click to add notes…</span>
+                                    )}
+                                  </button>
+                                )}
+                              </div>
+
                               <div>
                                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Links</p>
                                 {editingField?.taskId === task.id && editingField?.field === 'links' ? (
@@ -882,89 +925,25 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
                                     placeholder="Paste URLs, one per line..."
                                     className="w-full border-2 border-black bg-white px-2 py-1 text-xs text-black focus:outline-none focus:border-blue"
                                   />
-                                ) : (
-                                  <div>
-                                    {task.links ? (
-                                      <div className="space-y-1">
-                                        {task.links.split('\n').filter(Boolean).map((line, li) => {
-                                          const trimmed = line.trim()
-                                          const urlMatch = trimmed.match(/(https?:\/\/[^\s]+)/)
-                                          const url = urlMatch ? urlMatch[1] : (trimmed.startsWith('http') ? trimmed : `https://${trimmed}`)
-                                          return (
-                                            <a key={li} href={url} target="_blank" rel="noopener noreferrer"
-                                              className="text-xs text-blue hover:text-red underline block truncate">{trimmed}</a>
-                                          )
-                                        })}
-                                        <button onClick={() => startEditing(task.id, 'links', task.links)}
-                                          className="text-[9px] text-muted/40 hover:text-muted mt-1">edit links</button>
-                                      </div>
-                                    ) : (
-                                      <button onClick={() => startEditing(task.id, 'links', task.links)}
-                                        className="text-xs text-muted/40 italic hover:text-muted">Click to add links...</button>
-                                    )}
+                                ) : task.links ? (
+                                  <div className="space-y-1">
+                                    {task.links.split('\n').filter(Boolean).map((line, li) => {
+                                      const trimmed = line.trim()
+                                      const urlMatch = trimmed.match(/(https?:\/\/[^\s]+)/)
+                                      const url = urlMatch ? urlMatch[1] : (trimmed.startsWith('http') ? trimmed : `https://${trimmed}`)
+                                      return (
+                                        <a key={li} href={url} target="_blank" rel="noopener noreferrer"
+                                          className="text-xs text-blue hover:text-red underline block truncate">{trimmed}</a>
+                                      )
+                                    })}
+                                    <button onClick={() => startEditing(task.id, 'links', task.links)}
+                                      className="text-[9px] text-muted/40 hover:text-muted mt-1">edit</button>
                                   </div>
+                                ) : (
+                                  <button onClick={() => startEditing(task.id, 'links', task.links)}
+                                    className="text-xs text-muted/40 italic hover:text-muted">Click to add links…</button>
                                 )}
                               </div>
-                            </div>
-
-                            {/* Action Items as checkboxes */}
-                            <div className="mt-4">
-                              <div className="flex items-center justify-between mb-1">
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Action Items</p>
-                                <button
-                                  onClick={() => startEditing(task.id, 'action_items', task.action_items)}
-                                  className="text-[9px] text-muted/40 hover:text-muted"
-                                >edit</button>
-                              </div>
-                              {editingField?.taskId === task.id && editingField?.field === 'action_items' ? (
-                                <textarea
-                                  value={editValue}
-                                  onChange={(e) => setEditValue(e.target.value)}
-                                  onBlur={saveField}
-                                  onKeyDown={(e) => { if (e.key === 'Escape') setEditingField(null) }}
-                                  autoFocus
-                                  rows={4}
-                                  placeholder="One item per line..."
-                                  className="w-full border-2 border-black bg-white px-2 py-1 text-xs text-black focus:outline-none focus:border-blue"
-                                />
-                              ) : (
-                                <div>
-                                  {task.action_items ? (
-                                    <div className="space-y-1.5">
-                                      {task.action_items.split('\n').filter(Boolean).map((item, ai) => {
-                                        const trimmed = item.replace(/^[-•*]\s*/, '').replace(/^\[[ x]\]\s*/i, '').trim()
-                                        const isChecked = item.match(/^\[x\]/i) !== null
-                                        return (
-                                          <div key={ai} className="flex items-start gap-2">
-                                            <button
-                                              onClick={async () => {
-                                                const lines = task.action_items!.split('\n')
-                                                lines[ai] = isChecked ? trimmed : `[x] ${trimmed}`
-                                                const updated = lines.join('\n')
-                                                setTasks(prev => prev.map(t => t.id === task.id ? { ...t, action_items: updated } : t))
-                                                await supabase.from('master_tasks').update({ action_items: updated } as never).eq('id', task.id)
-                                              }}
-                                              className={`mt-0.5 w-4 h-4 flex items-center justify-center shrink-0 border-2 transition-colors ${
-                                                isChecked ? 'bg-green border-green text-white' : 'border-black/20 hover:border-black/40'
-                                              }`}
-                                            >
-                                              {isChecked && <span className="text-[9px]">✓</span>}
-                                            </button>
-                                            <span className={`text-xs ${isChecked ? 'line-through text-muted' : ''}`}>{trimmed}</span>
-                                          </div>
-                                        )
-                                      })}
-                                    </div>
-                                  ) : (
-                                    <button onClick={() => startEditing(task.id, 'action_items', task.action_items)}
-                                      className="text-xs text-muted/40 italic hover:text-muted">Click to add action items...</button>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="mt-4">
-                              <EditableField taskId={task.id} field="dan_comments" label="Dan's Comments" value={task.dan_comments} highlight editingField={editingField} editValue={editValue} setEditValue={setEditValue} startEditing={startEditing} saveField={saveField} setEditingField={setEditingField} />
                             </div>
 
                             {/* Your update to Dan */}
@@ -1018,17 +997,6 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
                                 <button key={p} onClick={() => handlePriorityChange(task, p)}
                                   className={`px-2 py-1 text-[9px] font-bold tracking-widest uppercase transition-all ${task.priority === p ? priorityColors[p] : 'bg-black/5 text-muted/40 hover:text-muted'}`}>
                                   {p === 'ultra-high' ? 'VERY HIGH' : p.toUpperCase()}
-                                </button>
-                              ))}
-                            </div>
-
-                            {/* Status change */}
-                            <div className="mt-2 flex items-center gap-2">
-                              <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Status:</span>
-                              {['not-started', 'in-progress', 'review', 'blocked', 'complete'].map((s) => (
-                                <button key={s} onClick={() => handleStatusChange(task, s)}
-                                  className={`px-2 py-1 text-[9px] font-bold tracking-widest uppercase transition-all ${task.status === s ? statusColors[s] : 'bg-black/5 text-muted/40 hover:text-muted'}`}>
-                                  {statusLabels[s]}
                                 </button>
                               ))}
                             </div>
