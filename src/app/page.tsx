@@ -170,7 +170,7 @@ export default async function HubPage() {
                 <h3 className="text-lg font-bold uppercase tracking-tight mt-1">Team Workspace</h3>
               </div>
               <div className="bg-white px-6 py-4 group-hover:bg-cream-dark transition-colors">
-                <p className="text-xs font-bold text-muted leading-relaxed">Dan&apos;s dashboard,<br />review queue &amp; team</p>
+                <p className="text-xs font-bold text-muted leading-relaxed">Team summary,<br />per-person dashboards &amp; tasks</p>
               </div>
             </Link>
             <Link href="/board" className="group">
