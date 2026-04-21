@@ -1251,17 +1251,34 @@ interface TeamSummaryProps {
   onPickPerson: (name: string) => void
 }
 
+type SummaryRow =
+  | { kind: 'focus'; priority: string; deadline: string | null; title: string; id: string; item: FocusItem }
+  | { kind: 'task'; priority: string; deadline: string | null; title: string; id: string; item: MasterTask }
+
 function TeamSummary({ tasks, focus, onOpenTask, onOpenFocus, onPickPerson }: TeamSummaryProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
       {STREAMS.map((stream) => {
-        const sFocus = [...focus.filter((f) => f.stream === stream.key)].sort(
-          (a, b) => (PRIORITY_RANK[a.priority] ?? 4) - (PRIORITY_RANK[b.priority] ?? 4),
-        )
-        const sTasks = [...tasks.filter((t) => t.initiative === stream.key)].sort(
-          (a, b) => (PRIORITY_RANK[a.priority] ?? 4) - (PRIORITY_RANK[b.priority] ?? 4),
-        )
-        const total = sFocus.length + sTasks.length
+        const rows: SummaryRow[] = [
+          ...focus
+            .filter((f) => f.stream === stream.key)
+            .map<SummaryRow>((f) => ({ kind: 'focus', priority: f.priority, deadline: f.deadline, title: f.title, id: f.id, item: f })),
+          ...tasks
+            .filter((t) => t.initiative === stream.key)
+            .map<SummaryRow>((t) => ({ kind: 'task', priority: t.priority, deadline: t.deadline, title: t.title, id: t.id, item: t })),
+        ].sort((a, b) => {
+          // 1. priority rank
+          const pa = PRIORITY_RANK[a.priority] ?? 4
+          const pb = PRIORITY_RANK[b.priority] ?? 4
+          if (pa !== pb) return pa - pb
+          // 2. deadline (earlier first; no deadline goes last)
+          if (a.deadline && b.deadline) return a.deadline.localeCompare(b.deadline)
+          if (a.deadline) return -1
+          if (b.deadline) return 1
+          // 3. title for stability
+          return a.title.localeCompare(b.title)
+        })
+        const total = rows.length
         return (
           <div key={stream.key} className={`border-2 ${stream.border} bg-white flex flex-col`}>
             <div className={`${stream.bg} text-white px-4 py-3`}>
@@ -1279,34 +1296,40 @@ function TeamSummary({ tasks, focus, onOpenTask, onOpenFocus, onPickPerson }: Te
               </div>
             ) : (
               <div>
-                {sFocus.map((f) => {
-                  const pCfg = PRIORITY_OPTIONS.find((p) => p.value === f.priority)
-                  return (
-                    <div key={f.id} className="flex items-start gap-1 px-3 py-2 border-t border-black/5 bg-white hover:bg-cream-dark/30 transition-colors">
-                      <button onClick={() => onOpenFocus(f.id)} className="flex-1 min-w-0 text-left">
-                        <p className="text-[12px] font-semibold leading-snug text-black">{f.title}</p>
-                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                          <span className={`text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 ${pCfg?.badge ?? 'bg-black/10 text-black'}`}>
-                            {pCfg?.label ?? f.priority}
-                          </span>
-                          <span className="text-[8px] font-bold uppercase tracking-widest text-muted/60">Focus</span>
-                        </div>
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onPickPerson(f.owner) }}
-                        className="text-[8px] font-bold uppercase tracking-widest text-blue hover:underline shrink-0 mt-0.5"
-                        title={`Open ${f.owner}'s workspace`}
-                      >
-                        {f.owner}
-                      </button>
-                    </div>
-                  )
-                })}
-                {sTasks.map((t) => {
-                  const pCfg = PRIORITY_OPTIONS.find((p) => p.value === t.priority)
+                {rows.map((row) => {
+                  const pCfg = PRIORITY_OPTIONS.find((p) => p.value === row.priority)
+                  if (row.kind === 'focus') {
+                    const f = row.item
+                    return (
+                      <div key={`f-${f.id}`} className="flex items-start gap-1 px-3 py-2 border-t border-black/5 bg-white hover:bg-cream-dark/30 transition-colors">
+                        <button onClick={() => onOpenFocus(f.id)} className="flex-1 min-w-0 text-left">
+                          <p className="text-[12px] font-semibold leading-snug text-black">{f.title}</p>
+                          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                            <span className={`text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 ${pCfg?.badge ?? 'bg-black/10 text-black'}`}>
+                              {pCfg?.label ?? f.priority}
+                            </span>
+                            <span className="text-[8px] font-bold uppercase tracking-widest text-muted/60">Focus</span>
+                            {f.deadline && (
+                              <span className="text-[8px] font-bold uppercase tracking-widest text-red">
+                                Due {new Date(f.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onPickPerson(f.owner) }}
+                          className="text-[8px] font-bold uppercase tracking-widest text-blue hover:underline shrink-0 mt-0.5"
+                          title={`Open ${f.owner}'s workspace`}
+                        >
+                          {f.owner}
+                        </button>
+                      </div>
+                    )
+                  }
+                  const t = row.item
                   const firstAssignee = t.assignee?.split(',')[0]?.trim() || null
                   return (
-                    <div key={t.id} className="flex items-start gap-1 px-3 py-2 border-t border-black/5 bg-white hover:bg-cream-dark/30 transition-colors">
+                    <div key={`t-${t.id}`} className="flex items-start gap-1 px-3 py-2 border-t border-black/5 bg-white hover:bg-cream-dark/30 transition-colors">
                       <button onClick={() => onOpenTask(t.id)} className="flex-1 min-w-0 text-left">
                         <p className="text-[12px] font-semibold leading-snug text-black">{t.title}</p>
                         <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
