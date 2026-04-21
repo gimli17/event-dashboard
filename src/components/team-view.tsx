@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useUser } from './user-provider'
 import { logActivity } from '@/lib/activity-log'
 
-const ALL_TEAM_MEMBERS = ['Cody', 'Sabrina', 'Joe', 'Danny', 'Connor', 'Gib', 'Emily', 'Kendall', 'Alex', 'Liam', 'Dave', 'Tom', 'Kevin'] as const
+const ALL_TEAM_MEMBERS = ['Cody', 'Sabrina', 'Joe', 'Connor', 'Gib', 'Emily', 'Kendall', 'Alex', 'Liam', 'Kevin'] as const
 
 const STREAMS = [
   { key: 'brmf', label: 'Boulder Roots', emoji: '\uD83C\uDFB8', bg: 'bg-[#2a4e80]', border: 'border-[#2a4e80]' },

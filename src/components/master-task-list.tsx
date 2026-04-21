@@ -190,7 +190,7 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
   const [newTaskDeadline, setNewTaskDeadline] = useState('')
   const [newTaskInitiative, setNewTaskInitiative] = useState<string>(initiative || 'brmf')
   const [activeId, setActiveId] = useState<string | null>(null)
-  const teamMembers = ['Cody', 'Sabrina', 'Joe', 'Danny', 'Connor', 'Gib', 'Emily', 'Kendall', 'Alex', 'Liam', 'Dave', 'Tom', 'Kevin']
+  const teamMembers = ['Cody', 'Sabrina', 'Joe', 'Connor', 'Gib', 'Emily', 'Kendall', 'Alex', 'Liam', 'Kevin']
   const commentEndRef = useRef<HTMLDivElement>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
@@ -442,14 +442,14 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
   const handleAssigneeChange = async (task: MasterTask, newAssignee: string | null) => {
     setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, assignee: newAssignee } : t)))
     await supabase.from('master_tasks').update({ assignee: newAssignee, updated_at: new Date().toISOString() } as never).eq('id', task.id)
-    if (displayName) {
-      const c: TaskComment = { id: `temp-${Date.now()}`, task_id: task.id, author: displayName, message: newAssignee ? `Assigned to ${newAssignee}` : 'Unassigned', created_at: new Date().toISOString() }
-      setComments((prev) => [...prev, c])
-      await supabase.from('master_task_comments').insert({ task_id: task.id, author: displayName, message: c.message } as never)
-    }
   }
 
   const handleDeadlineChange = async (task: MasterTask, newDeadline: string | null) => {
+    // Ignore malformed years (e.g. 0002) — happens when date input emits partial value
+    if (newDeadline) {
+      const yearNum = parseInt(newDeadline.slice(0, 4), 10)
+      if (isNaN(yearNum) || yearNum < 2020 || yearNum > 2100) return
+    }
     // Auto-calculate priority based on deadline
     let autoPriority: string | null = null
     if (newDeadline) {
@@ -825,9 +825,9 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
                               </div>
                             </div>
 
-                            {/* Owner / Executive Lead / Deadline — click-to-change */}
-                            <div className="flex items-center gap-5 mb-5 flex-wrap">
-                              <div className="flex items-center gap-2">
+                            {/* Meta row: Owner / Exec Lead / Due / Priority / Milestone */}
+                            <div className="flex items-center gap-x-5 gap-y-2 mb-5 flex-wrap">
+                              <div className="flex items-center gap-1.5">
                                 <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Owner:</span>
                                 <select
                                   value={task.assignee || ''}
@@ -838,8 +838,8 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
                                   {teamMembers.map((n) => <option key={n} value={n}>{n}</option>)}
                                 </select>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Exec Lead:</span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Exec:</span>
                                 <select
                                   value={task.executive_lead || ''}
                                   onChange={async (e) => {
@@ -849,101 +849,124 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
                                   }}
                                   className={`border-none bg-transparent px-1 py-0.5 text-[11px] font-bold uppercase tracking-wider focus:outline-none cursor-pointer hover:bg-black/5 ${task.executive_lead ? 'text-purple' : 'text-muted/40'}`}
                                 >
-                                  <option value="">Unassigned</option>
+                                  <option value="">None</option>
                                   {EXECUTIVES.map((n) => <option key={n} value={n}>{n}</option>)}
                                 </select>
                               </div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1.5">
                                 <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Due:</span>
                                 <input
                                   type="date"
+                                  min="2025-01-01"
+                                  max="2100-12-31"
                                   value={task.deadline || ''}
                                   onChange={(e) => handleDeadlineChange(task, e.target.value || null)}
                                   className="border-none bg-transparent px-1 py-0.5 text-[11px] font-bold uppercase tracking-wider focus:outline-none cursor-pointer hover:bg-black/5"
                                 />
                               </div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Priority:</span>
+                                <select
+                                  value={task.priority}
+                                  onChange={(e) => handlePriorityChange(task, e.target.value)}
+                                  className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 border-0 cursor-pointer focus:outline-none ${priorityColors[task.priority] ?? 'bg-black/10 text-black'}`}
+                                >
+                                  {priorityOrder.map((p) => (
+                                    <option key={p} value={p} className="text-black bg-white">
+                                      {p === 'ultra-high' ? 'Very High' : p.charAt(0).toUpperCase() + p.slice(1)}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Milestone:</span>
+                                <select
+                                  value={task.milestone_id || ''}
+                                  onChange={async (e) => {
+                                    const val = e.target.value || null
+                                    setTasks(prev => prev.map(t => t.id === task.id ? { ...t, milestone_id: val } : t))
+                                    await supabase.from('master_tasks').update({ milestone_id: val } as never).eq('id', task.id)
+                                  }}
+                                  className={`border-none bg-transparent px-1 py-0.5 text-[11px] font-bold uppercase tracking-wider focus:outline-none cursor-pointer hover:bg-black/5 ${task.milestone_id ? 'text-black' : 'text-muted/40'}`}
+                                >
+                                  <option value="">None</option>
+                                  {milestoneOptions
+                                    .filter(ms => !initiative || ms.initiative === (task.initiative || initiative))
+                                    .map(ms => <option key={ms.id} value={ms.id}>{ms.title}</option>)}
+                                </select>
+                              </div>
                             </div>
 
-                            {/* Dan's Comments — moved to top for prominence */}
+                            {/* Dan's Comments */}
                             <div className="mb-5">
                               <EditableField taskId={task.id} field="dan_comments" label="Dan's Comments" value={task.dan_comments} highlight editingField={editingField} editValue={editValue} setEditValue={setEditValue} startEditing={startEditing} saveField={saveField} setEditingField={setEditingField} />
                             </div>
 
-                            {/* Notes (merged current_status + action_items) + Links side-by-side */}
-                            <div className="grid gap-5 sm:grid-cols-[2fr_1fr] mb-5">
-                              <div>
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Notes</p>
-                                {editingField?.taskId === task.id && editingField?.field === 'current_status' ? (
-                                  <textarea
-                                    value={editValue}
-                                    onChange={(e) => setEditValue(e.target.value)}
-                                    onBlur={saveField}
-                                    onKeyDown={(e) => { if (e.key === 'Escape') setEditingField(null) }}
-                                    autoFocus
-                                    rows={6}
-                                    placeholder="Status, next steps, anything relevant..."
-                                    className="w-full border-2 border-black bg-white px-3 py-2 text-sm text-black focus:outline-none focus:border-blue resize-y"
-                                  />
-                                ) : (
-                                  <button
-                                    onClick={() => {
-                                      // Merge legacy action_items into notes on first edit
-                                      const seed = [task.current_status, task.action_items].filter(Boolean).join('\n\n')
-                                      startEditing(task.id, 'current_status', seed || null)
-                                    }}
-                                    className="w-full text-left"
-                                  >
-                                    {task.current_status || task.action_items ? (
-                                      <div className="text-sm leading-relaxed whitespace-pre-wrap text-black/80">
-                                        {task.current_status && <div>{task.current_status.replace(/<[^>]+>/g, '').trim()}</div>}
-                                        {task.action_items && (
-                                          <div className={task.current_status ? 'mt-2 pt-2 border-t border-black/10' : ''}>
-                                            {task.action_items.split('\n').filter(Boolean).map((item, ai) => {
-                                              const cleaned = item.replace(/^[-•*]\s*/, '').replace(/^\[[ x]\]\s*/i, '').trim()
-                                              return <div key={ai}>{cleaned}</div>
-                                            })}
-                                          </div>
-                                        )}
-                                      </div>
-                                    ) : (
-                                      <span className="text-sm text-muted/40 italic">Click to add notes…</span>
-                                    )}
-                                  </button>
-                                )}
-                              </div>
+                            {/* Task Detail — single shaded full-width textarea */}
+                            <div className="mb-5">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1.5">Task Detail</p>
+                              {editingField?.taskId === task.id && editingField?.field === 'current_status' ? (
+                                <textarea
+                                  value={editValue}
+                                  onChange={(e) => setEditValue(e.target.value)}
+                                  onBlur={saveField}
+                                  onKeyDown={(e) => { if (e.key === 'Escape') setEditingField(null) }}
+                                  autoFocus
+                                  rows={8}
+                                  placeholder="Status, context, next steps, anything relevant..."
+                                  className="w-full border-2 border-black bg-cream-dark/40 px-4 py-3 text-sm leading-relaxed text-black focus:outline-none focus:border-blue focus:bg-white resize-y"
+                                />
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    const seed = task.current_status || task.action_items || null
+                                    startEditing(task.id, 'current_status', seed)
+                                  }}
+                                  className="w-full text-left bg-cream-dark/40 border-2 border-black/10 hover:border-black/30 px-4 py-3 min-h-[180px] transition-colors"
+                                >
+                                  {task.current_status || task.action_items ? (
+                                    <div className="text-sm leading-relaxed whitespace-pre-wrap text-black/80">
+                                      {(task.current_status || task.action_items || '').replace(/<[^>]+>/g, '').trim()}
+                                    </div>
+                                  ) : (
+                                    <span className="text-sm text-muted/50 italic">Click to add task detail…</span>
+                                  )}
+                                </button>
+                              )}
+                            </div>
 
-                              <div>
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Links</p>
-                                {editingField?.taskId === task.id && editingField?.field === 'links' ? (
-                                  <textarea
-                                    value={editValue}
-                                    onChange={(e) => setEditValue(e.target.value)}
-                                    onBlur={saveField}
-                                    onKeyDown={(e) => { if (e.key === 'Escape') setEditingField(null) }}
-                                    autoFocus
-                                    rows={3}
-                                    placeholder="Paste URLs, one per line..."
-                                    className="w-full border-2 border-black bg-white px-2 py-1 text-xs text-black focus:outline-none focus:border-blue"
-                                  />
-                                ) : task.links ? (
-                                  <div className="space-y-1">
-                                    {task.links.split('\n').filter(Boolean).map((line, li) => {
-                                      const trimmed = line.trim()
-                                      const urlMatch = trimmed.match(/(https?:\/\/[^\s]+)/)
-                                      const url = urlMatch ? urlMatch[1] : (trimmed.startsWith('http') ? trimmed : `https://${trimmed}`)
-                                      return (
-                                        <a key={li} href={url} target="_blank" rel="noopener noreferrer"
-                                          className="text-xs text-blue hover:text-red underline block truncate">{trimmed}</a>
-                                      )
-                                    })}
-                                    <button onClick={() => startEditing(task.id, 'links', task.links)}
-                                      className="text-[9px] text-muted/40 hover:text-muted mt-1">edit</button>
-                                  </div>
-                                ) : (
+                            {/* Links */}
+                            <div className="mb-5">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1.5">Links</p>
+                              {editingField?.taskId === task.id && editingField?.field === 'links' ? (
+                                <textarea
+                                  value={editValue}
+                                  onChange={(e) => setEditValue(e.target.value)}
+                                  onBlur={saveField}
+                                  onKeyDown={(e) => { if (e.key === 'Escape') setEditingField(null) }}
+                                  autoFocus
+                                  rows={3}
+                                  placeholder="Paste URLs, one per line..."
+                                  className="w-full border-2 border-black bg-white px-3 py-2 text-sm text-black focus:outline-none focus:border-blue resize-y"
+                                />
+                              ) : task.links ? (
+                                <div className="bg-cream-dark/20 border border-black/10 px-3 py-2 space-y-1">
+                                  {task.links.split('\n').filter(Boolean).map((line, li) => {
+                                    const trimmed = line.trim()
+                                    const urlMatch = trimmed.match(/(https?:\/\/[^\s]+)/)
+                                    const url = urlMatch ? urlMatch[1] : (trimmed.startsWith('http') ? trimmed : `https://${trimmed}`)
+                                    return (
+                                      <a key={li} href={url} target="_blank" rel="noopener noreferrer"
+                                        className="text-sm text-blue hover:text-red underline block truncate">{trimmed}</a>
+                                    )
+                                  })}
                                   <button onClick={() => startEditing(task.id, 'links', task.links)}
-                                    className="text-xs text-muted/40 italic hover:text-muted">Click to add links…</button>
-                                )}
-                              </div>
+                                    className="text-[10px] text-muted/50 hover:text-muted mt-1">edit</button>
+                                </div>
+                              ) : (
+                                <button onClick={() => startEditing(task.id, 'links', task.links)}
+                                  className="w-full text-left text-sm text-muted/50 italic bg-cream-dark/20 border border-black/10 hover:border-black/30 px-3 py-2 transition-colors">Click to add links…</button>
+                              )}
                             </div>
 
                             {/* Your update to Dan */}
@@ -989,36 +1012,6 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
                                 </a>
                               </div>
                             )}
-
-                            {/* Priority change */}
-                            <div className="mt-4 flex items-center gap-2">
-                              <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Priority:</span>
-                              {priorityOrder.map((p) => (
-                                <button key={p} onClick={() => handlePriorityChange(task, p)}
-                                  className={`px-2 py-1 text-[9px] font-bold tracking-widest uppercase transition-all ${task.priority === p ? priorityColors[p] : 'bg-black/5 text-muted/40 hover:text-muted'}`}>
-                                  {p === 'ultra-high' ? 'VERY HIGH' : p.toUpperCase()}
-                                </button>
-                              ))}
-                            </div>
-
-                            {/* Milestone assignment */}
-                            <div className="mt-2 flex items-center gap-2">
-                              <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Milestone:</span>
-                              <select
-                                value={task.milestone_id || ''}
-                                onChange={async (e) => {
-                                  const val = e.target.value || null
-                                  setTasks(prev => prev.map(t => t.id === task.id ? { ...t, milestone_id: val } : t))
-                                  await supabase.from('master_tasks').update({ milestone_id: val } as never).eq('id', task.id)
-                                }}
-                                className="border-2 border-black/10 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black cursor-pointer"
-                              >
-                                <option value="">None</option>
-                                {milestoneOptions
-                                  .filter(ms => !initiative || ms.initiative === (task.initiative || initiative))
-                                  .map(ms => <option key={ms.id} value={ms.id}>{ms.title}</option>)}
-                              </select>
-                            </div>
 
                             {/* Comments */}
                             <div className="mt-4 border-t-2 border-black/5 pt-4">
