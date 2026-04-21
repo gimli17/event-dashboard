@@ -192,7 +192,7 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
   const [newTaskDeadline, setNewTaskDeadline] = useState('')
   const [newTaskInitiative, setNewTaskInitiative] = useState<string>(initiative || 'brmf')
   const [activeId, setActiveId] = useState<string | null>(null)
-  const teamMembers = ['Cody', 'Sabrina', 'Joe', 'Bryan', 'Connor', 'Gib', 'Emily', 'Kendall', 'Alex', 'Liam', 'Kevin']
+  const teamMembers = ['Cody', 'Sabrina', 'Joe', 'Bryan', 'Connor', 'Gib', 'Emily', 'Kendall', 'Alex', 'Liam']
   const commentEndRef = useRef<HTMLDivElement>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
