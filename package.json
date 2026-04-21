@@ -13,6 +13,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@fontsource/lato": "^5.2.7",
+    "@notionhq/client": "^5.20.0",
     "@supabase/supabase-js": "^2.101.1",
     "googleapis": "^171.4.0",
     "lucide-react": "^1.7.0",

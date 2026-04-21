@@ -51,6 +51,7 @@ interface MasterTask {
   deadline: string | null
   initiative: string
   milestone_id: string | null
+  notion_page_url: string | null
 }
 
 interface MilestoneOption {
@@ -108,7 +109,7 @@ export function TeamView() {
       const [tRes, fRes, mRes] = await Promise.all([
         supabase
           .from('master_tasks')
-          .select('id, title, status, assignee, executive_lead, priority, links, current_status, overview, action_items, dan_comments, deadline, initiative, milestone_id')
+          .select('id, title, status, assignee, executive_lead, priority, links, current_status, overview, action_items, dan_comments, deadline, initiative, milestone_id, notion_page_url')
           .is('deleted_at', null)
           .neq('status', 'complete'),
         supabase
@@ -241,6 +242,7 @@ export function TeamView() {
       dan_comments: null,
       initiative: item.stream,
       milestone_id: null,
+      notion_page_url: null,
     }
     setTasks((prev) => [newTask, ...prev])
     setFocusItems((prev) => prev.map((f) => (f.id === focusId ? { ...f, master_task_id: taskId } : f)))
@@ -591,6 +593,32 @@ function TaskDrawer({ task, stream, milestones, currentUser, onClose, onUpdate }
   const [editingDanComments, setEditingDanComments] = useState(false)
   const [comments, setComments] = useState<TaskComment[]>([])
   const [commentText, setCommentText] = useState('')
+  const [notionUrl, setNotionUrl] = useState<string | null>(task.notion_page_url)
+  const [sendingNotion, setSendingNotion] = useState(false)
+  const [notionError, setNotionError] = useState<string | null>(null)
+
+  const firstAssignee = task.assignee?.split(',')[0]?.trim() || ''
+  const danReserved = ['dan', 'dan task', 'dan-task', 'dantask'].includes(firstAssignee.toLowerCase())
+  const canSendToNotion = !!firstAssignee && !danReserved
+
+  const handleSendToNotion = async () => {
+    setSendingNotion(true)
+    setNotionError(null)
+    try {
+      const res = await fetch('/api/notion/create-task', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ taskId: task.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed')
+      if (data.url) setNotionUrl(data.url)
+    } catch (err) {
+      setNotionError(err instanceof Error ? err.message : 'Failed to send to Notion')
+    } finally {
+      setSendingNotion(false)
+    }
+  }
 
   useEffect(() => {
     async function fetchComments() {
@@ -894,26 +922,65 @@ function TaskDrawer({ task, stream, milestones, currentUser, onClose, onUpdate }
             </div>
           </div>
 
-          {/* Mark Done — bottom action */}
-          <div className="pt-4 border-t-2 border-black/10 flex items-center justify-between gap-3">
-            {task.status === 'complete' ? (
-              <>
-                <span className="text-sm font-bold uppercase tracking-widest text-green">Done &#10003;</span>
+          {/* Notion + Mark Done — bottom actions */}
+          <div className="pt-4 border-t-2 border-black/10 space-y-3">
+            {/* Notion sync */}
+            <div>
+              {notionUrl ? (
+                <div className="flex items-center justify-between gap-3 bg-black/5 px-4 py-2">
+                  <span className="text-[11px] font-bold uppercase tracking-widest text-black">Synced to Notion &#10003;</span>
+                  <a
+                    href={notionUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-bold uppercase tracking-widest text-blue hover:underline"
+                  >
+                    Open in Notion &nearr;
+                  </a>
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={handleSendToNotion}
+                    disabled={!canSendToNotion || sendingNotion}
+                    className="w-full bg-black text-white hover:bg-black/80 px-6 py-2.5 text-xs font-bold uppercase tracking-widest transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    title={!firstAssignee ? 'Assign an owner first' : danReserved ? 'Owner cannot be Dan' : 'Send this task to Notion'}
+                  >
+                    {sendingNotion ? 'Sending…' : '\u2192 Generate Notion Task'}
+                  </button>
+                  {!canSendToNotion && (
+                    <p className="text-[10px] text-muted mt-1.5 text-center">
+                      {!firstAssignee ? 'Assign an owner first.' : 'Owner cannot be Dan.'}
+                    </p>
+                  )}
+                  {notionError && (
+                    <p className="text-[10px] text-red mt-1.5 text-center">{notionError}</p>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Mark Done */}
+            <div className="flex items-center justify-between gap-3">
+              {task.status === 'complete' ? (
+                <>
+                  <span className="text-sm font-bold uppercase tracking-widest text-green">Done &#10003;</span>
+                  <button
+                    onClick={() => onUpdate(task.id, { status: 'in-progress' })}
+                    className="text-[10px] font-bold uppercase tracking-widest text-muted hover:text-black"
+                  >
+                    Reopen
+                  </button>
+                </>
+              ) : (
                 <button
-                  onClick={() => onUpdate(task.id, { status: 'in-progress' })}
-                  className="text-[10px] font-bold uppercase tracking-widest text-muted hover:text-black"
+                  onClick={() => onUpdate(task.id, { status: 'complete' })}
+                  className="w-full bg-green text-white hover:bg-green/80 px-6 py-3 text-sm font-bold uppercase tracking-widest transition-colors"
                 >
-                  Reopen
+                  Mark Done
                 </button>
-              </>
-            ) : (
-              <button
-                onClick={() => onUpdate(task.id, { status: 'complete' })}
-                className="w-full bg-green text-white hover:bg-green/80 px-6 py-3 text-sm font-bold uppercase tracking-widest transition-colors"
-              >
-                Mark Done
-              </button>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </aside>
