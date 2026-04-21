@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useUser } from './user-provider'
 import { logActivity } from '@/lib/activity-log'
 
-const ALL_TEAM_MEMBERS = ['Cody', 'Sabrina', 'Joe', 'Bryan', 'Connor', 'Gib', 'Emily', 'Kendall', 'Alex', 'Liam'] as const
+const ALL_TEAM_MEMBERS = ['Cody', 'Sabrina', 'Joe', 'Connor', 'Kendall', 'Emily', 'Bryan', 'Gib', 'Alex', 'Liam'] as const
 
 const STREAMS = [
   { key: 'brmf', label: 'Boulder Roots', emoji: '\uD83C\uDFB8', bg: 'bg-[#2a4e80]', border: 'border-[#2a4e80]' },
@@ -135,11 +135,8 @@ export function TeamView() {
     fetchAll()
   }, [])
 
-  const orderedMembers = [...ALL_TEAM_MEMBERS].sort((a, b) => {
-    if (a === displayName) return -1
-    if (b === displayName) return 1
-    return a.localeCompare(b)
-  })
+  // Preserve the explicit ALL_TEAM_MEMBERS ordering
+  const orderedMembers = [...ALL_TEAM_MEMBERS]
 
   const personTasks = selectedPerson ? tasks.filter((t) => t.assignee?.includes(selectedPerson)) : []
   const personFocus = selectedPerson ? focusItems.filter((f) => f.owner === selectedPerson && !f.completed && !f.master_task_id) : []
