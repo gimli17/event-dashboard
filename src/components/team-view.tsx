@@ -182,6 +182,7 @@ export function TeamView() {
     const id = makeId('dp')
     const streamItems = focusItems.filter((f) => f.stream === streamKey && f.owner === selectedPerson)
     const nextOrder = streamItems.length > 0 ? Math.max(...streamItems.map((i) => i.sort_order)) + 1 : 0
+    const newPriority = 'medium'
     const item: FocusItem = {
       id,
       owner: selectedPerson,
@@ -190,12 +191,16 @@ export function TeamView() {
       master_task_id: null,
       sort_order: nextOrder,
       completed: false,
-      priority: 'medium',
+      priority: newPriority,
       deadline: null,
       notes: null,
       comments: [],
     }
     setFocusItems((prev) => [...prev, item])
+    // Make sure the new note is visible even if the priority filter would hide it
+    if (priorityFilter.size > 0 && !priorityFilter.has(newPriority)) {
+      setPriorityFilter((prev) => new Set([...prev, newPriority]))
+    }
     await supabase.from('daily_priorities').insert(item as never)
   }
 
@@ -451,7 +456,7 @@ function StreamColumn({ stream, focus, tasks, hiddenCount, onOpenFocus, onOpenTa
           <span className="text-[10px] font-bold uppercase tracking-widest text-white/70 shrink-0">&rarr;</span>
         </div>
         <p className="text-[10px] uppercase tracking-widest text-white/70 mt-0.5">
-          {focus.length} focus &middot; {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}
+          {focus.length} {focus.length === 1 ? "note" : "notes"} &middot; {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}
           {hiddenCount > 0 && <span className="ml-1.5 text-white/60">&middot; +{hiddenCount} hidden</span>}
         </p>
       </button>
@@ -514,7 +519,7 @@ function StreamColumn({ stream, focus, tasks, hiddenCount, onOpenFocus, onOpenTa
                   <button
                     onClick={() => onGenerateTask(f.id)}
                     className="text-[8px] font-bold uppercase tracking-widest text-blue hover:text-white hover:bg-blue border border-blue/40 px-1.5 py-1 shrink-0 transition-colors"
-                    title="Generate a master task from this focus item"
+                    title="Generate a master task from this note"
                   >
                     &#x2192; Task
                   </button>
@@ -1081,7 +1086,7 @@ function FocusDrawer({ item, stream, onClose, onUpdate, onAddComment, onGenerate
               <button
                 onClick={() => onGenerateTask(item.id)}
                 className="text-[11px] font-bold uppercase tracking-widest bg-blue text-white hover:bg-blue/80 px-3 py-1.5 transition-colors"
-                title="Promote this focus item into a tracked master task"
+                title="Promote this note into a tracked master task"
               >
                 &#x2192; Generate Task
               </button>
@@ -1199,7 +1204,7 @@ function StreamDetail({ stream, focus, tasks, onBack, onOpenFocus, onOpenTask, o
             {stream.label}
           </h2>
           <p className="text-[11px] uppercase tracking-widest text-white/70 mt-1">
-            {focus.length} focus &middot; {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'} &middot; full list
+            {focus.length} {focus.length === 1 ? "note" : "notes"} &middot; {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'} &middot; full list
           </p>
         </div>
 
@@ -1214,7 +1219,7 @@ function StreamDetail({ stream, focus, tasks, onBack, onOpenFocus, onOpenTask, o
                 setNewTitle('')
               }
             }}
-            placeholder="Brain dump a new focus item..."
+            placeholder="Brain dump a new note..."
             className="w-full border-2 border-black/20 bg-white px-4 py-2.5 text-sm text-black focus:outline-none focus:border-black placeholder:text-muted/40"
           />
         </div>
@@ -1258,7 +1263,7 @@ function StreamDetail({ stream, focus, tasks, onBack, onOpenFocus, onOpenTask, o
                     <button
                       onClick={() => onGenerateTask(f.id)}
                       className="text-[10px] font-bold uppercase tracking-widest text-blue hover:text-white hover:bg-blue border border-blue/40 px-2 py-1 shrink-0 transition-colors"
-                      title="Generate a master task from this focus item"
+                      title="Generate a master task from this note"
                     >
                       &#x2192; Task
                     </button>
@@ -1484,7 +1489,7 @@ function PersonWorkspace({
   if (availableStreams.length === 0) {
     return (
       <div className="border-2 border-black/10 bg-white py-16 text-center">
-        <p className="text-sm text-muted uppercase tracking-widest font-bold">{person} has no focus items or tasks yet.</p>
+        <p className="text-sm text-muted uppercase tracking-widest font-bold">{person} has no notes or tasks yet.</p>
       </div>
     )
   }
@@ -1528,7 +1533,7 @@ function PersonWorkspace({
                   </span>
                 </div>
                 <p className={`text-[10px] uppercase tracking-widest mt-1 ${isActive ? 'text-white/70' : 'text-muted'}`}>
-                  {fCount} focus &middot; {tCount} {tCount === 1 ? 'task' : 'tasks'}
+                  {fCount} notes &middot; {tCount} {tCount === 1 ? 'task' : 'tasks'}
                 </p>
               </button>
             )
@@ -1580,7 +1585,7 @@ function PersonStreamPanel({ stream, focus, tasks, onOpenFocus, onOpenTask, onFo
           {stream.label}
         </h2>
         <p className="text-[11px] uppercase tracking-widest text-white/70 mt-1">
-          {focus.length} focus &middot; {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}
+          {focus.length} {focus.length === 1 ? "note" : "notes"} &middot; {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}
         </p>
       </div>
 
@@ -1595,7 +1600,7 @@ function PersonStreamPanel({ stream, focus, tasks, onOpenFocus, onOpenTask, onFo
               setNewTitle('')
             }
           }}
-          placeholder="Brain dump a new focus item..."
+          placeholder="Brain dump a new note..."
           className="w-full border-2 border-black/20 bg-white px-4 py-2.5 text-sm text-black focus:outline-none focus:border-black placeholder:text-muted/40"
         />
       </div>
@@ -1639,7 +1644,7 @@ function PersonStreamPanel({ stream, focus, tasks, onOpenFocus, onOpenTask, onFo
                   <button
                     onClick={() => onGenerateTask(f.id)}
                     className="text-[10px] font-bold uppercase tracking-widest text-blue hover:text-white hover:bg-blue border border-blue/40 px-2 py-1 shrink-0 transition-colors"
-                    title="Generate a master task from this focus item"
+                    title="Generate a master task from this note"
                   >
                     &#x2192; Task
                   </button>
