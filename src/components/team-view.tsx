@@ -712,7 +712,7 @@ function TaskDrawer({ task, stream, milestones, currentUser, onClose, onUpdate, 
             <div className="flex items-center gap-1.5">
               <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Owner:</span>
               <select
-                value={task.assignee || ''}
+                value={(task.assignee || '').split(',')[0]?.trim() || ''}
                 onChange={(e) => onUpdate(task.id, { assignee: e.target.value || null })}
                 className={`border-none bg-transparent px-1 py-0.5 text-[11px] font-bold uppercase tracking-wider focus:outline-none cursor-pointer hover:bg-black/5 ${task.assignee ? 'text-blue' : 'text-muted/40'}`}
               >
