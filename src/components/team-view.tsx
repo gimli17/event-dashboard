@@ -682,6 +682,11 @@ function TaskDrawer({ task, stream, milestones, currentUser, onClose, onUpdate, 
     await supabase.from('master_task_comments').insert(newComment as never)
   }
 
+  const handleDeleteComment = async (id: string) => {
+    setComments((prev) => prev.filter((c) => c.id !== id))
+    await supabase.from('master_task_comments').delete().eq('id', id)
+  }
+
   const availableMilestones = milestones.filter((m) => m.initiative === task.initiative)
 
   return (
@@ -927,19 +932,29 @@ function TaskDrawer({ task, stream, milestones, currentUser, onClose, onUpdate, 
             {comments.length > 0 && (
               <div className="space-y-3 mb-3">
                 {comments.map((c) => (
-                  <div key={c.id} className="border-l-2 border-black/30 pl-3 py-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-black">{c.author}</span>
-                      <span className="text-[10px] text-muted">
-                        {new Date(c.created_at).toLocaleString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: 'numeric',
-                          minute: '2-digit',
-                        })}
-                      </span>
+                  <div key={c.id} className="group border-l-2 border-black/30 pl-3 py-1 flex items-start gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-black">{c.author}</span>
+                        <span className="text-[10px] text-muted">
+                          {new Date(c.created_at).toLocaleString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                      </div>
+                      <p className="text-sm leading-relaxed text-black/80 whitespace-pre-wrap mt-1">{c.message}</p>
                     </div>
-                    <p className="text-sm leading-relaxed text-black/80 whitespace-pre-wrap mt-1">{c.message}</p>
+                    <button
+                      onClick={() => handleDeleteComment(c.id)}
+                      className="text-muted/30 hover:text-red text-lg font-bold shrink-0 w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Delete comment"
+                      aria-label="Delete comment"
+                    >
+                      &times;
+                    </button>
                   </div>
                 ))}
               </div>
