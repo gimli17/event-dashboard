@@ -86,11 +86,7 @@ export function TeamView() {
   const [tasks, setTasks] = useState<MasterTask[]>([])
   const [focusItems, setFocusItems] = useState<FocusItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedPerson, setSelectedPerson] = useState<string>(() =>
-    displayName && (ALL_TEAM_MEMBERS as readonly string[]).includes(displayName)
-      ? displayName
-      : 'Sabrina',
-  )
+  const [selectedPerson, setSelectedPerson] = useState<string | null>(null)
   const [priorityFilter, setPriorityFilter] = useState<Set<string>>(new Set(['ultra-high', 'high']))
   const [openItem, setOpenItem] = useState<OpenItem>(null)
   const [focusedStream, setFocusedStream] = useState<string | null>(null)
@@ -122,8 +118,8 @@ export function TeamView() {
     return a.localeCompare(b)
   })
 
-  const personTasks = tasks.filter((t) => t.assignee?.includes(selectedPerson))
-  const personFocus = focusItems.filter((f) => f.owner === selectedPerson && !f.completed)
+  const personTasks = selectedPerson ? tasks.filter((t) => t.assignee?.includes(selectedPerson)) : []
+  const personFocus = selectedPerson ? focusItems.filter((f) => f.owner === selectedPerson && !f.completed) : []
 
   const applyPriorityFilter = <T extends { priority: string }>(arr: T[]) =>
     priorityFilter.size === 0 ? arr : arr.filter((x) => priorityFilter.has(x.priority))
@@ -167,7 +163,7 @@ export function TeamView() {
   }
 
   const handleFocusAdd = async (streamKey: string, title: string) => {
-    if (!title.trim()) return
+    if (!title.trim() || !selectedPerson) return
     const id = makeId('dp')
     const streamItems = focusItems.filter((f) => f.stream === streamKey && f.owner === selectedPerson)
     const nextOrder = streamItems.length > 0 ? Math.max(...streamItems.map((i) => i.sort_order)) + 1 : 0
@@ -191,7 +187,7 @@ export function TeamView() {
   const handleFocusAddComment = async (id: string, text: string) => {
     const trimmed = text.trim()
     if (!trimmed) return
-    const author = displayName || selectedPerson
+    const author = displayName || selectedPerson || 'Unknown'
     const newComment: FocusComment = {
       id: makeId('pc'),
       author,
@@ -272,18 +268,35 @@ export function TeamView() {
 
   return (
     <div className="max-w-[1600px] mx-auto px-6 py-6">
-      {/* Person pills */}
+      {/* View switcher: Team Summary + person pills */}
       <div className="mb-4">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Team Member</p>
         <div className="flex flex-wrap gap-1.5">
+          <button
+            onClick={() => {
+              setSelectedPerson(null)
+              setFocusedStream(null)
+            }}
+            className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest border-2 transition-colors ${
+              selectedPerson === null
+                ? 'bg-black text-white border-black'
+                : 'bg-white text-black border-black/20 hover:border-black'
+            }`}
+          >
+            Team Summary
+          </button>
+          <span className="inline-block w-px bg-black/10 mx-1" aria-hidden="true" />
           {orderedMembers.map((name) => {
             const isActive = name === selectedPerson
             const tCount = tasks.filter((t) => t.assignee?.includes(name)).length
             const fCount = focusItems.filter((f) => f.owner === name && !f.completed).length
+            if (tCount + fCount === 0) return null
             return (
               <button
                 key={name}
-                onClick={() => setSelectedPerson(name)}
+                onClick={() => {
+                  setSelectedPerson(name)
+                  setFocusedStream(null)
+                }}
                 className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest border-2 transition-colors ${
                   isActive
                     ? 'bg-black text-white border-black'
@@ -328,65 +341,38 @@ export function TeamView() {
           )
         })}
         <span className="text-[10px] uppercase tracking-widest text-muted ml-auto">
-          {visibleFocus.length + visibleTasks.length} of {personFocus.length + personTasks.length} shown
+          {selectedPerson === null
+            ? `${tasks.filter((t) => priorityFilter.has(t.priority)).length + focusItems.filter((f) => !f.completed && priorityFilter.has(f.priority)).length} items shown`
+            : `${visibleFocus.length + visibleTasks.length} of ${personFocus.length + personTasks.length} shown`}
         </span>
       </div>
 
-      {/* Stream board — overview grid or single-stream detail */}
-      {focusedStream ? (
-        (() => {
-          const stream = STREAMS.find((s) => s.key === focusedStream)
-          if (!stream) return null
-          const streamFocus = [...personFocus.filter((f) => f.stream === stream.key)].sort(
-            (a, b) => (PRIORITY_RANK[a.priority] ?? 4) - (PRIORITY_RANK[b.priority] ?? 4) || a.sort_order - b.sort_order,
-          )
-          const streamTasks = [...personTasks.filter((t) => t.initiative === stream.key)].sort(
-            (a, b) => (PRIORITY_RANK[a.priority] ?? 4) - (PRIORITY_RANK[b.priority] ?? 4),
-          )
-          return (
-            <StreamDetail
-              stream={stream}
-              focus={streamFocus}
-              tasks={streamTasks}
-              onBack={() => setFocusedStream(null)}
-              onOpenFocus={(id) => setOpenItem({ type: 'focus', id })}
-              onOpenTask={(id) => setOpenItem({ type: 'task', id })}
-              onFocusAdd={(title) => handleFocusAdd(stream.key, title)}
-              onGenerateTask={handleGenerateTask}
-              onFocusDelete={handleFocusDelete}
-            />
-          )
-        })()
+      {/* Main body — Team Summary vs Person Workspace */}
+      {selectedPerson === null ? (
+        <TeamSummary
+          tasks={tasks.filter((t) => priorityFilter.has(t.priority))}
+          focus={focusItems.filter((f) => !f.completed && priorityFilter.has(f.priority))}
+          onOpenTask={(id) => setOpenItem({ type: 'task', id })}
+          onOpenFocus={(id) => setOpenItem({ type: 'focus', id })}
+          onPickPerson={(name) => {
+            setSelectedPerson(name)
+            setFocusedStream(null)
+          }}
+        />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
-          {STREAMS.map((stream) => {
-            const allStreamFocus = personFocus.filter((f) => f.stream === stream.key)
-            const allStreamTasks = personTasks.filter((t) => t.initiative === stream.key)
-            const streamFocus = [...visibleFocus.filter((f) => f.stream === stream.key)].sort(
-              (a, b) => (PRIORITY_RANK[a.priority] ?? 4) - (PRIORITY_RANK[b.priority] ?? 4) || a.sort_order - b.sort_order,
-            )
-            const streamTasks = [...visibleTasks.filter((t) => t.initiative === stream.key)].sort(
-              (a, b) => (PRIORITY_RANK[a.priority] ?? 4) - (PRIORITY_RANK[b.priority] ?? 4),
-            )
-            const hiddenCount =
-              allStreamFocus.length + allStreamTasks.length - streamFocus.length - streamTasks.length
-            return (
-              <StreamColumn
-                key={stream.key}
-                stream={stream}
-                focus={streamFocus}
-                tasks={streamTasks}
-                hiddenCount={hiddenCount}
-                onOpenFocus={(id) => setOpenItem({ type: 'focus', id })}
-                onOpenTask={(id) => setOpenItem({ type: 'task', id })}
-                onFocusAdd={(title) => handleFocusAdd(stream.key, title)}
-                onGenerateTask={handleGenerateTask}
-                onFocusDelete={handleFocusDelete}
-                onOpenStream={() => setFocusedStream(stream.key)}
-              />
-            )
-          })}
-        </div>
+        <PersonWorkspace
+          person={selectedPerson}
+          personFocus={personFocus}
+          personTasks={personTasks}
+          priorityFilter={priorityFilter}
+          focusedStream={focusedStream}
+          setFocusedStream={setFocusedStream}
+          onOpenFocus={(id) => setOpenItem({ type: 'focus', id })}
+          onOpenTask={(id) => setOpenItem({ type: 'task', id })}
+          onFocusAdd={handleFocusAdd}
+          onGenerateTask={handleGenerateTask}
+          onFocusDelete={handleFocusDelete}
+        />
       )}
 
       {openTask && openStream && (
@@ -1138,6 +1124,363 @@ function StreamDetail({ stream, focus, tasks, onBack, onOpenFocus, onOpenTask, o
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+interface TeamSummaryProps {
+  tasks: MasterTask[]
+  focus: FocusItem[]
+  onOpenTask: (id: string) => void
+  onOpenFocus: (id: string) => void
+  onPickPerson: (name: string) => void
+}
+
+function TeamSummary({ tasks, focus, onOpenTask, onOpenFocus, onPickPerson }: TeamSummaryProps) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+      {STREAMS.map((stream) => {
+        const sFocus = [...focus.filter((f) => f.stream === stream.key)].sort(
+          (a, b) => (PRIORITY_RANK[a.priority] ?? 4) - (PRIORITY_RANK[b.priority] ?? 4),
+        )
+        const sTasks = [...tasks.filter((t) => t.initiative === stream.key)].sort(
+          (a, b) => (PRIORITY_RANK[a.priority] ?? 4) - (PRIORITY_RANK[b.priority] ?? 4),
+        )
+        const total = sFocus.length + sTasks.length
+        return (
+          <div key={stream.key} className={`border-2 ${stream.border} bg-white flex flex-col`}>
+            <div className={`${stream.bg} text-white px-4 py-3`}>
+              <h2 className="text-xs font-bold tracking-widest uppercase leading-tight">
+                <span className="mr-1.5">{stream.emoji}</span>
+                {stream.label}
+              </h2>
+              <p className="text-[10px] uppercase tracking-widest text-white/70 mt-0.5">
+                {total} {total === 1 ? 'item' : 'items'}
+              </p>
+            </div>
+            {total === 0 ? (
+              <div className="px-4 py-6 text-center">
+                <p className="text-[11px] text-muted italic">None</p>
+              </div>
+            ) : (
+              <div>
+                {sFocus.map((f) => {
+                  const pCfg = PRIORITY_OPTIONS.find((p) => p.value === f.priority)
+                  return (
+                    <div key={f.id} className="flex items-start gap-1 px-3 py-2 border-t border-black/5 bg-white hover:bg-cream-dark/30 transition-colors">
+                      <button onClick={() => onOpenFocus(f.id)} className="flex-1 min-w-0 text-left">
+                        <p className="text-[12px] font-semibold leading-snug text-black">{f.title}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                          <span className={`text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 ${pCfg?.badge ?? 'bg-black/10 text-black'}`}>
+                            {pCfg?.label ?? f.priority}
+                          </span>
+                          <span className="text-[8px] font-bold uppercase tracking-widest text-muted/60">Focus</span>
+                        </div>
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onPickPerson(f.owner) }}
+                        className="text-[8px] font-bold uppercase tracking-widest text-blue hover:underline shrink-0 mt-0.5"
+                        title={`Open ${f.owner}'s workspace`}
+                      >
+                        {f.owner}
+                      </button>
+                    </div>
+                  )
+                })}
+                {sTasks.map((t) => {
+                  const pCfg = PRIORITY_OPTIONS.find((p) => p.value === t.priority)
+                  const firstAssignee = t.assignee?.split(',')[0]?.trim() || null
+                  return (
+                    <div key={t.id} className="flex items-start gap-1 px-3 py-2 border-t border-black/5 bg-white hover:bg-cream-dark/30 transition-colors">
+                      <button onClick={() => onOpenTask(t.id)} className="flex-1 min-w-0 text-left">
+                        <p className="text-[12px] font-semibold leading-snug text-black">{t.title}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                          <span className={`text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 ${pCfg?.badge ?? 'bg-black/10 text-black'}`}>
+                            {pCfg?.label ?? t.priority}
+                          </span>
+                          {t.deadline && (
+                            <span className="text-[8px] font-bold uppercase tracking-widest text-red">
+                              Due {new Date(t.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                      {firstAssignee && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onPickPerson(firstAssignee) }}
+                          className="text-[8px] font-bold uppercase tracking-widest text-blue hover:underline shrink-0 mt-0.5 truncate max-w-[80px]"
+                          title={`Open ${firstAssignee}'s workspace`}
+                        >
+                          {t.assignee}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+interface PersonWorkspaceProps {
+  person: string
+  personFocus: FocusItem[]
+  personTasks: MasterTask[]
+  priorityFilter: Set<string>
+  focusedStream: string | null
+  setFocusedStream: (s: string | null) => void
+  onOpenFocus: (id: string) => void
+  onOpenTask: (id: string) => void
+  onFocusAdd: (streamKey: string, title: string) => void
+  onGenerateTask: (focusId: string) => void
+  onFocusDelete: (id: string) => void
+}
+
+function PersonWorkspace({
+  person,
+  personFocus,
+  personTasks,
+  priorityFilter,
+  focusedStream,
+  setFocusedStream,
+  onOpenFocus,
+  onOpenTask,
+  onFocusAdd,
+  onGenerateTask,
+  onFocusDelete,
+}: PersonWorkspaceProps) {
+  // Only include streams where this person actually has something
+  const availableStreams = STREAMS.filter((s) =>
+    personFocus.some((f) => f.stream === s.key) || personTasks.some((t) => t.initiative === s.key),
+  )
+
+  // Auto-pick first available stream if none selected or current selection has no activities
+  const activeStreamKey = focusedStream && availableStreams.some((s) => s.key === focusedStream)
+    ? focusedStream
+    : availableStreams[0]?.key ?? null
+
+  const activeStream = activeStreamKey ? STREAMS.find((s) => s.key === activeStreamKey) ?? null : null
+
+  if (availableStreams.length === 0) {
+    return (
+      <div className="border-2 border-black/10 bg-white py-16 text-center">
+        <p className="text-sm text-muted uppercase tracking-widest font-bold">{person} has no focus items or tasks yet.</p>
+      </div>
+    )
+  }
+
+  const apply = <T extends { priority: string }>(arr: T[]) =>
+    priorityFilter.size === 0 ? arr : arr.filter((x) => priorityFilter.has(x.priority))
+
+  const streamFocus = activeStream
+    ? [...apply(personFocus.filter((f) => f.stream === activeStream.key))].sort(
+        (a, b) => (PRIORITY_RANK[a.priority] ?? 4) - (PRIORITY_RANK[b.priority] ?? 4) || a.sort_order - b.sort_order,
+      )
+    : []
+  const streamTasks = activeStream
+    ? [...apply(personTasks.filter((t) => t.initiative === activeStream.key))].sort(
+        (a, b) => (PRIORITY_RANK[a.priority] ?? 4) - (PRIORITY_RANK[b.priority] ?? 4),
+      )
+    : []
+
+  return (
+    <div className="flex gap-5">
+      {/* Left sidebar: stream selector */}
+      <aside className="w-52 shrink-0">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">{person}&apos;s Workstreams</p>
+        <div className="flex flex-col border-2 border-black/10 bg-white">
+          {availableStreams.map((s) => {
+            const fCount = personFocus.filter((f) => f.stream === s.key).length
+            const tCount = personTasks.filter((t) => t.initiative === s.key).length
+            const isActive = s.key === activeStreamKey
+            return (
+              <button
+                key={s.key}
+                onClick={() => setFocusedStream(s.key)}
+                className={`text-left px-3 py-3 border-b border-black/5 last:border-b-0 transition-colors ${
+                  isActive ? `${s.bg} text-white` : 'bg-white text-black hover:bg-cream-dark/30'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold tracking-widest uppercase leading-tight">
+                    <span className="mr-1.5">{s.emoji}</span>
+                    {s.label}
+                  </span>
+                </div>
+                <p className={`text-[10px] uppercase tracking-widest mt-1 ${isActive ? 'text-white/70' : 'text-muted'}`}>
+                  {fCount} focus &middot; {tCount} {tCount === 1 ? 'task' : 'tasks'}
+                </p>
+              </button>
+            )
+          })}
+        </div>
+      </aside>
+
+      {/* Right: active stream detail */}
+      <div className="flex-1 min-w-0">
+        {activeStream ? (
+          <PersonStreamPanel
+            stream={activeStream}
+            focus={streamFocus}
+            tasks={streamTasks}
+            onOpenFocus={onOpenFocus}
+            onOpenTask={onOpenTask}
+            onFocusAdd={(title) => onFocusAdd(activeStream.key, title)}
+            onGenerateTask={onGenerateTask}
+            onFocusDelete={onFocusDelete}
+          />
+        ) : (
+          <div className="border-2 border-black/10 bg-white py-16 text-center">
+            <p className="text-sm text-muted uppercase tracking-widest font-bold">Pick a workstream</p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+interface PersonStreamPanelProps {
+  stream: (typeof STREAMS)[number]
+  focus: FocusItem[]
+  tasks: MasterTask[]
+  onOpenFocus: (id: string) => void
+  onOpenTask: (id: string) => void
+  onFocusAdd: (title: string) => void
+  onGenerateTask: (focusId: string) => void
+  onFocusDelete: (id: string) => void
+}
+
+function PersonStreamPanel({ stream, focus, tasks, onOpenFocus, onOpenTask, onFocusAdd, onGenerateTask, onFocusDelete }: PersonStreamPanelProps) {
+  const [newTitle, setNewTitle] = useState('')
+  return (
+    <div className={`border-2 ${stream.border} bg-white`}>
+      <div className={`${stream.bg} text-white px-6 py-5`}>
+        <h2 className="text-xl font-bold tracking-widest uppercase leading-tight">
+          <span className="mr-2">{stream.emoji}</span>
+          {stream.label}
+        </h2>
+        <p className="text-[11px] uppercase tracking-widest text-white/70 mt-1">
+          {focus.length} focus &middot; {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}
+        </p>
+      </div>
+
+      <div className="px-6 py-4 bg-cream-dark/40 border-b border-black/10">
+        <input
+          type="text"
+          value={newTitle}
+          onChange={(e) => setNewTitle(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && newTitle.trim()) {
+              onFocusAdd(newTitle)
+              setNewTitle('')
+            }
+          }}
+          placeholder="Brain dump a new focus item..."
+          className="w-full border-2 border-black/20 bg-white px-4 py-2.5 text-sm text-black focus:outline-none focus:border-black placeholder:text-muted/40"
+        />
+      </div>
+
+      <div className="px-6 py-3 bg-black/5 border-b border-black/10 flex items-center justify-between">
+        <span className="text-[11px] font-bold uppercase tracking-widest text-black">Focus Items</span>
+        <span className="text-[11px] uppercase tracking-widest text-muted">{focus.length}</span>
+      </div>
+      {focus.length === 0 ? (
+        <div className="px-6 py-6 text-center">
+          <p className="text-sm text-muted italic">No focus items</p>
+        </div>
+      ) : (
+        <div>
+          {focus.map((f) => {
+            const pCfg = PRIORITY_OPTIONS.find((p) => p.value === f.priority)
+            return (
+              <div key={f.id} className="flex items-start gap-3 px-6 py-3 border-t border-black/5 bg-white hover:bg-cream-dark/30 transition-colors">
+                <button onClick={() => onOpenFocus(f.id)} className="flex-1 min-w-0 text-left">
+                  <p className="text-[15px] font-semibold leading-snug text-black">{f.title}</p>
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 ${pCfg?.badge ?? 'bg-black/10 text-black'}`}>
+                      {pCfg?.label ?? f.priority}
+                    </span>
+                    {f.master_task_id ? (
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-green">Task &#10003;</span>
+                    ) : (
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-muted/60">Focus</span>
+                    )}
+                    {(f.comments?.length ?? 0) > 0 && (
+                      <span className="text-[10px] uppercase tracking-widest text-muted/60">
+                        {f.comments.length} {f.comments.length === 1 ? 'comment' : 'comments'}
+                      </span>
+                    )}
+                    {f.notes && (
+                      <span className="text-[11px] text-muted truncate max-w-md">&mdash; {f.notes}</span>
+                    )}
+                  </div>
+                </button>
+                {!f.master_task_id && (
+                  <button
+                    onClick={() => onGenerateTask(f.id)}
+                    className="text-[10px] font-bold uppercase tracking-widest text-blue hover:text-white hover:bg-blue border border-blue/40 px-2 py-1 shrink-0 transition-colors"
+                    title="Generate a master task from this focus item"
+                  >
+                    &#x2192; Task
+                  </button>
+                )}
+                <button
+                  onClick={() => onFocusDelete(f.id)}
+                  className="text-muted/30 hover:text-red text-xl font-bold shrink-0 w-6 h-6 flex items-center justify-center"
+                  title="Delete"
+                >
+                  &times;
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      <div className="px-6 py-3 bg-black/5 border-t border-b border-black/10 flex items-center justify-between">
+        <span className="text-[11px] font-bold uppercase tracking-widest text-black">Tasks</span>
+        <span className="text-[11px] uppercase tracking-widest text-muted">{tasks.length}</span>
+      </div>
+      {tasks.length === 0 ? (
+        <div className="px-6 py-6 text-center">
+          <p className="text-sm text-muted italic">No tasks</p>
+        </div>
+      ) : (
+        <div>
+          {tasks.map((t) => {
+            const pCfg = PRIORITY_OPTIONS.find((p) => p.value === t.priority)
+            return (
+              <button
+                key={t.id}
+                onClick={() => onOpenTask(t.id)}
+                className="block w-full text-left px-6 py-3 border-t border-black/5 bg-white hover:bg-cream-dark/40 transition-colors"
+              >
+                <p className="text-[15px] font-semibold leading-snug text-black">{t.title}</p>
+                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                  <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 ${pCfg?.badge ?? 'bg-black/10 text-black'}`}>
+                    {pCfg?.label ?? t.priority}
+                  </span>
+                  <span className="text-[10px] uppercase tracking-widest text-muted/70">
+                    {STATUS_LABELS[t.status] ?? t.status}
+                  </span>
+                  {t.deadline && (
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-red">
+                      Due {new Date(t.deadline + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </span>
+                  )}
+                  {t.overview && (
+                    <span className="text-[11px] text-muted truncate max-w-md">&mdash; {t.overview}</span>
+                  )}
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
