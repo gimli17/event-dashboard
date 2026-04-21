@@ -28,6 +28,14 @@ const PRIORITY_RANK: Record<string, number> = { 'ultra-high': 0, high: 1, medium
 const STATUS_OPTIONS = ['not-started', 'in-progress', 'review', 'blocked', 'complete'] as const
 
 const makeId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+
+// If the stored content already contains HTML tags leave it; otherwise convert
+// plain-text newlines to <br> so the contentEditable div preserves line breaks.
+const plainToHtml = (text: string): string => {
+  if (!text) return ''
+  if (/<\/?[a-z][\s\S]*>/i.test(text)) return text
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')
+}
 const STATUS_LABELS: Record<string, string> = {
   'not-started': 'Not Started',
   'in-progress': 'In Progress',
@@ -823,33 +831,50 @@ function TaskDrawer({ task, stream, milestones, currentUser, onClose, onUpdate, 
 
           {/* Task Detail (merged current_status + action_items) */}
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-1.5">Task Detail</p>
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Task Detail</p>
+              {editingDetail && (
+                <p className="text-[9px] uppercase tracking-widest text-muted/60">
+                  ⌘B bold &middot; ⌘I italic &middot; ⌘U underline
+                </p>
+              )}
+            </div>
             {editingDetail ? (
-              <textarea
-                value={detailDraft}
-                onChange={(e) => setDetailDraft(e.target.value)}
-                onBlur={() => {
-                  if (detailDraft !== (task.current_status || task.action_items || '')) onUpdate(task.id, { current_status: detailDraft || null })
+              <div
+                contentEditable
+                suppressContentEditableWarning
+                ref={(el) => {
+                  if (el && !el.dataset.initialized) {
+                    el.innerHTML = plainToHtml(task.current_status || task.action_items || '')
+                    el.focus()
+                    el.dataset.initialized = 'true'
+                  }
+                }}
+                onBlur={(e) => {
+                  const html = e.currentTarget.innerHTML
+                  if (html !== (task.current_status || task.action_items || '')) {
+                    onUpdate(task.id, { current_status: html || null })
+                  }
                   setEditingDetail(false)
                 }}
-                onKeyDown={(e) => { if (e.key === 'Escape') { setDetailDraft(task.current_status || task.action_items || ''); setEditingDetail(false) } }}
-                autoFocus
-                rows={10}
-                placeholder="Status, context, next steps, anything relevant..."
-                className="w-full border-2 border-black bg-cream-dark/40 px-4 py-3 text-sm leading-relaxed text-black focus:outline-none focus:border-blue focus:bg-white resize-y"
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    e.currentTarget.blur()
+                    setEditingDetail(false)
+                  }
+                }}
+                className="w-full min-h-[200px] border-2 border-black bg-cream-dark/40 focus:bg-white px-4 py-3 text-sm leading-relaxed text-black focus:outline-none focus:border-blue"
               />
             ) : (
               <button
-                onClick={() => {
-                  setDetailDraft(task.current_status || task.action_items || '')
-                  setEditingDetail(true)
-                }}
+                onClick={() => setEditingDetail(true)}
                 className="flex items-start w-full text-left bg-cream-dark/40 border-2 border-black/10 hover:border-black/30 px-4 py-3 min-h-[200px] transition-colors"
               >
                 {task.current_status || task.action_items ? (
-                  <div className="text-sm leading-relaxed whitespace-pre-wrap text-black/80 w-full">
-                    {(task.current_status || task.action_items || '').replace(/<[^>]+>/g, '').trim()}
-                  </div>
+                  <div
+                    className="text-sm leading-relaxed text-black/80 w-full"
+                    dangerouslySetInnerHTML={{ __html: plainToHtml(task.current_status || task.action_items || '') }}
+                  />
                 ) : (
                   <span className="text-sm text-muted/50 italic">Click to add task detail…</span>
                 )}
