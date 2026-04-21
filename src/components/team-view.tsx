@@ -327,8 +327,10 @@ export function TeamView() {
           <span className="inline-block w-px bg-black/10 mx-1" aria-hidden="true" />
           {orderedMembers.map((name) => {
             const isActive = name === selectedPerson
-            const tCount = tasks.filter((t) => t.assignee?.includes(name)).length
-            const fCount = focusItems.filter((f) => f.owner === name && !f.completed && !f.master_task_id).length
+            const passes = <T extends { priority: string }>(x: T) =>
+              priorityFilter.size === 0 || priorityFilter.has(x.priority)
+            const tCount = tasks.filter((t) => t.assignee?.includes(name) && passes(t)).length
+            const fCount = focusItems.filter((f) => f.owner === name && !f.completed && !f.master_task_id && passes(f)).length
             if (tCount + fCount === 0) return null
             return (
               <button
@@ -1579,8 +1581,8 @@ function PersonWorkspace({
         <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">{person}&apos;s Workstreams</p>
         <div className="flex flex-col border-2 border-black/10 bg-white">
           {availableStreams.map((s) => {
-            const fCount = personFocus.filter((f) => f.stream === s.key).length
-            const tCount = personTasks.filter((t) => t.initiative === s.key).length
+            const fCount = apply(personFocus.filter((f) => f.stream === s.key)).length
+            const tCount = apply(personTasks.filter((t) => t.initiative === s.key)).length
             const isActive = s.key === activeStreamKey
             return (
               <button
