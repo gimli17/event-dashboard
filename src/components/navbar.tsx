@@ -18,7 +18,6 @@ interface SearchResult {
 export function Navbar({ initiative }: { initiative?: InitiativeKey } = {}) {
   const sidebar = useSidebar()
   const router = useRouter()
-  const [reviewCount, setReviewCount] = useState(0)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
@@ -26,17 +25,6 @@ export function Navbar({ initiative }: { initiative?: InitiativeKey } = {}) {
   const [selectedIdx, setSelectedIdx] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  useEffect(() => {
-    async function fetchCount() {
-      const { count } = await supabase
-        .from('master_tasks')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'review')
-      setReviewCount(count || 0)
-    }
-    fetchCount()
-  }, [])
 
   // Keyboard shortcut: Cmd+K or Ctrl+K
   useEffect(() => {
@@ -233,13 +221,8 @@ export function Navbar({ initiative }: { initiative?: InitiativeKey } = {}) {
             <Link href="/" className="text-xs font-bold tracking-widest uppercase hover:text-cream transition-colors">
               Hub
             </Link>
-            <Link href="/team" className="text-xs font-bold tracking-widest uppercase bg-purple-light/30 hover:bg-purple-light/50 px-3 py-1.5 transition-colors relative">
+            <Link href="/team" className="text-xs font-bold tracking-widest uppercase bg-purple-light/30 hover:bg-purple-light/50 px-3 py-1.5 transition-colors">
               Team Workspace
-              {reviewCount > 0 && (
-                <span className="absolute -top-2 -right-3 bg-red text-white text-[9px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
-                  {reviewCount}
-                </span>
-              )}
             </Link>
             {/* Hamburger menu */}
             <button
