@@ -922,10 +922,10 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
                                     const seed = task.current_status || task.action_items || null
                                     startEditing(task.id, 'current_status', seed)
                                   }}
-                                  className="w-full text-left bg-cream-dark/40 border-2 border-black/10 hover:border-black/30 px-4 py-3 min-h-[180px] transition-colors"
+                                  className="flex items-start w-full text-left bg-cream-dark/40 border-2 border-black/10 hover:border-black/30 px-4 py-3 min-h-[180px] transition-colors"
                                 >
                                   {task.current_status || task.action_items ? (
-                                    <div className="text-sm leading-relaxed whitespace-pre-wrap text-black/80">
+                                    <div className="text-sm leading-relaxed whitespace-pre-wrap text-black/80 w-full">
                                       {(task.current_status || task.action_items || '').replace(/<[^>]+>/g, '').trim()}
                                     </div>
                                   ) : (
