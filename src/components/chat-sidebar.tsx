@@ -371,7 +371,7 @@ export function ChatSidebar() {
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b-4 border-black bg-black text-cream">
-          <h2 className="text-sm font-bold uppercase tracking-widest">Boulder Roots</h2>
+          <h2 className="text-sm font-bold uppercase tracking-widest">Caruso Ventures</h2>
           <button onClick={() => sidebar.closeSidebar()} className="text-cream hover:text-red text-lg font-bold">&times;</button>
         </div>
 
