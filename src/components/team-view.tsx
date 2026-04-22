@@ -133,6 +133,11 @@ export function TeamView() {
       setLoading(false)
     }
     fetchAll()
+
+    // Refresh when another component (e.g. Quick Add) creates a task
+    const onChange = () => { fetchAll() }
+    window.addEventListener('master-tasks-changed', onChange)
+    return () => window.removeEventListener('master-tasks-changed', onChange)
   }, [])
 
   // Preserve the explicit ALL_TEAM_MEMBERS ordering

@@ -279,6 +279,9 @@ export function ChatSidebar() {
     const eventName = linkedEvent ? events.find((ev) => ev.id === linkedEvent)?.title : null
     setTaskSuccess(eventName ? `Created & linked to ${eventName}` : 'Task created')
 
+    // Tell any open task views to refresh so the new task appears instantly
+    window.dispatchEvent(new CustomEvent('master-tasks-changed'))
+
     await supabase.from('comments').insert({
       author: displayName,
       message: `Created: "${taskTitle.trim()}"${taskAssignee ? ` → ${taskAssignee}` : ''}${eventName ? ` [${eventName}]` : ''}`,

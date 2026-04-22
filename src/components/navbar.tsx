@@ -227,6 +227,9 @@ export function Navbar({ initiative }: { initiative?: InitiativeKey } = {}) {
             <Link href="/tasks" className="text-xs font-bold tracking-widest uppercase bg-purple-light/30 hover:bg-purple-light/50 px-3 py-1.5 transition-colors">
               Master Task List
             </Link>
+            <Link href="/brain-dump" className="text-xs font-bold tracking-widest uppercase bg-purple-light/30 hover:bg-purple-light/50 px-3 py-1.5 transition-colors">
+              Brain Dump
+            </Link>
             {/* Hamburger menu */}
             <button
               onClick={() => setMenuOpen(!menuOpen)}
