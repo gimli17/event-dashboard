@@ -1,10 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Navbar } from '@/components/navbar'
 import { BackLink } from '@/components/back-link'
 import { SidebarButtons } from '@/components/sidebar-buttons'
 import { useUser } from '@/components/user-provider'
+
+// Minimal typing for the Web Speech API (not in the default DOM lib)
+interface SR {
+  continuous: boolean
+  interimResults: boolean
+  lang: string
+  onresult: ((e: { resultIndex: number; results: { [i: number]: { transcript: string }; isFinal: boolean; length: number }[] & { length: number } }) => void) | null
+  onerror: ((e: { error?: string }) => void) | null
+  onend: (() => void) | null
+  start: () => void
+  stop: () => void
+  abort: () => void
+}
 
 interface ParsedOperation {
   action: string
@@ -31,6 +44,66 @@ export default function BrainDumpPage() {
   const [applying, setApplying] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [log, setLog] = useState<string[]>([])
+
+  // Speech-to-text
+  const [sttSupported, setSttSupported] = useState(false)
+  const [recording, setRecording] = useState(false)
+  const [interim, setInterim] = useState('')
+  const recognitionRef = useRef<SR | null>(null)
+
+  useEffect(() => {
+    const w = window as unknown as { SpeechRecognition?: new () => SR; webkitSpeechRecognition?: new () => SR }
+    if (w.SpeechRecognition || w.webkitSpeechRecognition) setSttSupported(true)
+  }, [])
+
+  const stopRecording = () => {
+    recognitionRef.current?.stop()
+  }
+
+  const startRecording = () => {
+    const w = window as unknown as { SpeechRecognition?: new () => SR; webkitSpeechRecognition?: new () => SR }
+    const Ctor = w.SpeechRecognition || w.webkitSpeechRecognition
+    if (!Ctor) return
+    const rec = new Ctor()
+    rec.continuous = true
+    rec.interimResults = true
+    rec.lang = 'en-US'
+    rec.onresult = (e) => {
+      let finalAdd = ''
+      let interimBuf = ''
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const r = e.results[i] as { [k: number]: { transcript: string }; isFinal: boolean }
+        if (r.isFinal) finalAdd += r[0].transcript
+        else interimBuf += r[0].transcript
+      }
+      if (finalAdd) {
+        setText((prev) => {
+          const sep = !prev || prev.endsWith(' ') || prev.endsWith('\n') ? '' : ' '
+          return prev + sep + finalAdd.trim()
+        })
+      }
+      setInterim(interimBuf)
+    }
+    rec.onerror = (e) => {
+      const msg = e?.error === 'not-allowed' ? 'Microphone permission denied.' : e?.error ? `Mic error: ${e.error}` : null
+      if (msg) setError(msg)
+      setRecording(false)
+      setInterim('')
+    }
+    rec.onend = () => {
+      setRecording(false)
+      setInterim('')
+    }
+    recognitionRef.current = rec
+    rec.start()
+    setRecording(true)
+    setError(null)
+  }
+
+  const toggleMic = () => {
+    if (recording) stopRecording()
+    else startRecording()
+  }
 
   const handleProcess = async () => {
     if (!text.trim()) return
@@ -105,16 +178,45 @@ export default function BrainDumpPage() {
       <section className="bg-cream flex-1">
         <div className="max-w-4xl mx-auto px-6 py-8 space-y-5">
           <div>
-            <label className="text-[10px] font-bold uppercase tracking-widest text-muted block mb-2">
-              What&apos;s on your mind?
-            </label>
-            <textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="Example: 'Reassign the sponsor funnel task from Dan to Sabrina. Create a new task for Cody to pressure-test the LLC structure due Friday. Mark the logo concepts task as done.'"
-              rows={10}
-              className="w-full border-2 border-black bg-white px-4 py-3 text-sm leading-relaxed text-black focus:outline-none focus:border-blue resize-y"
-            />
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted">
+                What&apos;s on your mind?
+              </label>
+              {sttSupported && (
+                <button
+                  type="button"
+                  onClick={toggleMic}
+                  className={`inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 transition-colors ${
+                    recording
+                      ? 'bg-red text-white animate-pulse'
+                      : 'bg-white border-2 border-black/20 hover:border-black text-black'
+                  }`}
+                  title={recording ? 'Stop recording' : 'Dictate with your microphone'}
+                >
+                  <span className={`inline-block w-2 h-2 rounded-full ${recording ? 'bg-white' : 'bg-red'}`} />
+                  {recording ? 'Stop' : 'Dictate'}
+                </button>
+              )}
+            </div>
+            <div className="relative">
+              <textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Example: 'Reassign the sponsor funnel task from Dan to Sabrina. Create a new task for Cody to pressure-test the LLC structure due Friday. Mark the logo concepts task as done.'"
+                rows={10}
+                className="w-full border-2 border-black bg-white px-4 py-3 text-sm leading-relaxed text-black focus:outline-none focus:border-blue resize-y"
+              />
+              {recording && interim && (
+                <div className="absolute bottom-2 left-2 right-2 bg-black/80 text-white text-[11px] px-3 py-1.5 italic">
+                  {interim}
+                </div>
+              )}
+            </div>
+            {!sttSupported && (
+              <p className="text-[10px] text-muted mt-1 italic">
+                Voice dictation requires Chrome, Edge, or Safari.
+              </p>
+            )}
             <div className="flex items-center gap-2 mt-3">
               <button
                 onClick={handleProcess}
