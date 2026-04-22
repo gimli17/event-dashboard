@@ -10,8 +10,11 @@ const SYSTEM_PROMPT = `You are an AI assistant for the Caruso Ventures operation
 
 Available tables and their key fields:
 
-MASTER_TASKS:
-- id (text), title (text), assignee (text, nullable), priority (text: ultra-high, high, medium, low, backlog), status (text: not-started, in-progress, review, blocked, complete), deadline (text, nullable), initiative (text: brmf, bold-summit, ensuring-colorado, investments, loud-bear), milestone_id (text, nullable), deleted_at (timestamptz, nullable)
+MASTER_TASKS (real project tasks, assigned to a person):
+- id (text), title (text), assignee (text, nullable), executive_lead (text: Cody/Joe/Sabrina, nullable), priority (text: ultra-high, high, medium, low, backlog), status (text: not-started, in-progress, review, blocked, complete), deadline (text YYYY-MM-DD, nullable), current_status (text — task detail/status body, nullable), dan_comments (text, nullable), links (text, nullable), initiative (text: brmf, bold-summit, ensuring-colorado, investments, loud-bear), milestone_id (text, nullable), deleted_at (timestamptz, nullable)
+
+DAILY_PRIORITIES (lightweight personal notes / brain dumps, not yet tasks):
+- id (text), owner (text — team member name), title (text), stream (text: brmf, bold-summit, ensuring-colorado, investments, loud-bear, nullable), priority (text: ultra-high, high, medium, low, backlog), deadline (text YYYY-MM-DD, nullable), notes (text, nullable), completed (boolean), master_task_id (text, nullable — set when promoted to a task), deleted_at (timestamptz, nullable)
 
 MILESTONES:
 - id (text), title (text), initiative (text), target_date (text), sort_order (int)
@@ -22,19 +25,16 @@ EVENTS:
 BULLETIN_NOTES:
 - id (text), title (text), body (text), author (text)
 
-ACTIVITY_LOG:
-- id (text), actor (text), action (text), target_type (text), target_id (text), target_title (text), details (text)
+Team members (valid assignee/owner values): Cody, Sabrina, Joe, Bryan, Connor, Gib, Emily, Kendall, Alex, Liam
 
-Team members: Cody, Sabrina, Joe, Danny, Connor, Gib, Emily, Kendall, Alex, Liam, Dave, Tom, Kevin
-
-Respond ONLY with valid JSON in this exact format:
+Respond with ONLY a JSON object in this exact shape — no prose, no markdown fences, no commentary:
 {
   "type": "query" | "mutation" | "answer",
   "confirmation": "Human-readable description of what will happen",
   "operations": [
     {
       "action": "select" | "update" | "insert" | "delete",
-      "table": "master_tasks" | "milestones" | "events" | "bulletin_notes",
+      "table": "master_tasks" | "daily_priorities" | "milestones" | "events" | "bulletin_notes",
       "filters": { "column": "value" },
       "filterType": "eq" | "ilike",
       "updates": { "column": "value" },
@@ -45,14 +45,42 @@ Respond ONLY with valid JSON in this exact format:
   "answer": "For query-type responses, the answer text to show"
 }
 
-For queries (like "how many tasks does Joe have?"), use type "query" with a select operation.
-For mutations (like "mark X as done"), use type "mutation" with update/insert/delete operations.
-For questions you can answer from context (like "what priorities are available?"), use type "answer".
+Guidance:
+- "Send X a note / remind X / leave a message for X in their workspace" → insert into daily_priorities with owner=X, title=<the note text>, stream=<best-guess initiative if implied>. Set priority to 'medium' unless user specifies urgency.
+- "Create a task for X" / "Assign X to do …" → insert into master_tasks with assignee=X, title=…, initiative=<best-guess or default brmf>, priority/deadline as specified.
+- "Mark X as done" → update master_tasks where title ilike '%X%' set status='complete'.
+- "Reassign task X to Y" → update master_tasks where title ilike '%X%' set assignee='Y'.
+- "Change priority of X to high" → update master_tasks where title ilike '%X%' set priority='high'.
+- Delete (except daily_priorities): set deleted_at to current ISO timestamp instead of hard delete.
+- Match by title with ilike '%term%' for fuzziness.
+- Include a concise confirmation field.
+- NEVER output anything outside the JSON object — no backticks, no "Here is the JSON:", nothing.`
 
-When matching tasks by title, use ilike filterType for fuzzy matching with % wildcards.
-When deleting tasks, set deleted_at to the current timestamp instead of actually deleting.
-Always include the confirmation field describing what will happen.
-Do NOT include any text outside the JSON object.`
+// Pull the first balanced {...} block out of any response, in case the model
+// wraps it in prose or markdown fences despite instructions.
+function extractJsonBlock(text: string): string | null {
+  if (!text) return null
+  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/i)
+  if (fence?.[1]) return fence[1].trim()
+  const start = text.indexOf('{')
+  if (start === -1) return null
+  let depth = 0
+  let inString = false
+  let escaped = false
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i]
+    if (escaped) { escaped = false; continue }
+    if (ch === '\\') { escaped = true; continue }
+    if (ch === '"') { inString = !inString; continue }
+    if (inString) continue
+    if (ch === '{') depth++
+    else if (ch === '}') {
+      depth--
+      if (depth === 0) return text.slice(start, i + 1)
+    }
+  }
+  return null
+}
 
 export async function POST(req: Request) {
   try {
@@ -88,10 +116,11 @@ export async function POST(req: Request) {
     const text = aiData.content?.[0]?.text || ''
 
     let parsed
+    const jsonBlock = extractJsonBlock(text)
     try {
-      parsed = JSON.parse(text)
+      parsed = JSON.parse(jsonBlock ?? text)
     } catch {
-      return NextResponse.json({ error: 'Could not interpret command', raw: text })
+      return NextResponse.json({ error: 'Could not interpret command. Try rephrasing or being more specific.', raw: text })
     }
 
     // If not executing yet, return the interpretation for confirmation
@@ -104,7 +133,7 @@ export async function POST(req: Request) {
 
     for (const op of parsed.operations || []) {
       const table = op.table
-      if (!['master_tasks', 'milestones', 'events', 'bulletin_notes'].includes(table)) {
+      if (!['master_tasks', 'daily_priorities', 'milestones', 'events', 'bulletin_notes'].includes(table)) {
         results.push(`Skipped invalid table: ${table}`)
         continue
       }
@@ -156,7 +185,7 @@ export async function POST(req: Request) {
       }
 
       if (op.action === 'delete') {
-        if (table === 'master_tasks') {
+        if (table === 'master_tasks' || table === 'daily_priorities') {
           // Soft delete
           let query = supabase.from(table).update({ deleted_at: new Date().toISOString() } as never)
           for (const [col, val] of Object.entries(op.filters || {})) {
