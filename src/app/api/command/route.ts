@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { emailForTeamMember, slackUserIdByEmail, slackDm } from '@/lib/slack'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -32,6 +33,7 @@ Respond with ONLY a JSON object in this exact shape — no prose, no markdown fe
   "type": "query" | "mutation" | "answer",
   "confirmation": "Human-readable description of what will happen",
   "operations": [
+    // Database operation:
     {
       "action": "select" | "update" | "insert" | "delete",
       "table": "master_tasks" | "daily_priorities" | "milestones" | "events" | "bulletin_notes",
@@ -41,13 +43,17 @@ Respond with ONLY a JSON object in this exact shape — no prose, no markdown fe
       "insertData": { "column": "value" },
       "select": "column1, column2"
     }
+    // -- OR --
+    // Slack DM operation:
+    // { "action": "slack_dm", "to": "Cody", "message": "Please review the partnership doc" }
   ],
   "answer": "For query-type responses, the answer text to show"
 }
 
 Guidance:
-- "Send X a note / remind X / leave a message for X in their workspace" → insert into daily_priorities with owner=X, title=<the note text>, stream=<best-guess initiative if implied>. Set priority to 'medium' unless user specifies urgency.
-- "Create a task for X" / "Assign X to do …" → insert into master_tasks with assignee=X, title=…, initiative=<best-guess or default brmf>, priority/deadline as specified.
+- "Send X a Slack / ping X / Slack X to say …" → operation with action='slack_dm', to=<name>, message=<the message text>. Do NOT also create a task or note unless user explicitly asks for one.
+- "Send X a note / remind X / leave a message for X in their workspace" → insert into daily_priorities with owner=X, title=<the note text>, stream=<best-guess initiative if implied>. Set priority='medium' unless urgency is specified.
+- "Create a task for X" / "Assign X to do …" / "Add a new task to <Initiative> re <...>" → insert into master_tasks with assignee=X (if specified), title=…, initiative=<map to key: brmf | bold-summit | ensuring-colorado | investments | loud-bear>, priority/deadline as specified. Map 'Boulder Roots' → brmf, 'Bold Summit' → bold-summit, 'Engage Colorado'/'Ensuring Colorado' → ensuring-colorado, 'Investments' → investments, 'Loud Bear' → loud-bear.
 - "Mark X as done" → update master_tasks where title ilike '%X%' set status='complete'.
 - "Reassign task X to Y" → update master_tasks where title ilike '%X%' set assignee='Y'.
 - "Change priority of X to high" → update master_tasks where title ilike '%X%' set priority='high'.
@@ -132,6 +138,22 @@ export async function POST(req: Request) {
     const results: string[] = []
 
     for (const op of parsed.operations || []) {
+      // Slack DM operation (no table)
+      if (op.action === 'slack_dm') {
+        const to = (op.to || '').trim()
+        const message = (op.message || '').trim()
+        if (!to || !message) { results.push('Slack DM skipped: missing to/message'); continue }
+        const email = emailForTeamMember(to)
+        if (!email) { results.push(`Slack DM skipped: no email mapping for ${to}`); continue }
+        const uid = await slackUserIdByEmail(email)
+        if (!uid) { results.push(`Slack DM skipped: no Slack user for ${email}`); continue }
+        const actor = userName || 'Someone'
+        const sent = await slackDm(uid, `💬 *From ${actor}*\n${message}`)
+        if (sent.ok) results.push(`Slack DM sent to ${to}`)
+        else results.push(`Slack error (${to}): ${sent.error}`)
+        continue
+      }
+
       const table = op.table
       if (!['master_tasks', 'daily_priorities', 'milestones', 'events', 'bulletin_notes'].includes(table)) {
         results.push(`Skipped invalid table: ${table}`)

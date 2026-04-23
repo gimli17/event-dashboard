@@ -10,6 +10,18 @@ interface InterpretedCommand {
   answer?: string
 }
 
+// Minimal Web Speech API typing
+interface SR {
+  continuous: boolean
+  interimResults: boolean
+  lang: string
+  onresult: ((e: { resultIndex: number; results: { [i: number]: { transcript: string }; isFinal: boolean; length: number }[] & { length: number } }) => void) | null
+  onerror: ((e: { error?: string }) => void) | null
+  onend: (() => void) | null
+  start: () => void
+  stop: () => void
+}
+
 export function CommandBar() {
   const { displayName } = useUser()
   const [open, setOpen] = useState(false)
@@ -19,11 +31,63 @@ export function CommandBar() {
   const [result, setResult] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [history, setHistory] = useState<{ command: string; result: string }[]>([])
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
+
+  // Speech-to-text
+  const [sttSupported, setSttSupported] = useState(false)
+  const [recording, setRecording] = useState(false)
+  const [interim, setInterim] = useState('')
+  const recognitionRef = useRef<SR | null>(null)
 
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 50)
   }, [open])
+
+  useEffect(() => {
+    const w = window as unknown as { SpeechRecognition?: new () => SR; webkitSpeechRecognition?: new () => SR }
+    if (w.SpeechRecognition || w.webkitSpeechRecognition) setSttSupported(true)
+  }, [])
+
+  const startRecording = () => {
+    const w = window as unknown as { SpeechRecognition?: new () => SR; webkitSpeechRecognition?: new () => SR }
+    const Ctor = w.SpeechRecognition || w.webkitSpeechRecognition
+    if (!Ctor) return
+    const rec = new Ctor()
+    rec.continuous = true
+    rec.interimResults = true
+    rec.lang = 'en-US'
+    rec.onresult = (e) => {
+      let finalAdd = ''
+      let interimBuf = ''
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const r = e.results[i] as { [k: number]: { transcript: string }; isFinal: boolean }
+        if (r.isFinal) finalAdd += r[0].transcript
+        else interimBuf += r[0].transcript
+      }
+      if (finalAdd) {
+        setInput((prev) => {
+          const sep = !prev || prev.endsWith(' ') || prev.endsWith('\n') ? '' : ' '
+          return prev + sep + finalAdd.trim()
+        })
+      }
+      setInterim(interimBuf)
+    }
+    rec.onerror = (e) => {
+      if (e?.error === 'not-allowed') setError('Microphone permission denied.')
+      setRecording(false)
+      setInterim('')
+    }
+    rec.onend = () => { setRecording(false); setInterim('') }
+    recognitionRef.current = rec
+    rec.start()
+    setRecording(true)
+    setError(null)
+  }
+
+  const toggleMic = () => {
+    if (recording) recognitionRef.current?.stop()
+    else startRecording()
+  }
 
   const handleInterpret = async () => {
     if (!input.trim() || loading) return
@@ -44,7 +108,7 @@ export function CommandBar() {
         setError(data.error)
       } else if (data.interpreted) {
         setInterpreted(data.interpreted)
-        // Auto-execute queries and answers
+        // Auto-execute pure queries and answers (safe, read-only)
         if (data.interpreted.type === 'query' || data.interpreted.type === 'answer') {
           handleExecute(data.interpreted)
         }
@@ -56,6 +120,7 @@ export function CommandBar() {
   }
 
   const handleExecute = async (cmd?: InterpretedCommand) => {
+    void cmd
     setLoading(true)
     try {
       const res = await fetch('/api/command', {
@@ -70,9 +135,11 @@ export function CommandBar() {
       } else {
         const msg = data.answer || data.confirmation || 'Done'
         setResult(msg)
-        setHistory(prev => [{ command: input.trim(), result: msg }, ...prev].slice(0, 10))
+        setHistory((prev) => [{ command: input.trim(), result: msg }, ...prev].slice(0, 10))
         setInterpreted(null)
         setInput('')
+        // Tell open task views to refresh (matches the Quick Add + Notion paths)
+        window.dispatchEvent(new CustomEvent('master-tasks-changed'))
       }
     } catch (e) {
       setError(String(e))
@@ -87,6 +154,7 @@ export function CommandBar() {
   }
 
   const handleClose = () => {
+    if (recording) recognitionRef.current?.stop()
     setOpen(false)
     setInput('')
     setInterpreted(null)
@@ -111,21 +179,39 @@ export function CommandBar() {
       {open && (
         <div className="fixed inset-0 z-50 flex items-end justify-end p-6" onClick={handleClose}>
           <div
-            className="w-full max-w-md bg-white border-2 border-black shadow-2xl flex flex-col max-h-[70vh]"
-            onClick={e => e.stopPropagation()}
+            className="w-full max-w-2xl bg-white border-2 border-black shadow-2xl flex flex-col max-h-[85vh]"
+            onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div className="bg-purple-dark text-white px-5 py-3 flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-widest">AI Command</h3>
-              <button onClick={handleClose} className="text-white/60 hover:text-white text-lg">&times;</button>
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-widest">AI Command</h3>
+                <p className="text-[10px] uppercase tracking-widest text-white/60 mt-0.5">
+                  Create tasks, ping teammates, update fields — natural language
+                </p>
+              </div>
+              <button onClick={handleClose} className="text-white/60 hover:text-white text-lg shrink-0">&times;</button>
             </div>
+
+            {/* Examples hint */}
+            {!history.length && !interpreted && !result && !error && (
+              <div className="px-5 py-3 bg-cream-dark/30 border-b border-black/10 text-[11px] leading-relaxed text-black/70">
+                <p className="font-bold uppercase tracking-widest text-[9px] text-muted mb-1.5">Try</p>
+                <ul className="space-y-1">
+                  <li>&middot; &ldquo;Send a slack to Cody telling him to review the partnership doc&rdquo;</li>
+                  <li>&middot; &ldquo;Add a new task to Boulder Roots re final sponsor outreach, assign Sabrina, due Friday&rdquo;</li>
+                  <li>&middot; &ldquo;Mark the RMP logo concepts task as done&rdquo;</li>
+                  <li>&middot; &ldquo;How many open tasks does Joe have?&rdquo;</li>
+                </ul>
+              </div>
+            )}
 
             {/* History */}
             {history.length > 0 && (
-              <div className="max-h-40 overflow-y-auto border-b-2 border-black/10">
+              <div className="max-h-32 overflow-y-auto border-b-2 border-black/10 bg-cream-dark/20">
                 {history.map((h, i) => (
-                  <div key={i} className="px-5 py-2.5 border-b border-black/5">
-                    <p className="text-[10px] font-bold text-muted uppercase tracking-wider">{h.command}</p>
+                  <div key={i} className="px-5 py-2 border-b border-black/5">
+                    <p className="text-[10px] font-bold text-muted uppercase tracking-wider truncate">{h.command}</p>
                     <p className="text-xs mt-0.5">{h.result}</p>
                   </div>
                 ))}
@@ -148,8 +234,18 @@ export function CommandBar() {
 
               {interpreted && interpreted.type === 'mutation' && (
                 <div className="px-5 py-4">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Confirm Action</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Confirm action</p>
                   <p className="text-sm font-bold mb-4">{interpreted.confirmation}</p>
+                  {interpreted.operations && interpreted.operations.length > 0 && (
+                    <details className="mb-4">
+                      <summary className="text-[10px] font-bold uppercase tracking-widest text-muted cursor-pointer hover:text-black">
+                        {interpreted.operations.length} operation{interpreted.operations.length === 1 ? '' : 's'} — show details
+                      </summary>
+                      <pre className="mt-2 text-[10px] text-muted whitespace-pre-wrap bg-cream-dark/30 p-2 max-h-40 overflow-auto">
+                        {JSON.stringify(interpreted.operations, null, 2)}
+                      </pre>
+                    </details>
+                  )}
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleExecute()}
@@ -170,24 +266,49 @@ export function CommandBar() {
             </div>
 
             {/* Input */}
-            <div className="border-t-2 border-black/10 px-4 py-3 flex gap-2">
-              <input
-                ref={inputRef}
-                type="text"
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleInterpret(); if (e.key === 'Escape') handleClose() }}
-                placeholder="Type a command..."
-                className="flex-1 border-2 border-black/20 bg-white px-3 py-2 text-xs font-bold focus:outline-none focus:border-purple-dark"
-                disabled={loading}
-              />
-              <button
-                onClick={handleInterpret}
-                disabled={!input.trim() || loading}
-                className="bg-purple-dark text-white px-4 py-2 text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-opacity disabled:opacity-40"
-              >
-                {loading ? '...' : 'Go'}
-              </button>
+            <div className="border-t-2 border-black/10 px-4 py-3">
+              <div className="relative">
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); handleInterpret() }
+                    if (e.key === 'Escape') handleClose()
+                  }}
+                  placeholder="Type or dictate… ⌘↵ to process"
+                  rows={3}
+                  className="w-full border-2 border-black/20 bg-white px-3 py-2 text-sm focus:outline-none focus:border-purple-dark resize-y"
+                  disabled={loading}
+                />
+                {recording && interim && (
+                  <div className="absolute bottom-2 left-2 right-2 bg-black/80 text-white text-[11px] px-3 py-1.5 italic pointer-events-none">
+                    {interim}
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                {sttSupported && (
+                  <button
+                    onClick={toggleMic}
+                    type="button"
+                    className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-3 py-2 transition-colors ${
+                      recording ? 'bg-red text-white animate-pulse' : 'bg-white border-2 border-black/20 hover:border-black text-black'
+                    }`}
+                    title={recording ? 'Stop recording' : 'Dictate'}
+                  >
+                    <span className={`inline-block w-2 h-2 rounded-full ${recording ? 'bg-white' : 'bg-red'}`} />
+                    {recording ? 'Stop' : 'Dictate'}
+                  </button>
+                )}
+                <button
+                  onClick={handleInterpret}
+                  disabled={!input.trim() || loading}
+                  className="ml-auto bg-purple-dark text-white px-4 py-2 text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-opacity disabled:opacity-40"
+                >
+                  {loading ? 'Processing…' : 'Process'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
