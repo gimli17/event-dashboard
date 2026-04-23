@@ -114,6 +114,7 @@ export function TeamView() {
   const [priorityFilter, setPriorityFilter] = useState<Set<string>>(new Set(['ultra-high', 'high']))
   const [openItem, setOpenItem] = useState<OpenItem>(null)
   const [focusedStream, setFocusedStream] = useState<string | null>(null)
+  const [teamView, setTeamView] = useState<'summary' | 'daily'>('summary')
 
   useEffect(() => {
     async function fetchAll() {
@@ -178,6 +179,14 @@ export function TeamView() {
 
   const personTasks = selectedPerson ? tasks.filter((t) => t.assignee?.includes(selectedPerson)) : []
   const personFocus = selectedPerson ? focusItems.filter((f) => f.owner === selectedPerson && !f.completed && !f.master_task_id) : []
+
+  // Team-wide derived lists
+  const todayIso = new Date().toISOString().slice(0, 10)
+  const passesPrio = <T extends { priority: string }>(x: T) => priorityFilter.size === 0 || priorityFilter.has(x.priority)
+  const summaryTasks = tasks.filter((t) => (t.priority === 'ultra-high' || t.deadline === todayIso) && passesPrio(t))
+  const summaryFocus = focusItems.filter((f) => !f.completed && !f.master_task_id && (f.priority === 'ultra-high' || f.deadline === todayIso) && passesPrio(f))
+  const dailyTasks = tasks.filter((t) => t.for_daily && passesPrio(t))
+  const dailyFocus = focusItems.filter((f) => f.for_daily && !f.completed && !f.master_task_id && passesPrio(f))
 
   const applyPriorityFilter = <T extends { priority: string }>(arr: T[]) =>
     priorityFilter.size === 0 ? arr : arr.filter((x) => priorityFilter.has(x.priority))
@@ -377,17 +386,32 @@ export function TeamView() {
 
   return (
     <div className="max-w-[1600px] mx-auto px-6 py-6">
-      {/* View switcher: Team Summary + person pills */}
+      {/* View switcher: Summary / The Daily / person pills */}
       <div className="mb-4">
         <div className="flex flex-wrap gap-1.5">
           <button
             onClick={() => {
               setSelectedPerson(null)
               setFocusedStream(null)
+              setTeamView('summary')
             }}
             className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest border-2 transition-colors ${
-              selectedPerson === null
+              selectedPerson === null && teamView === 'summary'
                 ? 'bg-black text-white border-black'
+                : 'bg-white text-black border-black/20 hover:border-black'
+            }`}
+          >
+            Summary
+          </button>
+          <button
+            onClick={() => {
+              setSelectedPerson(null)
+              setFocusedStream(null)
+              setTeamView('daily')
+            }}
+            className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest border-2 transition-colors ${
+              selectedPerson === null && teamView === 'daily'
+                ? 'bg-gold text-white border-gold'
                 : 'bg-white text-black border-black/20 hover:border-black'
             }`}
           >
@@ -453,16 +477,18 @@ export function TeamView() {
         })}
         <span className="text-[10px] uppercase tracking-widest text-muted ml-auto">
           {selectedPerson === null
-            ? `${tasks.filter((t) => t.for_daily && (priorityFilter.size === 0 || priorityFilter.has(t.priority))).length + focusItems.filter((f) => f.for_daily && !f.completed && !f.master_task_id && (priorityFilter.size === 0 || priorityFilter.has(f.priority))).length} tagged for The Daily`
+            ? teamView === 'daily'
+              ? `${dailyTasks.length + dailyFocus.length} tagged for The Daily`
+              : `${summaryTasks.length + summaryFocus.length} very-high or due today`
             : `${visibleFocus.length + visibleTasks.length} of ${personFocus.length + personTasks.length} shown`}
         </span>
       </div>
 
-      {/* Main body — The Daily vs Person Workspace */}
+      {/* Main body — Team Summary / The Daily / Person Workspace */}
       {selectedPerson === null ? (
         <TeamSummary
-          tasks={tasks.filter((t) => t.for_daily && (priorityFilter.size === 0 || priorityFilter.has(t.priority)))}
-          focus={focusItems.filter((f) => f.for_daily && !f.completed && !f.master_task_id && (priorityFilter.size === 0 || priorityFilter.has(f.priority)))}
+          tasks={teamView === 'daily' ? dailyTasks : summaryTasks}
+          focus={teamView === 'daily' ? dailyFocus : summaryFocus}
           onOpenTask={(id) => setOpenItem({ type: 'task', id })}
           onOpenFocus={(id) => setOpenItem({ type: 'focus', id })}
           onPickPerson={(name) => {
