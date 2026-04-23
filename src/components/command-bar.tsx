@@ -133,7 +133,10 @@ export function CommandBar() {
       if (data.error) {
         setError(data.error)
       } else {
-        const msg = data.answer || data.confirmation || 'Done'
+        // Prefer the concrete results (e.g. "Slack DM sent to Cody") over the
+        // pre-execution confirmation text ("Sending a Slack DM to Cody…").
+        const resultLines = Array.isArray(data.results) ? data.results.filter(Boolean) : []
+        const msg = data.answer || (resultLines.length > 0 ? resultLines.join(' · ') : data.confirmation) || 'Done'
         setResult(msg)
         setHistory((prev) => [{ command: input.trim(), result: msg }, ...prev].slice(0, 10))
         setInterpreted(null)
