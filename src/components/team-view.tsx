@@ -175,12 +175,22 @@ export function TeamView() {
   }
 
   const handleTaskUpdate = async (id: string, updates: Partial<MasterTask>) => {
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...updates } : t)))
+    const prev = tasks.find((t) => t.id === id)
+    setTasks((prevList) => prevList.map((t) => (t.id === id ? { ...t, ...updates } : t)))
     await supabase
       .from('master_tasks')
       .update({ ...updates, updated_at: new Date().toISOString() } as never)
       .eq('id', id)
     if (displayName && updates.title) logActivity(displayName, 'updated', 'task', id, updates.title)
+
+    // If assignee changed to a new person, ping them on Slack
+    if ('assignee' in updates && updates.assignee && updates.assignee !== prev?.assignee) {
+      fetch('/api/slack/notify-assignment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskId: id, actor: displayName || 'Someone' }),
+      }).catch(() => { /* fire-and-forget */ })
+    }
   }
 
   const handleFocusUpdate = async (id: string, updates: Partial<FocusItem>) => {

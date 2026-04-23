@@ -282,6 +282,15 @@ export function ChatSidebar() {
     // Tell any open task views to refresh so the new task appears instantly
     window.dispatchEvent(new CustomEvent('master-tasks-changed'))
 
+    // Ping the assignee on Slack if one is set
+    if (taskAssignee) {
+      fetch('/api/slack/notify-assignment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskId, actor: displayName }),
+      }).catch(() => { /* fire-and-forget */ })
+    }
+
     await supabase.from('comments').insert({
       author: displayName,
       message: `Created: "${taskTitle.trim()}"${taskAssignee ? ` → ${taskAssignee}` : ''}${eventName ? ` [${eventName}]` : ''}`,
