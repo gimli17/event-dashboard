@@ -12,6 +12,7 @@ interface Milestone {
   initiative: string
   sort_order: number
   target_date: string | null
+  completed_at: string | null
 }
 
 interface MilestoneTask {
@@ -132,6 +133,12 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
     await supabase.from('milestones').delete().eq('id', msId)
   }
 
+  const handleToggleComplete = async (msId: string, currentlyComplete: boolean) => {
+    const nextValue = currentlyComplete ? null : new Date().toISOString()
+    setMilestones(prev => prev.map(m => m.id === msId ? { ...m, completed_at: nextValue } : m))
+    await supabase.from('milestones').update({ completed_at: nextValue } as never).eq('id', msId)
+  }
+
   if (loading) {
     return <div className="max-w-5xl mx-auto px-6 py-16 text-center"><p className="text-muted uppercase tracking-widest text-xs font-bold">Loading milestones...</p></div>
   }
@@ -143,6 +150,7 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
   const monthsWithContent = MONTHS.map(m => {
     const msList = milestones.filter(ms => ms.target_date?.slice(5, 7) === m.key)
     const allComplete = msList.length > 0 && msList.every(ms => {
+      if (ms.completed_at) return true
       const msTasks = tasks.filter(t => t.milestone_id === ms.id).sort(sortTasks)
       return msTasks.length > 0 && msTasks.every(t => t.status === 'complete')
     })
@@ -179,8 +187,10 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
           const msTasks = tasks.filter(t => t.milestone_id === ms.id).sort(sortTasks)
           const doneCount = msTasks.filter(t => t.status === 'complete').length
           const totalCount = msTasks.length
-          const progress = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0
-          const isComplete = totalCount > 0 && doneCount === totalCount
+          const tasksAllDone = totalCount > 0 && doneCount === totalCount
+          const manuallyComplete = !!ms.completed_at
+          const isComplete = manuallyComplete || tasksAllDone
+          const progress = manuallyComplete ? 100 : (totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0)
 
           return (
             <div>
@@ -255,12 +265,25 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
                       </div>
                     )}
                   </div>
-                  <button
-                    onClick={() => handleDelete(ms.id)}
-                    className="text-[10px] font-bold uppercase tracking-widest text-muted hover:text-red hover:bg-red/10 px-3 py-1.5 transition-colors shrink-0"
-                  >
-                    Delete
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => handleToggleComplete(ms.id, manuallyComplete)}
+                      className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 transition-colors ${
+                        manuallyComplete
+                          ? 'bg-green text-white hover:bg-green/80'
+                          : 'bg-white text-green border-2 border-green/40 hover:bg-green hover:text-white'
+                      }`}
+                      title={manuallyComplete ? 'Mark as incomplete' : 'Mark this milestone complete regardless of task status'}
+                    >
+                      {manuallyComplete ? '\u2713 Done' : 'Mark Complete'}
+                    </button>
+                    <button
+                      onClick={() => handleDelete(ms.id)}
+                      className="text-[10px] font-bold uppercase tracking-widest text-muted hover:text-red hover:bg-red/10 px-3 py-1.5 transition-colors"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
 
                 {/* Task list */}
@@ -307,8 +330,10 @@ export function MilestoneTracker({ initiative }: { initiative: InitiativeKey }) 
                 const msTasks = tasks.filter(t => t.milestone_id === ms.id).sort(sortTasks)
                 const doneCount = msTasks.filter(t => t.status === 'complete').length
                 const totalCount = msTasks.length
-                const progress = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0
-                const isComplete = totalCount > 0 && doneCount === totalCount
+                const manuallyComplete = !!ms.completed_at
+                const tasksAllDone = totalCount > 0 && doneCount === totalCount
+                const isComplete = manuallyComplete || tasksAllDone
+                const progress = manuallyComplete ? 100 : (totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0)
 
                 return (
                   <button
