@@ -141,7 +141,17 @@ export function TeamView() {
     // Refresh when another component (e.g. Quick Add) creates a task
     const onChange = () => { fetchAll() }
     window.addEventListener('master-tasks-changed', onChange)
-    return () => window.removeEventListener('master-tasks-changed', onChange)
+
+    // Redundant belt: poll every 15s while the tab is visible, in case the
+    // window event was missed (e.g. Quick Add dispatched before we mounted).
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') fetchAll()
+    }, 15000)
+
+    return () => {
+      window.removeEventListener('master-tasks-changed', onChange)
+      clearInterval(interval)
+    }
   }, [])
 
   // Deep-link support: ?task=<id> or ?note=<id> auto-opens the drawer and jumps to the owner
