@@ -288,14 +288,15 @@ export function TeamView() {
   const handleFocusAdd = async (streamKey: string, title: string) => {
     if (!title.trim() || !selectedPerson) return
     const id = makeId('dp')
-    const streamItems = focusItems.filter((f) => f.stream === streamKey && f.owner === selectedPerson)
+    const normalizedStream = streamKey && streamKey !== 'general' ? streamKey : null
+    const streamItems = focusItems.filter((f) => f.stream === normalizedStream && f.owner === selectedPerson)
     const nextOrder = streamItems.length > 0 ? Math.max(...streamItems.map((i) => i.sort_order)) + 1 : 0
     const newPriority = 'medium'
     const item: FocusItem = {
       id,
       owner: selectedPerson,
       title: title.trim(),
-      stream: streamKey,
+      stream: normalizedStream,
       master_task_id: null,
       sort_order: nextOrder,
       completed: false,
@@ -1267,6 +1268,7 @@ function FocusDrawer({ item, stream, onClose, onUpdate, onAddComment, onGenerate
               onChange={(e) => onUpdate(item.id, { stream: e.target.value || null })}
               className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 border border-black/20 bg-white focus:outline-none"
             >
+              <option value="">General</option>
               {STREAMS.map((s) => (
                 <option key={s.key} value={s.key}>
                   {s.label}
@@ -1856,7 +1858,7 @@ interface PersonDashboardProps {
 
 function PersonDashboard({ person, personFocus, personTasks, onOpenFocus, onOpenTask, onFocusAdd, onGenerateTask, onFocusDelete }: PersonDashboardProps) {
   const [newTitle, setNewTitle] = useState('')
-  const [newStream, setNewStream] = useState<string>('brmf')
+  const [newStream, setNewStream] = useState<string>('general')
 
   // ---- Summary stats ----
   const today = new Date()
@@ -1921,6 +1923,7 @@ function PersonDashboard({ person, personFocus, personTasks, onOpenFocus, onOpen
             className="border-2 border-black/20 bg-white px-3 py-2.5 text-xs font-bold uppercase tracking-widest focus:outline-none focus:border-black"
             title="Stream to tag this note with"
           >
+            <option value="general">General</option>
             {STREAMS.map((s) => (
               <option key={s.key} value={s.key}>{s.label}</option>
             ))}
@@ -1940,9 +1943,13 @@ function PersonDashboard({ person, personFocus, personTasks, onOpenFocus, onOpen
                   <button onClick={() => onOpenFocus(f.id)} className="flex-1 min-w-0 text-left">
                     <p className="text-[14px] font-semibold leading-snug text-black">{f.title}</p>
                     <div className="flex items-center gap-2 mt-1 flex-wrap">
-                      {streamCfg && (
+                      {streamCfg ? (
                         <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 ${streamCfg.bg} text-white`}>
                           {streamCfg.emoji} {streamCfg.label}
+                        </span>
+                      ) : (
+                        <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 bg-black/10 text-black">
+                          General
                         </span>
                       )}
                       <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 ${pCfg?.badge ?? 'bg-black/10 text-black'}`}>
