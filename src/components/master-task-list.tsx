@@ -329,6 +329,15 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
     setNewTaskInitiative(initiative || 'brmf')
 
     await supabase.from('master_tasks').insert(newTask as never)
+
+    // Ping the assignee unless it's a self-assignment
+    if (newTask.assignee && newTask.assignee !== displayName) {
+      fetch('/api/slack/notify-assignment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'task', taskId, actor: displayName }),
+      }).catch(() => { /* fire-and-forget */ })
+    }
   }
 
   // Parse comments for priority keywords and auto-reprioritize

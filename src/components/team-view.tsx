@@ -236,6 +236,15 @@ export function TeamView() {
       setPriorityFilter((prev) => new Set([...prev, newPriority]))
     }
     await supabase.from('daily_priorities').insert(item as never)
+
+    // Ping the note's owner on Slack unless it's a self-note
+    if (selectedPerson && selectedPerson !== displayName) {
+      fetch('/api/slack/notify-assignment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'note', noteId: id, actor: displayName || 'Someone' }),
+      }).catch(() => { /* fire-and-forget */ })
+    }
   }
 
   const handleFocusAddComment = async (id: string, text: string) => {
@@ -306,6 +315,16 @@ export function TeamView() {
       .eq('id', focusId)
 
     if (displayName) logActivity(displayName, 'generated task from focus', 'task', taskId, item.title)
+
+    // Ping the assignee unless it's a self-assignment
+    if (item.owner && item.owner !== displayName) {
+      fetch('/api/slack/notify-assignment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'task', taskId, actor: displayName || 'Someone' }),
+      }).catch(() => { /* fire-and-forget */ })
+    }
+
     // Switch drawer focus → the new task
     setOpenItem({ type: 'task', id: taskId })
   }
