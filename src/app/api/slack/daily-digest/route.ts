@@ -44,14 +44,14 @@ async function runDigest() {
     if (dueToday.length) lines.push(`*Due today (${dueToday.length}):*\n` + dueToday.slice(0, 5).map((t) => `  • ${t.title}`).join('\n'))
     if (!lines.length) lines.push(`*${theirs.length} open task${theirs.length === 1 ? '' : 's'}* — nothing overdue or due today. Good day 👌`)
 
-    const text = `🌇 *End-of-day check*\n${lines.join('\n\n')}\n\n<${APP_URL}/team|Open your workspace>`
+    const text = `🌇 *End-of-day check*\n${lines.join('\n\n')}\n\n<${APP_URL}/team?person=${encodeURIComponent(person)}|Open your workspace>`
     const blocks: unknown[] = [
       { type: 'header', text: { type: 'plain_text', text: '🌇 End-of-day check' } },
       ...lines.map((ln) => ({ type: 'section', text: { type: 'mrkdwn', text: ln } })),
       {
         type: 'actions',
         elements: [
-          { type: 'button', text: { type: 'plain_text', text: 'Open your workspace' }, url: `${APP_URL}/team` },
+          { type: 'button', text: { type: 'plain_text', text: 'Open your workspace' }, url: `${APP_URL}/team?person=${encodeURIComponent(person)}` },
         ],
       },
     ]
