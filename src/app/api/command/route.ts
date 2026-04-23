@@ -198,11 +198,57 @@ export async function POST(req: Request) {
       }
 
       if (op.action === 'insert') {
-        const { error } = await supabase.from(table).insert(op.insertData as never)
+        // Stamp created_by and (for master_tasks) give the row a deterministic id
+        // so we can fire a Slack notify to the assignee afterwards.
+        const payload: Record<string, unknown> = { ...(op.insertData || {}) }
+        if (table === 'master_tasks') {
+          if (!payload.id) payload.id = `mt-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+          if (userName && !payload.created_by) payload.created_by = userName
+          if (!payload.initiative) payload.initiative = 'brmf'
+          if (!payload.priority) payload.priority = 'medium'
+          if (!payload.status) payload.status = 'not-started'
+        }
+        if (table === 'daily_priorities') {
+          if (!payload.id) payload.id = `dp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+          if (!payload.priority) payload.priority = 'medium'
+        }
+        const { error } = await supabase.from(table).insert(payload as never)
         if (error) {
           results.push(`Error: ${error.message}`)
         } else {
           results.push('Created successfully')
+
+          // Fire Slack notify for new tasks / notes so the assignee learns about it
+          if (table === 'master_tasks' && payload.assignee && payload.assignee !== userName) {
+            try {
+              const email = emailForTeamMember(payload.assignee as string)
+              if (email) {
+                const uid = await slackUserIdByEmail(email)
+                if (uid) {
+                  const from = userName ? ` from ${userName}` : ''
+                  const title = (payload.title as string) || '(untitled)'
+                  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://event-dashboard-two-delta.vercel.app'
+                  const link = `${appUrl}/team?task=${encodeURIComponent(payload.id as string)}`
+                  await slackDm(uid, `🆕 *New task${from}*: ${title}\n<${link}|Open task>`)
+                }
+              }
+            } catch { /* non-fatal */ }
+          }
+          if (table === 'daily_priorities' && payload.owner && payload.owner !== userName) {
+            try {
+              const email = emailForTeamMember(payload.owner as string)
+              if (email) {
+                const uid = await slackUserIdByEmail(email)
+                if (uid) {
+                  const from = userName ? ` from ${userName}` : ''
+                  const title = (payload.title as string) || '(untitled)'
+                  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://event-dashboard-two-delta.vercel.app'
+                  const link = `${appUrl}/team?note=${encodeURIComponent(payload.id as string)}`
+                  await slackDm(uid, `🆕 *New note${from}*: ${title}\n<${link}|Open note>`)
+                }
+              }
+            } catch { /* non-fatal */ }
+          }
         }
       }
 

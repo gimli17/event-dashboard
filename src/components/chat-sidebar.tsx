@@ -274,6 +274,7 @@ export function ChatSidebar() {
       week_of: null,
       initiative: taskInitiative,
       milestone_id: taskMilestone || null,
+      created_by: displayName || null,
     } as never)
 
     const eventName = linkedEvent ? events.find((ev) => ev.id === linkedEvent)?.title : null

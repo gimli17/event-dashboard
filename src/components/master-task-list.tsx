@@ -330,6 +330,8 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
       initiative: newTaskInitiative,
       milestone_id: null,
       for_daily: false,
+      // @ts-expect-error created_by not in MasterTask interface but exists in DB
+      created_by: displayName || null,
     }
     setTasks((prev) => [...prev, newTask])
     setShowAddTask(false)
