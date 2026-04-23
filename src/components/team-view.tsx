@@ -389,38 +389,26 @@ export function TeamView() {
       {/* View switcher: Summary / The Daily / person pills */}
       <div className="mb-4">
         <div className="flex flex-wrap gap-1.5">
-          <div className={`inline-flex items-stretch border-2 ${
-            selectedPerson === null ? 'border-black' : 'border-black/20'
-          }`}>
-            <button
-              onClick={() => {
+          <select
+            value={selectedPerson === null ? teamView : '__person'}
+            onChange={(e) => {
+              const v = e.target.value
+              if (v === 'summary' || v === 'daily') {
                 setSelectedPerson(null)
                 setFocusedStream(null)
-                setTeamView('summary')
-              }}
-              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest transition-colors ${
-                selectedPerson === null && teamView === 'summary'
-                  ? 'bg-black text-white'
-                  : 'bg-white text-black hover:bg-black/5'
-              }`}
-            >
-              Summary
-            </button>
-            <button
-              onClick={() => {
-                setSelectedPerson(null)
-                setFocusedStream(null)
-                setTeamView('daily')
-              }}
-              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest border-l-2 transition-colors ${
-                selectedPerson === null && teamView === 'daily'
-                  ? 'bg-gold text-white border-gold'
-                  : 'bg-white text-black border-black/20 hover:bg-black/5'
-              }`}
-            >
-              The Daily
-            </button>
-          </div>
+                setTeamView(v as 'summary' | 'daily')
+              }
+            }}
+            className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest border-2 cursor-pointer focus:outline-none ${
+              selectedPerson === null
+                ? (teamView === 'daily' ? 'bg-gold text-white border-gold' : 'bg-black text-white border-black')
+                : 'bg-white text-black border-black/20 hover:border-black'
+            }`}
+          >
+            <option value="summary" className="bg-white text-black">Summary</option>
+            <option value="daily" className="bg-white text-black">The Daily</option>
+            {selectedPerson !== null && <option value="__person" disabled className="bg-white text-black">— viewing {selectedPerson}</option>}
+          </select>
           <span className="inline-block w-px bg-black/10 mx-1" aria-hidden="true" />
           {orderedMembers.map((name) => {
             const isActive = name === selectedPerson
