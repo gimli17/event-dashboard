@@ -60,6 +60,8 @@ Guidance:
 - Delete (except daily_priorities): set deleted_at to current ISO timestamp instead of hard delete.
 - Match by title with ilike '%term%' for fuzziness.
 - Include a concise confirmation field.
+- For filters, only include columns you actually want to match. Do NOT pass nullable columns like deleted_at/dan_feedback — the executor already scopes master_tasks queries to non-deleted rows.
+- "How many open tasks does X have" → type='query' with operation action='select', table='master_tasks', filters={assignee: 'X'}, filterType='ilike', and filters.assignee value='%X%'. (Deleted + completion are handled by the executor and follow-up filtering.)
 - NEVER output anything outside the JSON object — no backticks, no "Here is the JSON:", nothing.`
 
 // Pull the first balanced {...} block out of any response, in case the model
@@ -163,7 +165,9 @@ export async function POST(req: Request) {
       if (op.action === 'select') {
         let query = supabase.from(table).select(op.select || '*')
         for (const [col, val] of Object.entries(op.filters || {})) {
-          if (op.filterType === 'ilike') {
+          if (val === null || val === 'null') {
+            query = query.is(col, null)
+          } else if (op.filterType === 'ilike') {
             query = query.ilike(col, val as string)
           } else {
             query = query.eq(col, val as string)
@@ -183,7 +187,9 @@ export async function POST(req: Request) {
       if (op.action === 'update') {
         let query = supabase.from(table).update({ ...op.updates, updated_at: new Date().toISOString() } as never)
         for (const [col, val] of Object.entries(op.filters || {})) {
-          if (op.filterType === 'ilike') {
+          if (val === null || val === 'null') {
+            query = query.is(col, null)
+          } else if (op.filterType === 'ilike') {
             query = query.ilike(col, val as string)
           } else {
             query = query.eq(col, val as string)
@@ -257,7 +263,9 @@ export async function POST(req: Request) {
           // Soft delete
           let query = supabase.from(table).update({ deleted_at: new Date().toISOString() } as never)
           for (const [col, val] of Object.entries(op.filters || {})) {
-            if (op.filterType === 'ilike') {
+            if (val === null || val === 'null') {
+              query = query.is(col, null)
+            } else if (op.filterType === 'ilike') {
               query = query.ilike(col, val as string)
             } else {
               query = query.eq(col, val as string)
