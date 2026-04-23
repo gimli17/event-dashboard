@@ -137,10 +137,12 @@ export function CommandBar() {
         // pre-execution confirmation text ("Sending a Slack DM to Cody…").
         const resultLines = Array.isArray(data.results) ? data.results.filter(Boolean) : []
         const msg = data.answer || (resultLines.length > 0 ? resultLines.join(' · ') : data.confirmation) || 'Done'
-        setResult(msg)
         setHistory((prev) => [{ command: input.trim(), result: msg }, ...prev].slice(0, 10))
         setInterpreted(null)
         setInput('')
+        // Brief green ✓ flash that clears itself so the panel is ready for the next command
+        setResult('Done')
+        setTimeout(() => setResult((cur) => (cur === 'Done' ? null : cur)), 2000)
         // Tell open task views to refresh (matches the Quick Add + Notion paths)
         window.dispatchEvent(new CustomEvent('master-tasks-changed'))
       }
@@ -230,8 +232,9 @@ export function CommandBar() {
               )}
 
               {result && !interpreted && (
-                <div className="px-5 py-3 bg-green/10 text-green text-xs font-bold">
-                  {result}
+                <div className="px-5 py-3 bg-green/10 text-green text-xs font-bold flex items-center gap-2">
+                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green text-white text-[10px]">&#10003;</span>
+                  <span>{result}</span>
                 </div>
               )}
 
