@@ -111,7 +111,7 @@ export function TeamView() {
   const [milestones, setMilestones] = useState<MilestoneOption[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedPerson, setSelectedPerson] = useState<string | null>(null)
-  const [priorityFilter, setPriorityFilter] = useState<Set<string>>(new Set(['ultra-high', 'high']))
+  const [priorityFilter, setPriorityFilter] = useState<Set<string>>(new Set())
   const [openItem, setOpenItem] = useState<OpenItem>(null)
   const [focusedStream, setFocusedStream] = useState<string | null>(null)
   const [teamView, setTeamView] = useState<'summary' | 'daily'>('summary')
