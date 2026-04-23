@@ -22,6 +22,26 @@ interface SR {
   stop: () => void
 }
 
+// Very small markdown renderer — handles **bold**, *italics*, bullet lines, and newlines.
+function renderMarkdown(text: string) {
+  const lines = text.split('\n')
+  return lines.map((line, i) => {
+    const trimmed = line.replace(/^\s*[-•]\s*/, '')
+    const isBullet = /^\s*[-•]\s+/.test(line)
+    const html = trimmed
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    if (isBullet) {
+      return <li key={i} className="ml-5 list-disc" dangerouslySetInnerHTML={{ __html: html }} />
+    }
+    if (!trimmed.trim()) return <br key={i} />
+    return <p key={i} className="mt-2 first:mt-0" dangerouslySetInnerHTML={{ __html: html }} />
+  })
+}
+
 export function CommandBar() {
   const { displayName } = useUser()
   const [open, setOpen] = useState(false)
@@ -31,6 +51,7 @@ export function CommandBar() {
   const [result, setResult] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [history, setHistory] = useState<{ command: string; result: string }[]>([])
+  const [answerModal, setAnswerModal] = useState<{ command: string; answer: string } | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
   // Speech-to-text
@@ -133,16 +154,21 @@ export function CommandBar() {
       if (data.error) {
         setError(data.error)
       } else {
-        // Prefer the concrete results (e.g. "Slack DM sent to Cody") over the
-        // pre-execution confirmation text ("Sending a Slack DM to Cody…").
+        const currentCommand = input.trim()
         const resultLines = Array.isArray(data.results) ? data.results.filter(Boolean) : []
-        const msg = data.answer || (resultLines.length > 0 ? resultLines.join(' · ') : data.confirmation) || 'Done'
-        setHistory((prev) => [{ command: input.trim(), result: msg }, ...prev].slice(0, 10))
+        // If this was a query/answer, show the full answer in a centered modal.
+        if (data.answer) {
+          setAnswerModal({ command: currentCommand, answer: data.answer })
+          setHistory((prev) => [{ command: currentCommand, result: 'View answer' }, ...prev].slice(0, 10))
+        } else {
+          const msg = resultLines.length > 0 ? resultLines.join(' · ') : (data.confirmation || 'Done')
+          setHistory((prev) => [{ command: currentCommand, result: msg }, ...prev].slice(0, 10))
+          // Brief green ✓ flash that clears itself so the panel is ready for the next command
+          setResult('Done')
+          setTimeout(() => setResult((cur) => (cur === 'Done' ? null : cur)), 2000)
+        }
         setInterpreted(null)
         setInput('')
-        // Brief green ✓ flash that clears itself so the panel is ready for the next command
-        setResult('Done')
-        setTimeout(() => setResult((cur) => (cur === 'Done' ? null : cur)), 2000)
         // Tell open task views to refresh (matches the Quick Add + Notion paths)
         window.dispatchEvent(new CustomEvent('master-tasks-changed'))
       }
@@ -180,6 +206,32 @@ export function CommandBar() {
         AI Command
       </button>
 
+      {/* Answer modal — centered, for query/answer responses */}
+      {answerModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/40" onClick={() => setAnswerModal(null)}>
+          <div className="w-full max-w-2xl bg-white border-2 border-black shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-purple-dark text-white px-6 py-4 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/60">You asked</p>
+                <p className="text-sm font-bold mt-1 leading-snug">{answerModal.command}</p>
+              </div>
+              <button onClick={() => setAnswerModal(null)} className="text-white/80 hover:text-white text-xl font-bold shrink-0" aria-label="Close">&times;</button>
+            </div>
+            <div className="px-6 py-5 max-h-[60vh] overflow-y-auto text-sm leading-relaxed text-black">
+              {renderMarkdown(answerModal.answer)}
+            </div>
+            <div className="border-t-2 border-black/10 px-6 py-3 flex items-center justify-end">
+              <button
+                onClick={() => setAnswerModal(null)}
+                className="bg-black text-white px-5 py-2 text-xs font-bold uppercase tracking-widest hover:bg-black/80"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal */}
       {open && (
         <div className="fixed inset-0 z-50 flex items-end justify-end p-6" onClick={handleClose}>
@@ -214,6 +266,15 @@ export function CommandBar() {
             {/* History */}
             {history.length > 0 && (
               <div className="max-h-32 overflow-y-auto border-b-2 border-black/10 bg-cream-dark/20">
+                <div className="flex items-center justify-between px-5 py-1.5 border-b border-black/10 bg-cream-dark/40">
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-muted">History</span>
+                  <button
+                    onClick={() => setHistory([])}
+                    className="text-[9px] font-bold uppercase tracking-widest text-muted hover:text-red"
+                  >
+                    Clear
+                  </button>
+                </div>
                 {history.map((h, i) => (
                   <div key={i} className="px-5 py-2 border-b border-black/5">
                     <p className="text-[10px] font-bold text-muted uppercase tracking-wider truncate">{h.command}</p>
