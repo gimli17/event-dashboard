@@ -93,8 +93,11 @@ export async function POST(req: Request) {
     const from = actor ? ` from ${actor}` : ''
     const trimmedBlurb = blurb ? blurb.slice(0, 200) : null
     const label = kind === 'note' ? 'note' : 'task'
+    const deepLink = kind === 'task'
+      ? `${APP_URL}/team?task=${encodeURIComponent((taskId || noteId) as string)}`
+      : `${APP_URL}/team?note=${encodeURIComponent(noteId as string)}`
 
-    const text = `🆕 *New ${label}${from}*: ${title}${prioLabel ? `\n${prioLabel}` : ''}${dueText}${trimmedBlurb ? `\n_${trimmedBlurb}${blurb && blurb.length > 200 ? '…' : ''}_` : ''}\n<${APP_URL}/team|Open in portal>`
+    const text = `🆕 *New ${label}${from}*: ${title}${prioLabel ? `\n${prioLabel}` : ''}${dueText}${trimmedBlurb ? `\n_${trimmedBlurb}${blurb && blurb.length > 200 ? '…' : ''}_` : ''}\n<${deepLink}|Open in portal>`
 
     const blocks: unknown[] = [
       {
@@ -117,7 +120,7 @@ export async function POST(req: Request) {
     blocks.push({
       type: 'actions',
       elements: [
-        { type: 'button', text: { type: 'plain_text', text: 'Open in portal' }, url: `${APP_URL}/team` },
+        { type: 'button', text: { type: 'plain_text', text: 'Open task' }, url: deepLink },
       ],
     })
 

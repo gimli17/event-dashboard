@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useUser } from './user-provider'
 import { logActivity } from '@/lib/activity-log'
@@ -141,6 +142,36 @@ export function TeamView() {
     window.addEventListener('master-tasks-changed', onChange)
     return () => window.removeEventListener('master-tasks-changed', onChange)
   }, [])
+
+  // Deep-link support: ?task=<id> or ?note=<id> auto-opens the drawer and jumps to the owner
+  const searchParams = useSearchParams()
+  useEffect(() => {
+    if (loading) return
+    const taskParam = searchParams?.get('task')
+    const noteParam = searchParams?.get('note')
+    if (taskParam) {
+      const t = tasks.find((x) => x.id === taskParam)
+      if (t) {
+        const firstAssignee = t.assignee?.split(',')[0]?.trim() || null
+        if (firstAssignee && (ALL_TEAM_MEMBERS as readonly string[]).includes(firstAssignee)) {
+          setSelectedPerson(firstAssignee)
+          setFocusedStream(t.initiative)
+        }
+        setOpenItem({ type: 'task', id: taskParam })
+      }
+    } else if (noteParam) {
+      const f = focusItems.find((x) => x.id === noteParam)
+      if (f) {
+        if ((ALL_TEAM_MEMBERS as readonly string[]).includes(f.owner)) {
+          setSelectedPerson(f.owner)
+          setFocusedStream('dashboard')
+        }
+        setOpenItem({ type: 'focus', id: noteParam })
+      }
+    }
+    // Only react to initial query params, not subsequent state changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading])
 
   // Preserve the explicit ALL_TEAM_MEMBERS ordering
   const orderedMembers = [...ALL_TEAM_MEMBERS]
