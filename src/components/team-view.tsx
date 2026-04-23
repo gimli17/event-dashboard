@@ -110,11 +110,36 @@ export function TeamView() {
   const [focusItems, setFocusItems] = useState<FocusItem[]>([])
   const [milestones, setMilestones] = useState<MilestoneOption[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedPerson, setSelectedPerson] = useState<string | null>(null)
+  // Initial state is read from the URL so reload preserves where the user was
+  const initialParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams()
+  const initialPerson = initialParams.get('person')
+  const initialStream = initialParams.get('stream')
+  const initialView = initialParams.get('view')
+  const [selectedPerson, setSelectedPerson] = useState<string | null>(
+    initialPerson && (ALL_TEAM_MEMBERS as readonly string[]).includes(initialPerson) ? initialPerson : null,
+  )
   const [priorityFilter, setPriorityFilter] = useState<Set<string>>(new Set())
   const [openItem, setOpenItem] = useState<OpenItem>(null)
-  const [focusedStream, setFocusedStream] = useState<string | null>(null)
-  const [teamView, setTeamView] = useState<'summary' | 'daily'>('summary')
+  const [focusedStream, setFocusedStream] = useState<string | null>(initialStream || null)
+  const [teamView, setTeamView] = useState<'summary' | 'daily'>(initialView === 'daily' ? 'daily' : 'summary')
+
+  // Keep the URL in sync with the view so reload lands you in the same place
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    // Preserve any existing ?task=/?note= deep link the first render resolved
+    if (selectedPerson) params.set('person', selectedPerson)
+    else params.delete('person')
+    if (selectedPerson && focusedStream) params.set('stream', focusedStream)
+    else params.delete('stream')
+    if (!selectedPerson && teamView !== 'summary') params.set('view', teamView)
+    else if (!selectedPerson) params.delete('view')
+    const q = params.toString()
+    const next = `${window.location.pathname}${q ? `?${q}` : ''}`
+    if (next !== `${window.location.pathname}${window.location.search}`) {
+      window.history.replaceState({}, '', next)
+    }
+  }, [selectedPerson, focusedStream, teamView])
 
   useEffect(() => {
     async function fetchAll() {

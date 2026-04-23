@@ -269,6 +269,15 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
       }
     }
     fetch()
+
+    // Refresh when another component (Quick Add, Brain Dump, /team) changes master_tasks
+    const onChange = () => { fetch() }
+    window.addEventListener('master-tasks-changed', onChange)
+    const poll = setInterval(() => { if (document.visibilityState === 'visible') fetch() }, 15000)
+    return () => {
+      window.removeEventListener('master-tasks-changed', onChange)
+      clearInterval(poll)
+    }
   }, [])
 
   useEffect(() => {
@@ -331,6 +340,9 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
     setNewTaskInitiative(initiative || 'brmf')
 
     await supabase.from('master_tasks').insert(newTask as never)
+
+    // Broadcast so /team and any other open views refresh immediately
+    window.dispatchEvent(new CustomEvent('master-tasks-changed'))
 
     // Ping the assignee unless it's a self-assignment
     if (newTask.assignee && newTask.assignee !== displayName) {
