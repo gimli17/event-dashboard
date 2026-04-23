@@ -45,6 +45,7 @@ interface MasterTask {
   week_of: string | null
   initiative: string
   milestone_id: string | null
+  for_daily: boolean
 }
 
 const EXECUTIVES = ['Cody', 'Joe', 'Sabrina'] as const
@@ -319,6 +320,7 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
       week_of: '2026-03-30',
       initiative: newTaskInitiative,
       milestone_id: null,
+      for_daily: false,
     }
     setTasks((prev) => [...prev, newTask])
     setShowAddTask(false)
@@ -819,6 +821,21 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
                                 </button>
                               )}
                               <div className="flex items-center gap-2 shrink-0">
+                                <button
+                                  onClick={async () => {
+                                    const next = !task.for_daily
+                                    setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, for_daily: next } : t)))
+                                    await supabase.from('master_tasks').update({ for_daily: next, updated_at: new Date().toISOString() } as never).eq('id', task.id)
+                                  }}
+                                  className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border-2 transition-colors ${
+                                    task.for_daily
+                                      ? 'bg-gold text-white border-gold'
+                                      : 'bg-white text-black border-gold/40 hover:bg-gold/10'
+                                  }`}
+                                  title="Tag for The Daily"
+                                >
+                                  {task.for_daily ? '\u2605 In The Daily' : '\u2606 Send to The Daily'}
+                                </button>
                                 {task.status !== 'complete' && (
                                   <button
                                     onClick={() => handleStatusChange(task, 'complete')}
