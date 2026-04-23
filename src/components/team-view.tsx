@@ -389,34 +389,38 @@ export function TeamView() {
       {/* View switcher: Summary / The Daily / person pills */}
       <div className="mb-4">
         <div className="flex flex-wrap gap-1.5">
-          <button
-            onClick={() => {
-              setSelectedPerson(null)
-              setFocusedStream(null)
-              setTeamView('summary')
-            }}
-            className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest border-2 transition-colors ${
-              selectedPerson === null && teamView === 'summary'
-                ? 'bg-black text-white border-black'
-                : 'bg-white text-black border-black/20 hover:border-black'
-            }`}
-          >
-            Summary
-          </button>
-          <button
-            onClick={() => {
-              setSelectedPerson(null)
-              setFocusedStream(null)
-              setTeamView('daily')
-            }}
-            className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest border-2 transition-colors ${
-              selectedPerson === null && teamView === 'daily'
-                ? 'bg-gold text-white border-gold'
-                : 'bg-white text-black border-black/20 hover:border-black'
-            }`}
-          >
-            The Daily
-          </button>
+          <div className={`inline-flex items-stretch border-2 ${
+            selectedPerson === null ? 'border-black' : 'border-black/20'
+          }`}>
+            <button
+              onClick={() => {
+                setSelectedPerson(null)
+                setFocusedStream(null)
+                setTeamView('summary')
+              }}
+              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest transition-colors ${
+                selectedPerson === null && teamView === 'summary'
+                  ? 'bg-black text-white'
+                  : 'bg-white text-black hover:bg-black/5'
+              }`}
+            >
+              Summary
+            </button>
+            <button
+              onClick={() => {
+                setSelectedPerson(null)
+                setFocusedStream(null)
+                setTeamView('daily')
+              }}
+              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-widest border-l-2 transition-colors ${
+                selectedPerson === null && teamView === 'daily'
+                  ? 'bg-gold text-white border-gold'
+                  : 'bg-white text-black border-black/20 hover:bg-black/5'
+              }`}
+            >
+              The Daily
+            </button>
+          </div>
           <span className="inline-block w-px bg-black/10 mx-1" aria-hidden="true" />
           {orderedMembers.map((name) => {
             const isActive = name === selectedPerson
