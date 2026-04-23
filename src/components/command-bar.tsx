@@ -201,7 +201,7 @@ export function CommandBar() {
                   <li>&middot; &ldquo;Send a slack to Cody telling him to review the partnership doc&rdquo;</li>
                   <li>&middot; &ldquo;Add a new task to Boulder Roots re final sponsor outreach, assign Sabrina, due Friday&rdquo;</li>
                   <li>&middot; &ldquo;Mark the RMP logo concepts task as done&rdquo;</li>
-                  <li>&middot; &ldquo;How many open tasks does Joe have?&rdquo;</li>
+                  <li>&middot; &ldquo;How many open tasks does Bryan have?&rdquo;</li>
                 </ul>
               </div>
             )}
