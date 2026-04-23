@@ -60,6 +60,7 @@ interface MasterTask {
   initiative: string
   milestone_id: string | null
   notion_page_url: string | null
+  for_daily: boolean
 }
 
 interface MilestoneOption {
@@ -97,6 +98,7 @@ interface FocusItem {
   deadline: string | null
   notes: string | null
   comments: FocusComment[]
+  for_daily: boolean
 }
 
 type OpenItem = { type: 'task'; id: string } | { type: 'focus'; id: string } | null
@@ -117,7 +119,7 @@ export function TeamView() {
       const [tRes, fRes, mRes] = await Promise.all([
         supabase
           .from('master_tasks')
-          .select('id, title, status, assignee, executive_lead, priority, links, current_status, overview, action_items, dan_comments, deadline, initiative, milestone_id, notion_page_url')
+          .select('id, title, status, assignee, executive_lead, priority, links, current_status, overview, action_items, dan_comments, deadline, initiative, milestone_id, notion_page_url, for_daily')
           .is('deleted_at', null)
           .neq('status', 'complete'),
         supabase
@@ -216,6 +218,7 @@ export function TeamView() {
       deadline: null,
       notes: null,
       comments: [],
+      for_daily: false,
     }
     setFocusItems((prev) => [...prev, item])
     // Make sure the new note is visible even if the priority filter would hide it
@@ -269,6 +272,7 @@ export function TeamView() {
       initiative: item.stream,
       milestone_id: null,
       notion_page_url: null,
+      for_daily: item.for_daily ?? false,
     }
     setTasks((prev) => [newTask, ...prev])
     setFocusItems((prev) => prev.map((f) => (f.id === focusId ? { ...f, master_task_id: taskId } : f)))
@@ -327,7 +331,7 @@ export function TeamView() {
                 : 'bg-white text-black border-black/20 hover:border-black'
             }`}
           >
-            Team Summary
+            The Daily
           </button>
           <span className="inline-block w-px bg-black/10 mx-1" aria-hidden="true" />
           {orderedMembers.map((name) => {
@@ -389,16 +393,16 @@ export function TeamView() {
         })}
         <span className="text-[10px] uppercase tracking-widest text-muted ml-auto">
           {selectedPerson === null
-            ? `${(priorityFilter.size === 0 ? tasks.length : tasks.filter((t) => priorityFilter.has(t.priority)).length) + focusItems.filter((f) => !f.completed && !f.master_task_id && (priorityFilter.size === 0 || priorityFilter.has(f.priority))).length} items shown`
+            ? `${tasks.filter((t) => t.for_daily && (priorityFilter.size === 0 || priorityFilter.has(t.priority))).length + focusItems.filter((f) => f.for_daily && !f.completed && !f.master_task_id && (priorityFilter.size === 0 || priorityFilter.has(f.priority))).length} tagged for The Daily`
             : `${visibleFocus.length + visibleTasks.length} of ${personFocus.length + personTasks.length} shown`}
         </span>
       </div>
 
-      {/* Main body — Team Summary vs Person Workspace */}
+      {/* Main body — The Daily vs Person Workspace */}
       {selectedPerson === null ? (
         <TeamSummary
-          tasks={priorityFilter.size === 0 ? tasks : tasks.filter((t) => priorityFilter.has(t.priority))}
-          focus={focusItems.filter((f) => !f.completed && !f.master_task_id && (priorityFilter.size === 0 || priorityFilter.has(f.priority)))}
+          tasks={tasks.filter((t) => t.for_daily && (priorityFilter.size === 0 || priorityFilter.has(t.priority)))}
+          focus={focusItems.filter((f) => f.for_daily && !f.completed && !f.master_task_id && (priorityFilter.size === 0 || priorityFilter.has(f.priority)))}
           onOpenTask={(id) => setOpenItem({ type: 'task', id })}
           onOpenFocus={(id) => setOpenItem({ type: 'focus', id })}
           onPickPerson={(name) => {
@@ -984,8 +988,21 @@ function TaskDrawer({ task, stream, milestones, currentUser, onClose, onUpdate, 
             </div>
           </div>
 
-          {/* Notion + Mark Done — bottom actions */}
+          {/* Daily + Notion + Mark Done — bottom actions */}
           <div className="pt-4 border-t-2 border-black/10 space-y-3">
+            {/* The Daily toggle */}
+            <button
+              onClick={() => onUpdate(task.id, { for_daily: !task.for_daily })}
+              className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-widest transition-colors border-2 ${
+                task.for_daily
+                  ? 'bg-gold text-white border-gold'
+                  : 'bg-white text-black border-gold/40 hover:bg-gold/10'
+              }`}
+              title="Tag this task for The Daily — it will appear on the team-wide summary"
+            >
+              {task.for_daily ? '\u2605 In The Daily — click to remove' : '\u2606 Send to The Daily'}
+            </button>
+
             {/* Notion sync */}
             <div>
               {notionUrl ? (
@@ -1162,6 +1179,15 @@ function FocusDrawer({ item, stream, onClose, onUpdate, onAddComment, onGenerate
                 &#x2192; Generate Task
               </button>
             )}
+            <button
+              onClick={() => onUpdate(item.id, { for_daily: !item.for_daily })}
+              className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 border transition-colors ${
+                item.for_daily ? 'bg-gold text-white border-gold' : 'bg-white text-black border-gold/40 hover:bg-gold/10'
+              }`}
+              title="Tag this note for The Daily"
+            >
+              {item.for_daily ? '\u2605 In The Daily' : '\u2606 Send to The Daily'}
+            </button>
             <button
               onClick={() => {
                 onDelete(item.id)
@@ -1446,7 +1472,7 @@ function TeamSummary({ tasks, focus, onOpenTask, onOpenFocus, onPickPerson }: Te
             </div>
             {total === 0 ? (
               <div className="px-4 py-6 text-center">
-                <p className="text-[11px] text-muted italic">None</p>
+                <p className="text-[11px] text-muted italic">Nothing tagged</p>
               </div>
             ) : (
               <div>
