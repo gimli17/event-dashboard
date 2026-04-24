@@ -4,9 +4,11 @@ import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { useUser } from './user-provider'
+
+const TEAM_SET_LOWER = new Set(['cody', 'sabrina', 'joe', 'connor', 'kendall', 'emily', 'bryan', 'gib', 'alex', 'liam', 'dan'])
 import { logActivity } from '@/lib/activity-log'
 
-const ALL_TEAM_MEMBERS = ['Cody', 'Sabrina', 'Joe', 'Connor', 'Kendall', 'Emily', 'Bryan', 'Gib', 'Alex', 'Liam'] as const
+const ALL_TEAM_MEMBERS = ['Cody', 'Sabrina', 'Joe', 'Connor', 'Kendall', 'Emily', 'Bryan', 'Gib', 'Alex', 'Liam', 'Dan'] as const
 
 const STREAMS = [
   { key: 'brmf', label: 'Boulder Roots', emoji: '\uD83C\uDFB8', bg: 'bg-[#2a4e80]', border: 'border-[#2a4e80]' },
@@ -106,7 +108,17 @@ interface FocusItem {
 type OpenItem = { type: 'task'; id: string } | { type: 'focus'; id: string } | null
 
 export function TeamView() {
-  const { displayName } = useUser()
+  const { displayName, setDisplayName } = useUser()
+
+  const handleSwitchUser = () => {
+    const next = window.prompt('Who are you? (first name)', displayName ?? '')?.trim()
+    if (next && TEAM_SET_LOWER.has(next.toLowerCase())) {
+      const normalized = next.charAt(0).toUpperCase() + next.slice(1).toLowerCase()
+      setDisplayName(normalized)
+    } else if (next) {
+      window.alert('That name isn\u2019t in the team list. Try one of: Cody, Sabrina, Joe, Connor, Kendall, Emily, Bryan, Gib, Alex, Liam, Dan.')
+    }
+  }
   const [tasks, setTasks] = useState<MasterTask[]>([])
   const [focusItems, setFocusItems] = useState<FocusItem[]>([])
   const [milestones, setMilestones] = useState<MilestoneOption[]>([])
@@ -425,6 +437,20 @@ export function TeamView() {
 
   return (
     <div className="max-w-[1600px] mx-auto px-6 py-6">
+      {/* Welcome banner */}
+      <div className="mb-4 flex items-baseline justify-between gap-3 flex-wrap">
+        <h2 className="text-lg font-bold uppercase tracking-wider">
+          Welcome{displayName ? `, ${displayName}` : ''}
+        </h2>
+        <button
+          onClick={handleSwitchUser}
+          className="text-[10px] font-bold uppercase tracking-widest text-muted hover:text-blue"
+          title="Switch to a different team member"
+        >
+          {displayName ? `Not ${displayName}?` : 'Set your name'}
+        </button>
+      </div>
+
       {/* View switcher: Summary / The Daily / person pills */}
       <div className="mb-4">
         <div className="flex flex-wrap gap-1.5">
