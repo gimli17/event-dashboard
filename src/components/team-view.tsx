@@ -225,7 +225,9 @@ export function TeamView() {
   // Preserve the explicit ALL_TEAM_MEMBERS ordering
   const orderedMembers = [...ALL_TEAM_MEMBERS]
 
-  const personTasks = selectedPerson ? tasks.filter((t) => t.assignee?.includes(selectedPerson)) : []
+  const assigneeIncludes = (assignee: string | null | undefined, name: string) =>
+    !!assignee && assignee.split(',').some((p) => p.trim() === name)
+  const personTasks = selectedPerson ? tasks.filter((t) => assigneeIncludes(t.assignee, selectedPerson)) : []
   const personFocus = selectedPerson ? focusItems.filter((f) => f.owner === selectedPerson && !f.completed && !f.master_task_id) : []
 
   // Team-wide derived lists
@@ -501,7 +503,7 @@ export function TeamView() {
             const isActive = name === selectedPerson
             const passes = <T extends { priority: string }>(x: T) =>
               priorityFilter.size === 0 || priorityFilter.has(x.priority)
-            const tCount = tasks.filter((t) => t.assignee?.includes(name) && passes(t)).length
+            const tCount = tasks.filter((t) => assigneeIncludes(t.assignee, name) && passes(t)).length
             const fCount = focusItems.filter((f) => f.owner === name && !f.completed && !f.master_task_id && passes(f)).length
             if (tCount + fCount === 0) return null
             return (
