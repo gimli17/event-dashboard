@@ -1577,6 +1577,9 @@ function TeamSummary({ tasks, focus, onOpenTask, onOpenFocus, onPickPerson }: Te
           return a.title.localeCompare(b.title)
         })
         const total = rows.length
+        const TOP_N = 10
+        const visible = rows.slice(0, TOP_N)
+        const hidden = total - visible.length
         return (
           <div key={stream.key} className={`border-2 ${stream.border} bg-white flex flex-col`}>
             <div className={`${stream.bg} text-white px-4 py-3`}>
@@ -1585,7 +1588,7 @@ function TeamSummary({ tasks, focus, onOpenTask, onOpenFocus, onPickPerson }: Te
                 {stream.label}
               </h2>
               <p className="text-[10px] uppercase tracking-widest text-white/70 mt-0.5">
-                {total} {total === 1 ? 'item' : 'items'}
+                {total <= TOP_N ? `${total} ${total === 1 ? 'item' : 'items'}` : `Top ${TOP_N} of ${total}`}
               </p>
             </div>
             {total === 0 ? (
@@ -1594,7 +1597,7 @@ function TeamSummary({ tasks, focus, onOpenTask, onOpenFocus, onPickPerson }: Te
               </div>
             ) : (
               <div>
-                {rows.map((row) => {
+                {visible.map((row) => {
                   const pCfg = PRIORITY_OPTIONS.find((p) => p.value === row.priority)
                   if (row.kind === 'focus') {
                     const f = row.item
@@ -1653,6 +1656,11 @@ function TeamSummary({ tasks, focus, onOpenTask, onOpenFocus, onPickPerson }: Te
                     </div>
                   )
                 })}
+                {hidden > 0 && (
+                  <div className="px-3 py-2 border-t border-black/5 text-center">
+                    <p className="text-[10px] uppercase tracking-widest text-muted italic">+ {hidden} more</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
