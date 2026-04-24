@@ -218,11 +218,10 @@ export function TeamView() {
 
   // Team-wide derived lists
   const todayIso = new Date().toISOString().slice(0, 10)
-  const recentCutoff = Date.now() - 1000 * 60 * 30 // items added in the last 30 min show on Summary too
-  const wasJustAdded = (createdAt?: string) => !!createdAt && new Date(createdAt).getTime() >= recentCutoff
+  const SUMMARY_PRIORITIES = new Set(['ultra-high', 'high', 'medium'])
   const passesPrio = <T extends { priority: string }>(x: T) => priorityFilter.size === 0 || priorityFilter.has(x.priority)
-  const summaryTasks = tasks.filter((t) => (t.priority === 'ultra-high' || t.deadline === todayIso || wasJustAdded(t.created_at)) && passesPrio(t))
-  const summaryFocus = focusItems.filter((f) => !f.completed && !f.master_task_id && (f.priority === 'ultra-high' || f.deadline === todayIso || wasJustAdded((f as unknown as { created_at?: string }).created_at)) && passesPrio(f))
+  const summaryTasks = tasks.filter((t) => (SUMMARY_PRIORITIES.has(t.priority) || t.deadline === todayIso) && passesPrio(t))
+  const summaryFocus = focusItems.filter((f) => !f.completed && !f.master_task_id && (SUMMARY_PRIORITIES.has(f.priority) || f.deadline === todayIso) && passesPrio(f))
   const dailyTasks = tasks.filter((t) => t.for_daily && passesPrio(t))
   const dailyFocus = focusItems.filter((f) => f.for_daily && !f.completed && !f.master_task_id && passesPrio(f))
 
@@ -511,7 +510,7 @@ export function TeamView() {
           {selectedPerson === null
             ? teamView === 'daily'
               ? `${dailyTasks.length + dailyFocus.length} tagged for The Daily`
-              : `${summaryTasks.length + summaryFocus.length} very-high or due today`
+              : `${summaryTasks.length + summaryFocus.length} very high / high / medium or due today`
             : `${visibleFocus.length + visibleTasks.length} of ${personFocus.length + personTasks.length} shown`}
         </span>
       </div>
