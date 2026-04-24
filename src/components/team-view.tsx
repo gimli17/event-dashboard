@@ -62,6 +62,7 @@ interface MasterTask {
   milestone_id: string | null
   notion_page_url: string | null
   for_daily: boolean
+  created_at: string
 }
 
 interface MilestoneOption {
@@ -146,7 +147,7 @@ export function TeamView() {
       const [tRes, fRes, mRes] = await Promise.all([
         supabase
           .from('master_tasks')
-          .select('id, title, status, assignee, executive_lead, priority, links, current_status, overview, action_items, dan_comments, deadline, initiative, milestone_id, notion_page_url, for_daily')
+          .select('id, title, status, assignee, executive_lead, priority, links, current_status, overview, action_items, dan_comments, deadline, initiative, milestone_id, notion_page_url, for_daily, created_at')
           .is('deleted_at', null)
           .neq('status', 'complete'),
         supabase
@@ -217,9 +218,11 @@ export function TeamView() {
 
   // Team-wide derived lists
   const todayIso = new Date().toISOString().slice(0, 10)
+  const recentCutoff = Date.now() - 1000 * 60 * 30 // items added in the last 30 min show on Summary too
+  const wasJustAdded = (createdAt?: string) => !!createdAt && new Date(createdAt).getTime() >= recentCutoff
   const passesPrio = <T extends { priority: string }>(x: T) => priorityFilter.size === 0 || priorityFilter.has(x.priority)
-  const summaryTasks = tasks.filter((t) => (t.priority === 'ultra-high' || t.deadline === todayIso) && passesPrio(t))
-  const summaryFocus = focusItems.filter((f) => !f.completed && !f.master_task_id && (f.priority === 'ultra-high' || f.deadline === todayIso) && passesPrio(f))
+  const summaryTasks = tasks.filter((t) => (t.priority === 'ultra-high' || t.deadline === todayIso || wasJustAdded(t.created_at)) && passesPrio(t))
+  const summaryFocus = focusItems.filter((f) => !f.completed && !f.master_task_id && (f.priority === 'ultra-high' || f.deadline === todayIso || wasJustAdded((f as unknown as { created_at?: string }).created_at)) && passesPrio(f))
   const dailyTasks = tasks.filter((t) => t.for_daily && passesPrio(t))
   const dailyFocus = focusItems.filter((f) => f.for_daily && !f.completed && !f.master_task_id && passesPrio(f))
 
@@ -367,6 +370,7 @@ export function TeamView() {
       initiative: item.stream,
       milestone_id: null,
       notion_page_url: null,
+      created_at: new Date().toISOString(),
       for_daily: item.for_daily ?? false,
     }
     setTasks((prev) => [newTask, ...prev])

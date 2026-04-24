@@ -88,6 +88,7 @@ export function ChatSidebar() {
   const [taskDeadline, setTaskDeadline] = useState('')
   const [taskInitiative, setTaskInitiative] = useState('brmf')
   const [taskMilestone, setTaskMilestone] = useState('')
+  const [taskExec, setTaskExec] = useState('')
   const [milestoneOptions, setMilestoneOptions] = useState<{ id: string; title: string; initiative: string }[]>([])
 
   // Add milestone state
@@ -274,6 +275,7 @@ export function ChatSidebar() {
       week_of: null,
       initiative: taskInitiative,
       milestone_id: taskMilestone || null,
+      executive_lead: taskExec || null,
       created_by: displayName || null,
     } as never)
 
@@ -305,6 +307,7 @@ export function ChatSidebar() {
     setTaskDeadline('')
     setTaskInitiative('brmf')
     setTaskMilestone('')
+    setTaskExec('')
     setSelectedEvent('')
     setTimeout(() => setTaskSuccess(''), 3000)
     setAddingTask(false)
@@ -455,6 +458,17 @@ export function ChatSidebar() {
               <select value={taskInitiative} onChange={(e) => setTaskInitiative(e.target.value)}
                 className="w-full border-2 border-black/20 bg-white px-2 py-2 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black">
                 {ALL_INITIATIVE_KEYS.map((k) => <option key={k} value={k}>{INITIATIVES[k].shortLabel}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Executive Lead (optional)</label>
+              <select value={taskExec} onChange={(e) => setTaskExec(e.target.value)}
+                className="w-full border-2 border-black/20 bg-white px-2 py-2 text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-black">
+                <option value="">None</option>
+                <option value="Cody">Cody</option>
+                <option value="Joe">Joe</option>
+                <option value="Sabrina">Sabrina</option>
               </select>
             </div>
 
