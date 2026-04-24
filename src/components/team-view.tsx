@@ -422,9 +422,12 @@ export function TeamView() {
 
   const openTask = openItem?.type === 'task' ? tasks.find((t) => t.id === openItem.id) ?? null : null
   const openFocus = openItem?.type === 'focus' ? focusItems.find((f) => f.id === openItem.id) ?? null : null
+  // Fallback when a task/note doesn't have one of the 5 known streams (e.g. General note, or
+  // an AI-generated insert with an unexpected stream value). Keeps the drawer openable.
+  const GENERAL_STREAM = { key: 'general', label: 'General', emoji: '\uD83D\uDCDD', bg: 'bg-black/70', border: 'border-black/30' } as const
   const openStream =
-    openTask ? STREAMS.find((s) => s.key === openTask.initiative) ?? null :
-    openFocus ? STREAMS.find((s) => s.key === openFocus.stream) ?? null :
+    openTask ? STREAMS.find((s) => s.key === openTask.initiative) ?? GENERAL_STREAM :
+    openFocus ? STREAMS.find((s) => s.key === openFocus.stream) ?? GENERAL_STREAM :
     null
 
   if (loading) {
@@ -573,7 +576,7 @@ export function TeamView() {
         <TaskDrawer
           key={openTask.id}
           task={openTask}
-          stream={openStream}
+          stream={openStream as (typeof STREAMS)[number]}
           milestones={milestones}
           currentUser={displayName}
           onClose={() => setOpenItem(null)}
@@ -585,7 +588,7 @@ export function TeamView() {
         <FocusDrawer
           key={openFocus.id}
           item={openFocus}
-          stream={openStream}
+          stream={openStream as (typeof STREAMS)[number]}
           onClose={() => setOpenItem(null)}
           onUpdate={handleFocusUpdate}
           onAddComment={handleFocusAddComment}
