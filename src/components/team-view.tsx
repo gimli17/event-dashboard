@@ -505,7 +505,6 @@ export function TeamView() {
               priorityFilter.size === 0 || priorityFilter.has(x.priority)
             const tCount = tasks.filter((t) => assigneeIncludes(t.assignee, name) && passes(t)).length
             const fCount = focusItems.filter((f) => f.owner === name && !f.completed && !f.master_task_id && passes(f)).length
-            if (tCount + fCount === 0) return null
             return (
               <button
                 key={name}
