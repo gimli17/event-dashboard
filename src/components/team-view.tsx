@@ -12,7 +12,7 @@ const ALL_TEAM_MEMBERS = ['Cody', 'Sabrina', 'Joe', 'Connor', 'Kendall', 'Emily'
 
 const STREAMS = [
   { key: 'brmf', label: 'Boulder Roots', emoji: '\uD83C\uDFB8', bg: 'bg-[#2a4e80]', border: 'border-[#2a4e80]' },
-  { key: 'bold-summit', label: 'Bold Summit', emoji: '\uD83E\uDDE0', bg: 'bg-[#d4a020]', border: 'border-[#d4a020]' },
+  { key: 'bold-summit', label: 'Bold Summit', emoji: '\uD83C\uDFA8', bg: 'bg-[#d4a020]', border: 'border-[#d4a020]' },
   { key: 'ensuring-colorado', label: 'Engage Colorado', emoji: '\uD83C\uDFD4\uFE0F', bg: 'bg-[#cc4444]', border: 'border-[#cc4444]' },
   { key: 'investments', label: 'Investments', emoji: '\uD83D\uDCBC', bg: 'bg-[#2a7d5c]', border: 'border-[#2a7d5c]' },
   { key: 'loud-bear', label: 'Loud Bear', emoji: '\uD83D\uDC3B', bg: 'bg-[#8b5a3c]', border: 'border-[#8b5a3c]' },
