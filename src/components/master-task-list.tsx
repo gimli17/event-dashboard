@@ -291,18 +291,31 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
     return () => { supabase.removeChannel(channel) }
   }, [])
 
+  const notifyUpdate = (taskId: string, changes: Record<string, unknown>) => {
+    if (Object.keys(changes).length === 0) return
+    fetch('/api/slack/notify-update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ taskId, actor: displayName || 'Someone', changes }),
+    }).catch(() => { /* fire-and-forget */ })
+  }
+
   const handleStatusChange = async (task: MasterTask, newStatus: string) => {
+    if (task.status === newStatus) return
     setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: newStatus } : t)))
     await supabase.from('master_tasks').update({ status: newStatus, updated_at: new Date().toISOString() } as never).eq('id', task.id)
     if (displayName) {
       const action = newStatus === 'complete' ? 'completed' : `changed status to ${newStatus}`
       logActivity(displayName, action, 'task', task.id, task.title)
     }
+    notifyUpdate(task.id, { status: newStatus })
   }
 
   const handlePriorityChange = async (task: MasterTask, newPriority: string) => {
+    if (task.priority === newPriority) return
     setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, priority: newPriority } : t)))
     await supabase.from('master_tasks').update({ priority: newPriority, updated_at: new Date().toISOString() } as never).eq('id', task.id)
+    notifyUpdate(task.id, { priority: newPriority })
   }
 
   const handleAddMasterTask = async () => {
@@ -463,8 +476,11 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
   const handleTitleSave = async (taskId: string) => {
     if (!titleValue.trim()) { setEditingTitle(null); return }
     setEditingTitle(null)
-    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, title: titleValue.trim() } : t)))
-    await supabase.from('master_tasks').update({ title: titleValue.trim(), updated_at: new Date().toISOString() } as never).eq('id', taskId)
+    const title = titleValue.trim()
+    const prevTitle = tasks.find((t) => t.id === taskId)?.title
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, title } : t)))
+    await supabase.from('master_tasks').update({ title, updated_at: new Date().toISOString() } as never).eq('id', taskId)
+    if (title !== prevTitle) notifyUpdate(taskId, { title })
   }
 
   const handleAssigneeChange = async (task: MasterTask, newAssignee: string | null) => {
@@ -523,6 +539,11 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
     }
 
     await supabase.from('master_tasks').update(updates as never).eq('id', task.id)
+
+    const changes: Record<string, unknown> = {}
+    if (newDeadline !== task.deadline) changes.deadline = newDeadline
+    if (autoPriority && autoPriority !== task.priority) changes.priority = autoPriority
+    notifyUpdate(task.id, changes)
   }
 
   const startEditing = (taskId: string, field: string, currentValue: string | null) => {
@@ -537,6 +558,8 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
     setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, [field]: newValue } : t)))
     setEditingField(null)
     await supabase.from('master_tasks').update({ [field]: newValue, updated_at: new Date().toISOString() } as never).eq('id', taskId)
+    // Only ping the assignee for meaningful owner-facing fields
+    if (field === 'dan_comments') notifyUpdate(taskId, { dan_comments: newValue })
   }
 
   const handleDeleteComment = async (commentId: string) => {

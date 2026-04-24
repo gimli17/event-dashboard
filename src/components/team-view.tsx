@@ -272,12 +272,31 @@ export function TeamView() {
       .eq('id', id)
     if (displayName && updates.title) logActivity(displayName, 'updated', 'task', id, updates.title)
 
-    // If assignee changed to a new person, ping them on Slack
+    const actor = displayName || 'Someone'
+
+    // If assignee changed to a new person, send the 'new task' DM
     if ('assignee' in updates && updates.assignee && updates.assignee !== prev?.assignee) {
       fetch('/api/slack/notify-assignment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ taskId: id, actor: displayName || 'Someone' }),
+        body: JSON.stringify({ taskId: id, actor }),
+      }).catch(() => { /* fire-and-forget */ })
+    }
+
+    // For other meaningful changes (Dan's comments, priority, status, deadline, title),
+    // send an 'update' DM to the current assignee
+    const NOTIFY_FIELDS: (keyof MasterTask)[] = ['dan_comments', 'priority', 'status', 'deadline', 'title']
+    const changes: Record<string, unknown> = {}
+    for (const k of NOTIFY_FIELDS) {
+      if (k in updates && updates[k] !== prev?.[k]) {
+        changes[k] = updates[k]
+      }
+    }
+    if (Object.keys(changes).length > 0) {
+      fetch('/api/slack/notify-update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskId: id, actor, changes }),
       }).catch(() => { /* fire-and-forget */ })
     }
   }
