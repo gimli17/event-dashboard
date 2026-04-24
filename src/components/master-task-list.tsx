@@ -548,7 +548,25 @@ export function MasterTaskList({ initiative }: { initiative?: InitiativeKey } = 
 
   const startEditing = (taskId: string, field: string, currentValue: string | null) => {
     setEditingField({ taskId, field })
-    setEditValue(currentValue || '')
+    // Strip any legacy HTML (tags, attributes) so the textarea shows clean text.
+    // Decode common entities so paragraphs read naturally.
+    const raw = currentValue || ''
+    const stripped = raw
+      .replace(/<\s*br\s*\/?\s*>/gi, '\n')
+      .replace(/<\/p>/gi, '\n\n')
+      .replace(/<\/h[1-6]>/gi, '\n\n')
+      .replace(/<\/li>/gi, '\n')
+      .replace(/<li[^>]*>/gi, '• ')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&#39;/g, "'")
+      .replace(/&quot;/g, '"')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+    setEditValue(stripped)
   }
 
   const saveField = async () => {
